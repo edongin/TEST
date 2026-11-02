@@ -74,7 +74,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 .who-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 @media (max-width:560px){.who-grid{grid-template-columns:repeat(2,1fr)}}
 .who-btn{background:#f6fbff;border:4px solid #e2eef7;border-radius:22px;padding:16px 6px;font-size:28px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .15s}
-.who-btn .em{font-size:48px;line-height:1}
+.who-btn .av svg{width:84px;height:84px;display:block;border-radius:50%;background:#e6f5ff}
 .who-btn .ck{font-size:16px;color:#aab}
 .who-btn.sel{border-color:#FF3EA5;background:#fff0f8;transform:translateY(-4px)}
 .who-btn.sel .ck{color:#FF3EA5}
@@ -694,7 +694,45 @@ function show(id){
 })();
 
 // 1-2) 누가 할까요
-const WHO_EMOJI = {'지섭':'👦','엄마':'👩','아빠':'👨','손님':'🙂'};
+// 플레이어 얼굴 (젊은 만화풍으로 직접 그림)
+function avatarSVG(nm){
+  const skin='#FFDCC0', skinS='#F2BE98';
+  const P = {
+    '지섭':{shirt:'#5DC232', hair:'#3A2414', r:31},
+    '엄마':{shirt:'#FF7EB6', hair:'#4A2C1A', r:28},
+    '아빠':{shirt:'#2BB5D8', hair:'#2B1B12', r:28},
+    '손님':{shirt:'#F7931E', hair:'#6B4426', r:28},
+  }[nm];
+  const cy=54, r=P.r;
+  let s='<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">';
+  if(nm==='엄마') s+=`<path d="M19 56 Q15 18 50 17 Q85 18 81 56 L86 94 Q50 102 14 94 Z" fill="${P.hair}"/>`;
+  s+=`<ellipse cx="50" cy="106" rx="34" ry="24" fill="${P.shirt}"/>`;
+  s+=`<rect x="43" y="74" width="14" height="12" rx="4" fill="${skinS}"/>`;
+  s+=`<circle cx="${50-r}" cy="${cy+2}" r="6" fill="${skin}" stroke="${skinS}" stroke-width="1.2"/><circle cx="${50+r}" cy="${cy+2}" r="6" fill="${skin}" stroke="${skinS}" stroke-width="1.2"/>`;
+  s+=`<circle cx="50" cy="${cy}" r="${r}" fill="${skin}"/>`;
+  if(nm==='지섭'){
+    s+=`<path d="M18 52 Q16 17 50 15 Q84 17 82 52 Q76 33 58 33 Q46 26 36 35 Q24 38 18 52 Z" fill="${P.hair}"/>`;
+    s+=`<path d="M48 17 Q50 6 60 8 Q53 11 54 18 Z" fill="${P.hair}"/>`;
+  } else if(nm==='엄마'){
+    s+=`<path d="M21 54 Q20 22 50 21 Q80 22 79 54 Q72 36 56 33 Q44 40 30 40 Q24 44 21 54 Z" fill="${P.hair}"/>`;
+    s+=`<path d="M72 26 l7 -5 l1 8 z M72 26 l8 4 l-7 4 z" fill="#FF3EA5"/><circle cx="73" cy="28" r="2.6" fill="#FFD1E8"/>`;
+  } else if(nm==='아빠'){
+    s+=`<path d="M21 50 Q20 20 50 19 Q80 20 79 50 Q76 35 64 31 Q52 37 38 32 Q26 36 21 50 Z" fill="${P.hair}"/>`;
+    s+=`<path d="M35 46 Q40 43 45 46 M55 46 Q60 43 65 46" stroke="${P.hair}" stroke-width="2.6" stroke-linecap="round" fill="none"/>`;
+  } else {
+    s+=`<path d="M22 46 Q22 14 50 14 Q78 14 78 46 Z" fill="#E8232A"/><path d="M50 44 Q74 42 90 48 Q72 52 50 50 Z" fill="#B8141B"/><circle cx="50" cy="16" r="3" fill="#F9D71C"/>`;
+  }
+  // 눈, 볼, 입
+  [40,60].forEach(x=>{
+    s+=`<ellipse cx="${x}" cy="${cy+3}" rx="3.8" ry="4.8" fill="#2a1f2f"/><circle cx="${x-1.2}" cy="${cy+1.4}" r="1.4" fill="#fff"/>`;
+    if(nm==='엄마') s+=`<path d="M${x+(x<50?-3.6:3.6)} ${cy+1} l${x<50?-2.6:2.6} -1.6" stroke="#2a1f2f" stroke-width="1.5" stroke-linecap="round"/>`;
+  });
+  s+=`<circle cx="33" cy="${cy+12}" r="5" fill="#FF8FA3" opacity=".5"/><circle cx="67" cy="${cy+12}" r="5" fill="#FF8FA3" opacity=".5"/>`;
+  s+= nm==='엄마'
+    ? `<path d="M43 ${cy+13} Q50 ${cy+21} 57 ${cy+13} Q50 ${cy+16} 43 ${cy+13} Z" fill="#E8556E" stroke="#C93A55" stroke-width="1.4" stroke-linejoin="round"/>`
+    : `<path d="M43 ${cy+13} Q50 ${cy+21} 57 ${cy+13} Z" fill="#7a1f30" stroke="#5a1020" stroke-width="1.4" stroke-linejoin="round"/>`;
+  return s+'</svg>';
+}
 function renderWho(){
   const k=setup.names.length, N=setup.count;
   $('#whoTitle').innerHTML=`<b style="color:#FF3EA5">${N}명</b>을 골라요 (${k}/${N})`;
@@ -702,7 +740,7 @@ function renderWho(){
   NAMES.forEach(nm=>{
     const on=setup.names.includes(nm);
     const b=document.createElement('button'); b.className='who-btn'+(on?' sel':'');
-    b.innerHTML=`<span class="em">${WHO_EMOJI[nm]}</span>${nm}<span class="ck">${on?'✔ 함께해요':'눌러서 선택'}</span>`;
+    b.innerHTML=`<span class="av">${avatarSVG(nm)}</span>${nm}<span class="ck">${on?'✔ 함께해요':'눌러서 선택'}</span>`;
     b.onclick=()=>{
       if(on) setup.names=setup.names.filter(x=>x!==nm);
       else if(setup.names.length<N) setup.names=NAMES.filter(x=>x===nm||setup.names.includes(x));
