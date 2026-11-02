@@ -386,16 +386,45 @@ function mouthSVG(x,y,w,d){
   return `<path d="M${f1(x-w)} ${f1(y)} Q ${f1(x)} ${f1(y+d*2)} ${f1(x+w)} ${f1(y)} Q ${f1(x)} ${f1(y+d*.55)} ${f1(x-w)} ${f1(y)} Z" fill="#7a1f30" stroke="#4a1220" stroke-width="1"/>`;
 }
 
+function lipsSVG(x,y,w,d,lip,lw=2.6){
+  return `<path d="M${f1(x-w)} ${f1(y)} Q ${f1(x)} ${f1(y+d*2)} ${f1(x+w)} ${f1(y)} Q ${f1(x)} ${f1(y+d*.5)} ${f1(x-w)} ${f1(y)} Z" fill="#6b1020" stroke="${lip}" stroke-width="${lw}" stroke-linejoin="round"/>`+
+         `<path d="M${f1(x-w*.55)} ${f1(y+d*.5)} Q ${f1(x)} ${f1(y+d*.95)} ${f1(x+w*.55)} ${f1(y+d*.5)}" stroke="#fff" stroke-width="1.6" fill="none"/>`;
+}
+// 둥근 네모 눈 (lid: 아래 눈꺼풀 색)
+function sqEye(x,y,w,h,rim,rw,lid,look=0){
+  const rx=Math.min(w,h)*.32;
+  let e=`<rect x="${f1(x-w/2)}" y="${f1(y-h/2)}" width="${w}" height="${h}" rx="${f1(rx)}" fill="#fff"/>`;
+  const py = lid ? y-h*.08 : y+h*.04, pr=Math.min(w,h)*.2;
+  e+=`<circle cx="${f1(x+look)}" cy="${f1(py)}" r="${f1(pr)}" fill="#1a1a1a"/><circle cx="${f1(x+look-pr*.35)}" cy="${f1(py-pr*.35)}" r="${f1(pr*.3)}" fill="#fff"/>`;
+  if(lid){
+    e+=`<rect x="${f1(x-w/2)}" y="${f1(y+h*.1)}" width="${w}" height="${f1(h*.4)}" rx="${f1(rx)}" fill="${lid}"/>`;
+    e+=`<rect x="${f1(x-w/2)}" y="${f1(y+h*.1)}" width="${w}" height="${f1(h*.2)}" fill="${lid}"/>`;
+  }
+  e+=`<rect x="${f1(x-w/2)}" y="${f1(y-h/2)}" width="${w}" height="${h}" rx="${f1(rx)}" fill="none" stroke="${rim}" stroke-width="${rw}"/>`;
+  return e;
+}
+// 손가락 있는 장갑 (k: -1 왼쪽 / 1 오른쪽)
+function gloveSVG(x,y,k,g){
+  let s=`<g transform="translate(${f1(x)} ${f1(y)}) rotate(${k*g.rot}) scale(${f1(-k*g.sc)} ${g.sc})">`;
+  [[-5.2,-2],[-1.7,-3.2],[1.8,-3],[5.3,-1.8]].forEach(([fx,fy],i)=>
+    s+=`<rect x="${f1(fx-1.9)}" y="${f1(fy-10)}" width="3.8" height="11" rx="1.9" fill="${g.fill}" stroke="${g.stroke}" stroke-width=".9" transform="rotate(${(i-1.5)*9} ${fx} ${fy})"/>`);
+  s+=`<rect x="-12" y="-1" width="3.8" height="9" rx="1.9" fill="${g.fill}" stroke="${g.stroke}" stroke-width=".9" transform="rotate(-55 -9 3)"/>`;
+  s+=`<rect x="-7.5" y="-4" width="15" height="13" rx="5" fill="${g.fill}" stroke="${g.stroke}" stroke-width=".9"/>`;
+  if(g.star) s+=`<polygon points="${starPts(0,2.5,3.8,1.7)}" fill="${g.star}"/>`;
+  return s+'</g>';
+}
+
 let nbUid = 0;
 /** n: 1~10, h: 픽셀 높이(없으면 100% 채움) */
 function nbSVG(n, h){
   const d=NB[n], U=40, cols=d.cols, rows=d.rows;
-  const W=cols*U, H=rows*U, M=U*.62, T=U*.62, B=U*.42;
+  const W=cols*U, H=rows*U, M=([5,6,10].includes(n)?U*.8:U*.62), T=U*.62, B=U*.42;
   const VW=W+2*M, VH=T+H+B, x0=M, y0=T, cx=x0+W/2;
   const id='nbg'+(nbUid++);
   const size = h ? `width="${f1(h*VW/VH)}" height="${h}"` : `width="100%" height="100%"`;
-  const base = n===7 ? '#7A3FA0' : n===10 ? '#E2231A' : shade(d.c,-.3);
-  const limb = n===10 ? '#E2231A' : n===7 ? '#8E44AD' : shade(d.c,-.22);
+  const base = n===7 ? '#5E3FA0' : n===10 ? '#E2231A' : n===9 ? '#7d8590' : shade(d.c,-.3);
+  const LIMB = {4:'#2C7A1A', 5:'#1F3F8A', 6:'#9C2547', 7:'#6A3FB0', 9:'#4A5A72', 10:'#E2231A'};
+  const limb = LIMB[n] || shade(d.c,-.22);
   let s=`<svg ${size} viewBox="0 0 ${f1(VW)} ${f1(VH)}" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg">`;
   s+=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".14"/></linearGradient></defs>`;
 
@@ -407,22 +436,28 @@ function nbSVG(n, h){
     s+=`<ellipse cx="${f1(x+k*3)}" cy="${f1(VH-3.5)}" rx="${f1(legW*.9)}" ry="3.5" fill="${shade(limb,-.2)}"/>`;
   });
 
-  // 팔
-  const ay = y0 + Math.min(H*.42, U*1.15);
-  const glove = n===10 ? '#fff' : limb;
-  function arm(k, ayy, raise){
+  // 팔: mode = down / up / out, hand = null(동그란 손) 또는 장갑 설정
+  function arm(k, ayy, mode, hand){
     const sx = k<0 ? x0+3 : x0+W-3;
-    const ex = sx + k*M*.72, ey = raise ? ayy-U*.78 : ayy+U*.55;
-    s+=`<path d="M${f1(sx)} ${f1(ayy)} Q ${f1(sx+k*M*.6)} ${f1(ayy+(raise?-U*.1:U*.05))} ${f1(ex)} ${f1(ey)}" stroke="${limb}" stroke-width="${f1(U*.2)}" stroke-linecap="round" fill="none"/>`;
-    s+=`<circle cx="${f1(ex)}" cy="${f1(ey)}" r="${f1(U*(raise?.19:.15))}" fill="${glove}" stroke="${n===10?'#E2231A':'none'}" stroke-width="2"/>`;
+    let ex, ey;
+    if(mode==='up'){ ex=sx+k*M*.6; ey=ayy-U*.8; }
+    else if(mode==='out'){ ex=sx+k*M*.7; ey=ayy-U*.5; }
+    else { ex=sx+k*M*.72; ey=ayy+U*.55; }
+    s+=`<path d="M${f1(sx)} ${f1(ayy)} Q ${f1(sx+k*M*.6)} ${f1(ayy+(mode==='down'?U*.05:-U*.05))} ${f1(ex)} ${f1(ey)}" stroke="${limb}" stroke-width="${f1(U*.2)}" stroke-linecap="round" fill="none"/>`;
+    if(hand) s+=gloveSVG(ex, ey, k, hand);
+    else s+=`<circle cx="${f1(ex)}" cy="${f1(ey)}" r="${f1(U*.15)}" fill="${limb}"/>`;
   }
-  arm(-1, ay, false);
-  arm( 1, ay, n===5 || n===10);
-  if(n===8){ arm(-1, ay+U*1.2, false); arm(1, ay+U*1.2, false); }
+  const ay = n===6 ? y0+U*1.5 : n===10 ? y0+U*1.25 : y0 + Math.min(H*.42, U*1.15);
+  if(n===5){ arm(-1, ay, 'down'); arm(1, ay, 'up', {fill:'#1F4E9C', stroke:'#173B78', star:'#4FC3F7', rot:18, sc:1.15}); }
+  else if(n===7){ arm(-1, y0+U*.75, 'up'); arm(1, y0+U*.75, 'up'); }
+  else if(n===10){ const g={fill:'#fff', stroke:'#E2231A', star:'#E2231A', rot:38, sc:1.2}; arm(-1, ay, 'out', g); arm(1, ay, 'out', g); }
+  else { arm(-1, ay, 'down'); arm(1, ay, 'down'); }
+  if(n===8){ arm(-1, ay+U*1.2, 'down'); arm(1, ay+U*1.2, 'down'); }
 
   // 몸 블록
+  const NINE=['#9C9C9C','#B6B6B6','#CFCFCF'];
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-    const fill = n===7 ? RAINBOW[rows-1-r] : d.c;
+    const fill = n===7 ? RAINBOW[rows-1-r] : n===9 ? NINE[r] : d.c;
     const st = n===10 ? '#E2231A' : shade(fill,-.22);
     s+=`<rect x="${f1(x0+c*U)}" y="${f1(y0+r*U)}" width="${U}" height="${U}" fill="${fill}" stroke="${st}" stroke-width="${n===10?2:1.5}"/>`;
   }
@@ -430,8 +465,8 @@ function nbSVG(n, h){
 
   // 특별 장식
   if(n===6){
-    for(let r=1;r<rows;r++) for(let c=0;c<cols;c++)
-      s+=`<circle cx="${f1(x0+c*U+U/2)}" cy="${f1(y0+r*U+U/2)}" r="${f1(U*.17)}" fill="#B79BF0"/>`;
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
+      s+=`<circle cx="${f1(x0+c*U+U/2)}" cy="${f1(y0+r*U+U/2)}" r="${f1(U*.19)}" fill="#8D9CF6"/>`;
   }
   if(n===3){
     [1.3,1.65,2.0].forEach(t=> s+=`<circle cx="${f1(cx)}" cy="${f1(y0+U*t)}" r="${f1(U*.085)}" fill="#E8232A"/>`);
@@ -451,24 +486,67 @@ function nbSVG(n, h){
   if(n===1){
     s+=eyeSVG(cx, y0+U*.4, U*.26);
     s+=mouthSVG(cx, y0+U*.76, U*.14, U*.09);
+  } else if(n===4){
+    // 네모난 눈 + 블록 두 개로 된 진한 눈썹
+    [-1,1].forEach(k=>{
+      const ex=cx+k*17;
+      s+=sqEye(ex, y0+23, 22, 20, '#2C6E17', 3.6, null, -k*1.2);
+      s+=`<g transform="rotate(${k*12} ${f1(ex)} ${f1(y0+4)})">`+
+         `<rect x="${f1(ex-11)}" y="${f1(y0-2)}" width="11" height="10" rx="2" fill="#2A6A16" stroke="#1B4A0C" stroke-width="1"/>`+
+         `<rect x="${f1(ex)}" y="${f1(y0-2)}" width="11" height="10" rx="2" fill="#2A6A16" stroke="#1B4A0C" stroke-width="1"/></g>`;
+    });
+    s+=`<path d="M${f1(cx-12)} ${f1(y0+46)} Q ${f1(cx)} ${f1(y0+61)} ${f1(cx+13)} ${f1(y0+45)} Q ${f1(cx)} ${f1(y0+51)} ${f1(cx-12)} ${f1(y0+46)} Z" fill="#fff" stroke="#2C6E17" stroke-width="3.4" stroke-linejoin="round"/>`;
+  } else if(n===5){
+    // 왼쪽 눈은 별 모양
+    const ey=y0+13;
+    s+=`<polygon points="${starPts(cx-9, ey, 12.5, 6.4)}" fill="#1F4E9C" stroke="#173B78" stroke-width="1" stroke-linejoin="round"/>`;
+    s+=`<circle cx="${f1(cx+9)}" cy="${f1(ey)}" r="7.8" fill="#1F4E9C"/>`;
+    s+=eyeSVG(cx-9, ey, 5.6) + eyeSVG(cx+9, ey, 5.6);
+    s+=lipsSVG(cx, y0+31, 8, 4.5, '#E8697A');
+  } else if(n===6){
+    // 양옆으로 튀어나온 빨간 눈 (속눈썹 3개)
+    const ey=y0+U*.95;
+    [-1,1].forEach(k=>{
+      const ex = k<0 ? x0-1 : x0+W+1;
+      [-1,0,1].forEach(j=> s+=`<path d="M${f1(ex+j*4)} ${f1(ey-8)} Q ${f1(ex+j*6)} ${f1(ey-14)} ${f1(ex+j*7)} ${f1(ey-19)}" stroke="#E8232A" stroke-width="3.8" stroke-linecap="round" fill="none"/>`);
+      s+=`<circle cx="${f1(ex)}" cy="${f1(ey)}" r="11.5" fill="#E8232A" stroke="#B8141B" stroke-width="1"/>`;
+      s+=`<ellipse cx="${f1(ex)}" cy="${f1(ey-1)}" rx="7.8" ry="7" fill="#fff"/>`;
+      s+=`<circle cx="${f1(ex+k*2.2)}" cy="${f1(ey-1.8)}" r="3.4" fill="#1a1a1a"/><circle cx="${f1(ex+k*2.2-1)}" cy="${f1(ey-3)}" r="1" fill="#fff"/>`;
+      s+=`<path d="M${f1(ex-8.5)} ${f1(ey+.8)} Q ${f1(ex)} ${f1(ey+3.2)} ${f1(ex+8.5)} ${f1(ey+.8)} L ${f1(ex+8.5)} ${f1(ey+8)} L ${f1(ex-8.5)} ${f1(ey+8)} Z" fill="#E8232A"/>`;
+    });
+    s+=lipsSVG(cx, y0+U*1.45, 15, 5, '#E86AA8', 4);
+  } else if(n===7){
+    // 노란 테 고글 눈
+    const ey=y0+12;
+    s+=`<line x1="${f1(cx-3)}" y1="${f1(ey)}" x2="${f1(cx+3)}" y2="${f1(ey)}" stroke="#F9D71C" stroke-width="2.6"/>`;
+    [-1,1].forEach(k=>{
+      const ex=cx+k*9.5;
+      s+=`<rect x="${f1(ex-7.5)}" y="${f1(ey-6)}" width="15" height="12" rx="4" fill="#fff" stroke="#F9D71C" stroke-width="3"/>`;
+      s+=`<circle cx="${f1(ex+k*.6)}" cy="${f1(ey+.8)}" r="3" fill="#1a1a1a"/><circle cx="${f1(ex+k*.6-1)}" cy="${f1(ey-.4)}" r=".9" fill="#fff"/>`;
+    });
+    s+=lipsSVG(cx, y0+27, 8, 4.5, '#F9D71C');
+  } else if(n===9){
+    // 둥근 네모 눈 + 아래 눈꺼풀, 안쪽이 올라간 두꺼운 눈썹
+    [-1,1].forEach(k=>{
+      const ex=cx+k*25;
+      s+=sqEye(ex, y0+30, 30, 27, '#4A5A72', 4.5, '#4A5A72', 0);
+      s+=`<path d="M${f1(cx+k*43)} ${f1(y0+1)} Q ${f1(cx+k*27)} ${f1(y0-7)} ${f1(cx+k*11)} ${f1(y0-10)}" stroke="#4A5A72" stroke-width="13" stroke-linecap="round" fill="none"/>`;
+    });
+    s+=`<path d="M${f1(cx-30)} ${f1(y0+61)} Q ${f1(cx-4)} ${f1(y0+81)} ${f1(cx+31)} ${f1(y0+63)}" stroke="#4A5A72" stroke-width="8" stroke-linecap="round" fill="none"/>`;
+  } else if(n===10){
+    // 블록 한 칸을 꽉 채우는 큰 별 눈
+    [-1,1].forEach(k=>{
+      const ex=cx+k*20, ey=y0+19;
+      s+=`<polygon points="${starPts(ex, ey, 19.5, 10)}" fill="#E2231A" stroke="#B8141B" stroke-width="1" stroke-linejoin="round"/>`;
+      s+=eyeSVG(ex, ey+1, 7.4);
+    });
+    s+=lipsSVG(cx, y0+46, 9, 4, '#E8A090');
   } else {
     if(n===8) s+=`<rect x="${f1(cx-edx-er*1.7)}" y="${f1(eyeY-er*1.45)}" width="${f1(2*(edx+er*1.7))}" height="${f1(er*2.9)}" rx="${f1(er*1.2)}" fill="#B0136B"/>`;
-    if(n===5) s+=`<polygon points="${starPts(cx+edx, eyeY, er*1.85, er*1.05)}" fill="#1A6E9A"/>`;
-    if(n===10){
-      s+=`<polygon points="${starPts(cx-edx, eyeY, er*1.8, er*.95)}" fill="#E2231A"/>`;
-      s+=`<polygon points="${starPts(cx+edx, eyeY, er*1.8, er*.95)}" fill="#E2231A"/>`;
-    }
-    const r2 = n===10 ? er*.8 : er;
-    s+=eyeSVG(cx-edx, eyeY, r2) + eyeSVG(cx+edx, eyeY, r2);
+    s+=eyeSVG(cx-edx, eyeY, er) + eyeSVG(cx+edx, eyeY, er);
     if(n===2){
       [-1,1].forEach(k=> s+=`<circle cx="${f1(cx+k*edx)}" cy="${f1(eyeY)}" r="${f1(er+2.6)}" fill="none" stroke="#8E44AD" stroke-width="2.4"/>`);
       s+=`<line x1="${f1(cx-edx+er+2.6)}" y1="${f1(eyeY)}" x2="${f1(cx+edx-er-2.6)}" y2="${f1(eyeY)}" stroke="#8E44AD" stroke-width="2.4"/>`;
-    }
-    if(n===4){
-      [-1,1].forEach(k=> s+=`<rect x="${f1(cx+k*edx-er*1.1)}" y="${f1(eyeY-er*1.95)}" width="${f1(er*2.2)}" height="${f1(er*.6)}" rx="3" fill="#2E6B17" transform="rotate(${k*-8} ${f1(cx+k*edx)} ${f1(eyeY-er*1.6)})"/>`);
-    }
-    if(n===9){
-      [-1,1].forEach(k=> s+=`<path d="M${f1(cx+k*(edx+er*1.3))} ${f1(eyeY-er*1.4)} Q ${f1(cx+k*edx)} ${f1(eyeY-er*2.5)} ${f1(cx+k*(edx-er*1.2))} ${f1(eyeY-er*1.5)}" stroke="#4a4f57" stroke-width="${f1(er*.6)}" stroke-linecap="round" fill="none"/>`);
     }
     s+=mouthSVG(cx, eyeY+er+U*.2*fs, U*.2*fs, U*.1*fs);
   }
