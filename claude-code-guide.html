@@ -1,5 +1,9 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Claude Code 활용 설명서</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Gothic+A1:wght@800&display=swap">
@@ -33,7 +37,9 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
+  margin: 0;
   background: var(--bg); color: var(--fg);
   font-family: var(--font-body); font-size: 15.5px; line-height: 1.75;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -108,7 +114,8 @@ footer { margin-top: 60px; color: var(--muted); font-size: 13px; border-top: 1px
 }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 </style>
-
+</head>
+<body>
 <div class="wrap">
   <nav class="toc" aria-label="목차">
     <h2>시작하기</h2>
@@ -338,3 +345,5 @@ document.addEventListener("click", e => {
   try { navigator.clipboard.writeText(text).then(done, fallback); } catch (_) { fallback(); }
 });
 </script>
+</body>
+</html>
