@@ -244,6 +244,19 @@ def notifiers() -> list[tuple[str, callable]]:
     return out
 
 
+def describe_channels() -> None:
+    """실행 기록에서 알림 설정을 확인할 수 있게 상태를 출력한다 (비밀값 자체는 숨김)."""
+    topic = os.environ.get("NTFY_TOPIC", "")
+    if topic:
+        hint = f"{topic[:3]}…{topic[-2:]}" if len(topic) > 6 else "…"
+        print(f"ntfy: 설정됨 (주제 이름 {len(topic)}글자, '{hint}' 모양)")
+    else:
+        print("ntfy: 설정 안 됨 (NTFY_TOPIC 없음)")
+    tg = bool(os.environ.get("TELEGRAM_BOT_TOKEN")) and bool(os.environ.get("TELEGRAM_CHAT_ID"))
+    print(f"텔레그램: {'설정됨' if tg else '설정 안 됨'}")
+    print(f"디스코드: {'설정됨' if os.environ.get('DISCORD_WEBHOOK_URL') else '설정 안 됨'}")
+
+
 def send(title: str, body: str, url: str) -> bool:
     """설정된 모든 채널로 보낸다. 하나라도 성공하면 True."""
     ok = False
@@ -277,6 +290,7 @@ def save_seen(seen: dict[str, float]) -> None:
 
 def run(config: dict) -> int:
     seen = load_seen()
+    describe_channels()
     channels = notifiers()
     if not channels:
         print("알림 채널이 설정되지 않았습니다 (README 참고). 찾은 글만 출력합니다.")
@@ -309,6 +323,8 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.test:
+        print("== 알림 연결 테스트 모드 ==")
+        describe_channels()
         if not notifiers():
             print("알림 채널이 설정되지 않았습니다. GitHub Secrets 를 확인하세요.")
             return 1
