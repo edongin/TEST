@@ -1,0 +1,970 @@
+<title>루이지 피자 노트</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 레시피 카드 그리드 → 상세(재료 위 / 레시피 아래), 어두운 피자스톤 위에 그린 피자 일러스트 */
+:root{
+  --bg:#F1F2EF; --surface:#FFFFFF; --sunken:#E7E8E3;
+  --ink:#1E1C1A; --muted:#67635D; --line:#D9D9D3;
+  --accent:#BE3520; --accent-ink:#FFFFFF; --basil:#2E6A44; --heat:#C9661A;
+  --stone:#2B2826; --stone-2:#36322F;
+  --f-display:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151413; --surface:#1F1D1B; --sunken:#282624;
+  --ink:#EDEAE5; --muted:#A39E96; --line:#353230;
+  --accent:#E4573C; --accent-ink:#1A0F0C; --basil:#74B58A; --heat:#EE9A4A;
+  --stone:#0E0D0C; --stone-2:#1A1817; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#151413; --surface:#1F1D1B; --sunken:#282624;
+  --ink:#EDEAE5; --muted:#A39E96; --line:#353230;
+  --accent:#E4573C; --accent-ink:#1A0F0C; --basil:#74B58A; --heat:#EE9A4A;
+  --stone:#0E0D0C; --stone-2:#1A1817; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.65;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 96px}
+h1,h2,h3{text-wrap:balance;margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:28px}
+.brand{display:flex;align-items:baseline;gap:10px;text-decoration:none}
+.brand b{font-family:var(--f-display);font-weight:400;font-size:26px;letter-spacing:-.01em}
+.brand span{color:var(--muted);font-size:13px}
+.nav{display:flex;gap:6px}
+.nav a{text-decoration:none;font-size:14px;padding:6px 12px;border-radius:999px;color:var(--muted)}
+.nav a[aria-current="page"]{background:var(--ink);color:var(--bg)}
+
+/* home intro */
+.intro{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:28px;align-items:end;margin-bottom:28px}
+.intro h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,5vw,48px);line-height:1.15}
+.intro h1 em{font-style:normal;color:var(--accent)}
+.intro p{color:var(--muted);margin:12px 0 0;max-width:58ch}
+.spec{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.spec div{padding:12px 14px;border-top:1px solid var(--line)}
+.spec div:nth-child(-n+2){border-top:0}
+.spec div:nth-child(even){border-left:1px solid var(--line)}
+.spec dt{font-size:12px;color:var(--muted)}
+.spec dd{margin:0;font-family:var(--f-mono);font-size:18px;font-weight:500}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
+.card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;text-decoration:none;transition:transform .2s ease,box-shadow .2s ease}
+.card:hover{transform:translateY(-3px);box-shadow:0 10px 28px -14px rgba(0,0,0,.35)}
+.plate{background:radial-gradient(circle at 50% 45%,var(--stone-2),var(--stone) 70%);aspect-ratio:4/3;max-width:100%;display:grid;place-items:center;position:relative}
+.plate svg{width:78%;height:auto;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45));transition:transform .5s ease}
+.card:hover .plate svg{transform:rotate(14deg)}
+.plate .badge{position:absolute;left:12px;top:12px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.92);color:#1E1C1A}
+.card-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card h3{font-size:19px;font-weight:700;line-height:1.3}
+.card h3 small{display:block;font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.02em}
+.card p{margin:0;color:var(--muted);font-size:14px;line-height:1.6;flex:1}
+.times{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+.times div+div{border-left:1px solid var(--line);padding-left:12px}
+.times dt{font-size:12px;color:var(--muted)}
+.times dd{margin:0;font-family:var(--f-mono);font-weight:500;font-size:15px}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:12px;padding:1px 8px;border-radius:4px;background:var(--sunken);color:var(--muted)}
+.guide-link{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:28px;padding:18px 20px;border:1px dashed var(--line);border-radius:14px;text-decoration:none}
+.guide-link b{font-size:16px}
+.guide-link span{color:var(--muted);font-size:14px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:8px;padding:9px 16px;background:var(--accent);color:var(--accent-ink);font-weight:600;text-decoration:none;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.note{font-size:13px;color:var(--muted)}
+
+/* detail */
+.back{display:inline-flex;gap:6px;color:var(--muted);text-decoration:none;font-size:14px;margin-bottom:16px}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:28px;align-items:center;margin-bottom:36px}
+.hero .plate{border-radius:16px;aspect-ratio:1/1}
+.hero .plate svg{width:82%}
+.hero h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,4.6vw,46px);line-height:1.15}
+.hero .orig{color:var(--muted);font-size:14px;margin-top:4px}
+.hero .lead{margin:14px 0 18px;max-width:58ch}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.facts div{padding:10px 12px;min-width:0}
+.facts div+div{border-left:1px solid var(--line)}
+.facts dt{font-size:12px;color:var(--muted)}
+.facts dd{margin:0;font-family:var(--f-mono);font-weight:500;font-size:16px;line-height:1.35}
+.facts dd small{display:block;font-family:var(--f-body);font-size:11px;color:var(--muted);font-weight:400}
+section.block{margin-top:40px}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:18px}
+.sec-head h2{font-family:var(--f-display);font-weight:400;font-size:26px}
+.controls{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.stepper button{width:36px;height:36px;border:0;background:none;cursor:pointer;font-size:18px}
+.stepper output{min-width:54px;text-align:center;font-family:var(--f-mono);font-weight:500}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface);flex-wrap:wrap}
+.seg button{border:0;background:none;padding:8px 12px;font-size:13px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.ctrl-label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+.ing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.ing-group{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.ing-group h3{font-size:14px;font-weight:700;display:flex;justify-content:space-between;gap:8px;margin-bottom:6px}
+.ing-group h3 span{font-weight:400;color:var(--muted);font-size:12px}
+.ing{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:start;padding:8px 0;border-top:1px solid var(--line);cursor:pointer}
+.ing:first-of-type{border-top:0}
+.ing input{margin:4px 0 0;accent-color:var(--basil);width:16px;height:16px}
+.ing .nm{font-weight:500}
+.ing .nt{display:block;font-size:12.5px;color:var(--muted);font-weight:400;line-height:1.5}
+.ing .qt{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500;text-align:right;white-space:nowrap}
+.ing.done .nm,.ing.done .qt{text-decoration:line-through;color:var(--muted)}
+.oven{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--stone);color:#F2EEE8;border-radius:14px;overflow:hidden}
+.oven div{padding:16px 18px;min-width:0}
+.oven div+div{border-left:1px solid rgba(255,255,255,.1)}
+.oven dt{font-size:12px;color:#B5AEA5}
+.oven dd{margin:2px 0 0;font-family:var(--f-mono);font-size:20px;font-weight:500;color:#FFB36B;line-height:1.3}
+.oven dd small{display:block;font-family:var(--f-body);font-size:12px;color:#D6CFC6;font-weight:400;margin-top:4px}
+.oven-why{margin:10px 2px 0}
+.phase{margin-top:26px}
+.phase:first-child{margin-top:0}
+.phase h3{font-size:16px;display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.phase h3 .pl{font-family:var(--f-mono);font-size:12px;font-weight:500;background:var(--ink);color:var(--bg);border-radius:4px;padding:1px 7px}
+.phase h3 .sub{font-weight:400;font-size:13px;color:var(--muted)}
+ol.steps{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.step{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+.step .n{font-family:var(--f-mono);font-size:18px;font-weight:500;color:var(--accent)}
+.step h4{margin:0;font-size:15.5px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.step h4 .dur{font-family:var(--f-mono);font-size:12px;font-weight:400;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 6px}
+.step p{margin:4px 0 0;max-width:68ch}
+.tbtn{margin-top:8px;border:1px solid var(--heat);color:var(--heat);background:transparent;border-radius:999px;padding:3px 12px;font-family:var(--f-mono);font-size:13px;cursor:pointer}
+.tbtn:hover{background:var(--heat);color:var(--surface)}
+.plan{display:grid;grid-template-columns:minmax(0,280px) minmax(0,1fr);gap:24px;align-items:start}
+.plan label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+.plan input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.tl{list-style:none;margin:0;padding:0;border-left:2px solid var(--line)}
+.tl li{position:relative;padding:0 0 14px 18px}
+.tl li::before{content:"";position:absolute;left:-7px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--muted)}
+.tl li.hot::before{border-color:var(--heat);background:var(--heat)}
+.tl li.eat::before{border-color:var(--accent);background:var(--accent)}
+.tl .when{font-family:var(--f-mono);font-weight:500;font-size:14px}
+.tl .what{display:block;color:var(--muted);font-size:14px}
+.tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.tipbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.tipbox h3{font-size:15px;margin-bottom:8px}
+.tipbox ul{margin:0;padding-left:18px}
+.tipbox li+li{margin-top:6px}
+
+/* guide */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-top:1px solid var(--line);vertical-align:top}
+thead th{border-top:0;font-size:12px;color:var(--muted);font-weight:600;background:var(--sunken)}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+details{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px}
+details+details{margin-top:8px}
+summary{cursor:pointer;font-weight:600}
+details p{margin:8px 0 0;max-width:70ch}
+
+/* timer */
+.timer{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--stone);color:#F2EEE8;border-radius:14px;padding:12px 14px 12px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 14px 40px -12px rgba(0,0,0,.6);z-index:20;max-width:calc(100% - 32px)}
+.timer .tl-name{font-size:12px;color:#B5AEA5;display:block}
+.timer .tl-time{font-family:var(--f-mono);font-size:26px;font-weight:500;color:#FFB36B;line-height:1.1}
+.timer.ring .tl-time{color:#FF6B4F;animation:blink 1s steps(2) infinite}
+.timer button{background:rgba(255,255,255,.12);border:0;color:#F2EEE8;border-radius:8px;padding:7px 11px;cursor:pointer;font-size:13px}
+@keyframes blink{50%{opacity:.35}}
+
+@media (max-width:760px){
+  .intro,.hero,.plan{grid-template-columns:minmax(0,1fr)}
+  .hero .plate{max-width:420px}
+  .facts,.oven{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .facts div:nth-child(3),.oven div:nth-child(3){border-left:0}
+  .facts div:nth-child(n+3){border-top:1px solid var(--line)}
+  .oven div:nth-child(n+3){border-top:1px solid rgba(255,255,255,.1)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#"><b>루이지 피자 노트</b><span>Unold Luigi 68816 기준</span></a>
+    <nav class="nav" aria-label="메뉴">
+      <a href="#" id="nav-home">레시피</a>
+      <a href="#guide" id="nav-guide">도우 · 오븐 가이드</a>
+    </nav>
+  </header>
+  <main id="app"></main>
+</div>
+
+<div class="timer" id="timer" hidden role="status" aria-live="polite">
+  <div><span class="tl-name" id="timer-name">타이머</span><span class="tl-time" id="timer-time">0:00</span></div>
+  <button type="button" id="timer-pause">일시정지</button>
+  <button type="button" id="timer-close">닫기</button>
+</div>
+
+<script>
+/* ---------- 도우 ---------- */
+const DOUGHS = {
+  napoli:{
+    name:'나폴리 도우', sub:'24시간 냉장 저온숙성', ball:208,
+    ing:[
+      {n:'00 밀가루 (피자용)', q:125, u:'g', note:'없으면 강력분. 이때 물은 75g으로 줄이기'},
+      {n:'찬물', q:80, u:'g', note:'수분율 64%'},
+      {n:'고운 소금', q:3.5, u:'g'},
+      {n:'인스턴트 드라이이스트', q:0.25, u:'g', note:'4판 분량에 1g. 0.1g 저울이 없으면 1/4작은술이 약 0.8g'}
+    ],
+    stages:[
+      {m:30, t:'반죽하기'},
+      {m:60, t:'실온 1차 발효 후 분할'},
+      {m:1440, t:'냉장 저온숙성'},
+      {m:150, t:'실온 복귀'}
+    ],
+    steps:[
+      {h:'섞기', d:10, p:'찬물에 소금을 먼저 녹이고 밀가루 2/3와 이스트를 넣어 주걱으로 섞습니다. 나머지 밀가루를 넣고 가루가 안 보일 때까지 뭉친 뒤 랩을 씌워 10분 둡니다.'},
+      {h:'치대기', d:10, p:'손바닥으로 밀었다 접기를 8~10분. 표면이 매끈하고 살짝 끈적이는 상태가 되면 됩니다. 반죽기는 저속 6분.'},
+      {h:'실온 1차 발효', d:60, p:'볼에 덮개를 씌워 실온(20~24°C)에서 1시간.'},
+      {h:'분할 · 둥글리기', d:10, p:'한 덩이 약 208g으로 나눠 표면이 팽팽해지게 둥글립니다. 올리브오일을 살짝 바른 밀폐용기에 하나씩 담습니다.'},
+      {h:'냉장 저온숙성', d:1440, p:'냉장고에서 24시간(최대 48시간). 천천히 발효하면서 맛이 깊어지고 늘리기 쉬워집니다.'},
+      {h:'실온 복귀', d:150, p:'굽기 2시간 30분 전에 꺼내 뚜껑을 덮은 채 둡니다. 손가락으로 눌렀을 때 자국이 천천히 돌아오면 준비 완료. 이 시간 끝 무렵에 루이지 예열을 시작하세요.'}
+    ]
+  },
+  sameday:{
+    name:'당일 도우', sub:'6시간 30분, 실온 발효', ball:210,
+    ing:[
+      {n:'00 밀가루 또는 강력분', q:125, u:'g', note:'강력분이면 물 77g'},
+      {n:'미지근한 물 (25~28°C)', q:81, u:'g', note:'수분율 65%'},
+      {n:'고운 소금', q:3.5, u:'g'},
+      {n:'인스턴트 드라이이스트', q:0.75, u:'g', note:'4판 분량에 3g (약 1작은술)'}
+    ],
+    stages:[
+      {m:30, t:'반죽하기'},
+      {m:120, t:'실온 1차 발효'},
+      {m:240, t:'분할 후 2차 발효'}
+    ],
+    steps:[
+      {h:'섞고 치대기', d:30, p:'물에 소금을 녹이고 밀가루와 이스트를 넣어 뭉칩니다. 10분 쉬었다가 8~10분 치대 매끈하게 만듭니다.'},
+      {h:'실온 1차 발효', d:120, p:'덮어서 실온 2시간. 부피가 1.5배 정도 되면 됩니다.'},
+      {h:'분할 · 2차 발효', d:240, p:'약 210g씩 나눠 둥글리고 오일 바른 용기에 담아 실온 4시간. 거의 2배로 부풀고 표면에 작은 기포가 보이면 준비 완료. 마지막 30분에 예열을 시작하세요.'}
+    ]
+  },
+  ny:{
+    name:'뉴욕 도우', sub:'설탕·오일 넣은 24시간 숙성', ball:214,
+    ing:[
+      {n:'강력분', q:125, u:'g'},
+      {n:'찬물', q:79, u:'g', note:'수분율 63%'},
+      {n:'고운 소금', q:2.5, u:'g'},
+      {n:'설탕', q:2.5, u:'g', note:'색을 잘 내 줌'},
+      {n:'올리브오일', q:4, u:'g', note:'약 1작은술'},
+      {n:'인스턴트 드라이이스트', q:0.5, u:'g', note:'4판 분량에 2g'}
+    ],
+    stages:[
+      {m:20, t:'반죽하기'},
+      {m:40, t:'실온 휴지 후 분할'},
+      {m:1440, t:'냉장 저온숙성'},
+      {m:120, t:'실온 복귀'}
+    ],
+    steps:[
+      {h:'섞고 치대기', d:20, p:'오일을 뺀 모든 재료를 섞어 뭉친 뒤 오일을 넣고 8분 치댑니다. 나폴리 도우보다 조금 단단한 느낌이 정상입니다.'},
+      {h:'실온 휴지 · 분할', d:40, p:'약 214g씩 나눠 둥글리고 오일 바른 용기에 담아 실온 30~40분.'},
+      {h:'냉장 저온숙성', d:1440, p:'냉장 24시간(최대 72시간). 오래 둘수록 풍미가 진해집니다.'},
+      {h:'실온 복귀', d:120, p:'굽기 2시간 전에 꺼내 둡니다. 마지막 30분에 예열 시작.'}
+    ]
+  }
+};
+
+/* ---------- 공통 조리 단계 ---------- */
+const S = {
+  preheat:(t)=>({h:'루이지 예열', d:25, p:`뚜껑을 닫고 ${t}로 25분 예열합니다. 스톤이 충분히 달궈져야 바닥이 바삭해지니 예열 시간은 줄이지 마세요.`}),
+  stretch:{h:'도우 펴기', d:2, p:'덧가루(세몰리나나 밀가루)를 뿌린 작업대에서 가운데부터 손끝으로 눌러 펼칩니다. 테두리 1.5cm는 누르지 않고 남겨 두고 지름 26~28cm까지. 밀대는 기포가 빠지니 쓰지 마세요.'},
+  peel:{h:'필에 옮기기', d:1, p:'필에 덧가루를 뿌리고 도우를 올린 뒤 토핑합니다. 필을 살짝 흔들어 도우가 미끄러지는지 확인하세요. 붙어 있으면 그 부분을 들어 덧가루를 더 넣습니다.'},
+  launch:(sec,txt)=>({h:'굽기 시작', d:sec/60, timer:sec, tname:'회전할 때까지', p:txt||'뚜껑을 열고 필 끝을 스톤 안쪽에 대고 손목을 빠르게 당겨 도우만 내려놓습니다. 뚜껑을 바로 닫으세요.'}),
+  turn:(sec,txt)=>({h:'돌리고 마무리', d:sec/60, timer:sec, tname:'꺼낼 때까지', p:txt||'필로 피자를 꺼내 180° 돌려 다시 넣습니다. 안쪽 열선 쪽이 먼저 타기 때문입니다. 테두리가 부풀고 점점이 그을리면 꺼냅니다.'}),
+  rest:{h:'다음 판 전 회복', d:4, p:'여러 판을 연달아 구울 때는 판 사이에 뚜껑을 닫고 3~5분 두어 스톤 온도를 되살리세요. 바로 넣으면 바닥이 덜 익습니다.'}
+};
+
+/* ---------- 레시피 ---------- */
+const RECIPES = [
+{
+  id:'margherita', name:'마르게리타', orig:'Pizza Margherita · 나폴리',
+  desc:'토마토, 생 모짜렐라, 바질 세 가지로 만드는 나폴리 피자의 기준. 최고 온도에서 2분이면 테두리에 점점이 그을음이 올라옵니다.',
+  tags:['beginner','red','veg'], level:'쉬움', dough:'napoli', doughs:['napoli','sameday'], cook:8,
+  oven:{pre:'25분', temp:'450°C', tempNote:'최고 온도', time:'2분~2분 30초', turn:'1분 후 180°'},
+  why:'치즈와 소스가 적은 나폴리 피자는 가장 높은 온도에서 짧게 구워야 테두리는 부풀고 가운데는 촉촉합니다.',
+  draw:{base:'red', cheese:'fresh', top:[['basil',6],['oil']]},
+  groups:[
+    {g:'소스', items:[
+      {n:'홀토마토 통조림', q:80, u:'g', note:'손으로 으깨기. 산마르자노 품종이면 더 좋음 (400g 1캔 ≈ 5판)'},
+      {n:'고운 소금', q:0.8, u:'g', note:'토마토 무게의 1%'}
+    ]},
+    {g:'토핑', items:[
+      {n:'생 모짜렐라', q:80, u:'g', note:'한입 크기로 찢어 1시간 물기 빼기'},
+      {n:'생 바질', q:4, u:'잎'},
+      {n:'엑스트라버진 올리브오일', q:1, u:'작은술'},
+      {n:'파르미지아노 레지아노 (선택)', q:5, u:'g', note:'곱게 갈아서'}
+    ]},
+    {g:'굽고 나서', items:[
+      {n:'생 바질', q:2, u:'잎'},
+      {n:'올리브오일', q:0.5, u:'작은술'}
+    ]}
+  ],
+  prep:[
+    {h:'모짜렐라 물기 빼기', d:60, p:'굽기 1시간 전에 모짜렐라를 찢어 키친타월을 깐 체에 올려 냉장고에 둡니다. 물기가 많으면 가운데가 질척해집니다.'},
+    {h:'소스 만들기', d:3, p:'홀토마토를 볼에 붓고 손으로 으깬 뒤 소금을 섞습니다. 익히지 않습니다. 블렌더로 갈면 거품이 생기고 색이 옅어지니 손이나 포크로.'}
+  ],
+  top:[
+    {h:'소스 · 토핑', d:2, p:'국자 뒷면으로 가운데부터 원을 그리며 소스 70~80g을 펴고 테두리는 남깁니다. 모짜렐라를 고르게 흩고 바질을 올린 뒤 올리브오일을 한 바퀴 두릅니다.'}
+  ],
+  launchSec:60, turnSec:75,
+  finish:'꺼내서 생 바질 몇 잎과 올리브오일을 조금 더 올립니다.',
+  tips:['치즈는 1판 80g이 상한입니다. 더 올리면 2분 안에 녹지 않고 물이 생깁니다.','뚜껑 창으로 테두리가 부풀고 갈색 점이 생기기 시작하면 꺼낼 때입니다.','바질은 굽기 전 일부, 굽고 나서 일부를 올리면 향이 두 겹으로 납니다.'],
+  subs:['00 밀가루 → 강력분 (물을 5g 줄이기)','생 모짜렐라 → 부라타 속 또는 슈레드 모짜렐라 60g','홀토마토 → 토마토 파사타(곱게 거른 토마토)']
+},
+{
+  id:'marinara', name:'마리나라', orig:'Pizza Marinara · 나폴리',
+  desc:'치즈 없이 토마토, 마늘, 오레가노, 올리브오일만 올리는 가장 오래된 나폴리 피자. 재료가 단순해 도우 맛이 그대로 드러납니다.',
+  tags:['beginner','red','veg'], level:'쉬움', dough:'napoli', doughs:['napoli','sameday'], cook:7,
+  oven:{pre:'25분', temp:'450°C', tempNote:'최고 온도', time:'약 2분', turn:'1분 후 180°'},
+  why:'치즈가 없어 빨리 익습니다. 마늘이 탈 수 있으니 2분을 넘기지 마세요.',
+  draw:{base:'red', cheese:'none', top:[['garlic',14],['oregano'],['oil']]},
+  groups:[
+    {g:'소스', items:[
+      {n:'홀토마토 통조림', q:90, u:'g', note:'손으로 으깨기'},
+      {n:'고운 소금', q:0.9, u:'g'}
+    ]},
+    {g:'토핑', items:[
+      {n:'마늘', q:1.5, u:'쪽', note:'최대한 얇게 저미기'},
+      {n:'건조 오레가노', q:0.5, u:'작은술'},
+      {n:'엑스트라버진 올리브오일', q:1, u:'큰술'}
+    ]},
+    {g:'굽고 나서', items:[
+      {n:'생 바질 (선택)', q:3, u:'잎'}
+    ]}
+  ],
+  prep:[
+    {h:'소스 · 마늘 준비', d:5, p:'홀토마토를 손으로 으깨 소금을 섞습니다. 마늘은 얇게 저며 올리브오일 절반에 버무려 둡니다. 오일을 입히면 고온에서 덜 탑니다.'}
+  ],
+  top:[
+    {h:'소스 · 토핑', d:2, p:'소스를 테두리만 남기고 펴고, 오일에 버무린 마늘을 흩습니다. 오레가노를 손가락으로 비벼 뿌리고 남은 오일을 두릅니다.'}
+  ],
+  launchSec:60, turnSec:60,
+  finish:'꺼내서 기호에 따라 바질을 올립니다.',
+  tips:['소스를 조금 넉넉하게(90g) 쓰는 게 이 피자의 맛입니다.','오레가노는 말린 것이 향이 더 강하고 잘 어울립니다.','비건 피자로도 그대로 쓸 수 있습니다.'],
+  subs:['건조 오레가노 → 이탈리안 시즈닝 소량','생마늘 → 깐마늘 슬라이스 (미리 썰어둔 것은 향이 약함)']
+},
+{
+  id:'pepperoni', name:'페퍼로니', orig:'New York-style Pepperoni · 미국',
+  desc:'쫄깃한 뉴욕 도우에 녹는 치즈와 페퍼로니를 듬뿍. 온도를 조금 낮춰 4~5분 구우면 페퍼로니 가장자리가 바삭하게 말려 올라갑니다.',
+  tags:['beginner','red','meat'], level:'쉬움', dough:'ny', doughs:['ny','napoli','sameday'], cook:12,
+  oven:{pre:'25분', temp:'370°C', tempNote:'최고보다 낮게', time:'4~5분', turn:'2분 후 180°'},
+  why:'뉴욕 도우에 들어간 설탕과 오일은 450°C에서 금방 탑니다. 치즈 양도 많아 조금 낮은 온도로 오래 구워야 속까지 녹습니다. 나폴리 도우를 쓰면 430°C, 3분으로.',
+  draw:{base:'red', cheese:'shred', top:[['pepperoni',16],['oregano']]},
+  groups:[
+    {g:'소스', items:[
+      {n:'홀토마토 통조림', q:80, u:'g', note:'으깬 뒤 체에 5분 밭쳐 물기 빼기'},
+      {n:'고운 소금', q:0.8, u:'g'},
+      {n:'건조 오레가노', q:0.25, u:'작은술'},
+      {n:'설탕 (선택)', q:0.5, u:'g', note:'토마토가 시면'}
+    ]},
+    {g:'토핑', items:[
+      {n:'슈레드 모짜렐라', q:100, u:'g', note:'피자치즈. 냉장 상태로'},
+      {n:'페퍼로니 슬라이스', q:18, u:'장', note:'약 30g'},
+      {n:'파르메산 치즈 가루', q:1, u:'큰술'}
+    ]},
+    {g:'굽고 나서', items:[
+      {n:'칠리 플레이크 (선택)', q:0.25, u:'작은술'},
+      {n:'꿀 (선택)', q:1, u:'작은술', note:'칠리 플레이크와 섞으면 핫허니'}
+    ]}
+  ],
+  prep:[
+    {h:'소스 만들기', d:5, p:'홀토마토를 으깨 체에 5분 밭쳐 물기를 빼고 소금, 오레가노를 섞습니다. 치즈가 많은 피자라 소스는 진할수록 좋습니다.'}
+  ],
+  top:[
+    {h:'소스 · 토핑', d:3, p:'소스를 얇게 펴고 파르메산 가루, 모짜렐라 순서로 올립니다. 페퍼로니는 살짝 겹쳐도 됩니다. 테두리 1.5cm는 비워 둡니다.'}
+  ],
+  launchSec:120, turnSec:150,
+  finish:'꺼내서 1분 두었다 자르면 치즈가 흘러내리지 않습니다. 핫허니는 먹기 직전에.',
+  tips:['페퍼로니가 컵 모양으로 말리려면 두께가 2mm 이상인 제품이 좋습니다.','바닥이 덜 익으면 다음 판은 예열을 5분 더 하세요.','도우를 조금 얇게(28cm) 펴야 뉴욕 스타일 식감이 납니다.'],
+  subs:['페퍼로니 → 살라미, 초리조 슬라이스','슈레드 모짜렐라 → 모짜렐라 70g + 체다 30g']
+},
+{
+  id:'quattro', name:'콰트로 포르마지', orig:'Quattro Formaggi · 이탈리아',
+  desc:'모짜렐라, 고르곤졸라, 고다, 파르미지아노 네 가지 치즈의 화이트 피자. 꿀을 찍어 먹는 한국식 고르곤졸라 피자의 원형입니다.',
+  tags:['beginner','white','veg'], level:'쉬움', dough:'napoli', doughs:['napoli','sameday'], cook:8,
+  oven:{pre:'25분', temp:'400°C', tempNote:'한 단계 낮게', time:'약 2분 30초', turn:'1분 20초 후'},
+  why:'고르곤졸라와 파르미지아노는 높은 온도에서 금방 타고 기름이 분리됩니다. 400°C 정도로 낮춰 치즈가 고르게 녹게 합니다.',
+  draw:{base:'white', cheese:'four', top:[['walnut',7],['honey']]},
+  groups:[
+    {g:'치즈', items:[
+      {n:'생 모짜렐라', q:50, u:'g', note:'찢어서 물기 빼기'},
+      {n:'고르곤졸라', q:25, u:'g', note:'잘게 부수기'},
+      {n:'고다 또는 에멘탈', q:25, u:'g', note:'얇게 썰거나 갈기'},
+      {n:'파르미지아노 레지아노', q:10, u:'g', note:'곱게 갈아서'}
+    ]},
+    {g:'베이스', items:[
+      {n:'엑스트라버진 올리브오일', q:1, u:'작은술'},
+      {n:'호두 (선택)', q:10, u:'g', note:'굵게 부수기'}
+    ]},
+    {g:'곁들임', items:[
+      {n:'꿀', q:1, u:'큰술', note:'찍어 먹거나 뿌리기'},
+      {n:'후추', q:null, txt:'조금'}
+    ]}
+  ],
+  prep:[
+    {h:'치즈 준비', d:5, p:'모짜렐라는 찢어 물기를 빼고, 고르곤졸라는 손으로 부수고, 고다와 파르미지아노는 갈아 둡니다.'}
+  ],
+  top:[
+    {h:'베이스 · 치즈', d:2, p:'도우에 올리브오일을 얇게 바르고 고다, 모짜렐라, 고르곤졸라 순서로 고르게 올립니다. 파르미지아노는 마지막에 전체에 뿌리고, 호두를 흩습니다.'}
+  ],
+  launchSec:80, turnSec:70,
+  finish:'꺼내서 후추를 갈아 올리고 꿀을 곁들입니다.',
+  tips:['고르곤졸라는 25g만 넣어도 향이 충분합니다. 많으면 짭니다.','치즈만 올라가는 피자라 오일을 바르면 도우가 마르지 않습니다.','꿀은 굽기 전에 뿌리면 탑니다. 반드시 굽고 나서.'],
+  subs:['고다·에멘탈 → 슈레드 모짜렐라','고르곤졸라 → 블루치즈 아무 종류']
+},
+{
+  id:'prosciutto', name:'프로슈토 루콜라', orig:'Prosciutto e Rucola · 이탈리아',
+  desc:'마르게리타를 구운 뒤 짭짤한 생햄과 루콜라, 파르미지아노를 올리는 피자. 뜨거운 피자 위에서 햄 기름이 살짝 녹아 내립니다.',
+  tags:['red','meat'], level:'쉬움', dough:'napoli', doughs:['napoli','sameday'], cook:9,
+  oven:{pre:'25분', temp:'450°C', tempNote:'최고 온도', time:'약 2분', turn:'1분 후 180°'},
+  why:'토핑 대부분을 굽고 나서 올리기 때문에 마르게리타와 같은 조건으로 굽습니다.',
+  draw:{base:'red', cheese:'light', top:[['prosciutto',6],['arugula',26],['parmesan',10]]},
+  groups:[
+    {g:'굽기 전', items:[
+      {n:'홀토마토 통조림', q:70, u:'g', note:'손으로 으깨기'},
+      {n:'고운 소금', q:0.7, u:'g'},
+      {n:'생 모짜렐라', q:70, u:'g', note:'찢어서 물기 빼기'},
+      {n:'올리브오일', q:1, u:'작은술'}
+    ]},
+    {g:'굽고 나서', items:[
+      {n:'프로슈토 (생햄)', q:3, u:'장', note:'약 30g'},
+      {n:'루콜라', q:15, u:'g', note:'한 줌. 씻어서 물기 완전히 빼기'},
+      {n:'파르미지아노 레지아노', q:8, u:'g', note:'필러로 얇게 깎기'},
+      {n:'레몬즙 또는 발사믹 글레이즈 (선택)', q:0.5, u:'작은술'}
+    ]}
+  ],
+  prep:[
+    {h:'재료 준비', d:5, p:'모짜렐라 물기를 빼고 소스를 만듭니다. 루콜라는 씻어 물기를 완전히 털어 두고, 프로슈토는 냉장고에서 꺼내 실온에 10분 둡니다.'}
+  ],
+  top:[
+    {h:'소스 · 치즈', d:2, p:'소스를 펴고 모짜렐라를 흩은 뒤 오일을 두릅니다. 마르게리타보다 치즈를 조금 줄여 위 토핑 자리를 남깁니다.'}
+  ],
+  launchSec:60, turnSec:60,
+  finish:'꺼내자마자 루콜라를 올리고 프로슈토를 주름지게 얹은 뒤 파르미지아노를 깎아 올립니다. 레몬즙을 몇 방울 떨어뜨리면 깔끔합니다.',
+  tips:['프로슈토는 절대 같이 굽지 마세요. 짜고 질겨집니다.','루콜라에 물기가 남아 있으면 피자가 눅눅해집니다.','자를 때는 루콜라가 쏟아지지 않게 피자 커터를 한 번에 눌러 자르세요.'],
+  subs:['프로슈토 → 하몽, 얇은 훈제 햄','루콜라 → 어린잎 채소, 시금치 어린잎']
+},
+{
+  id:'patate', name:'감자 로즈마리', orig:'Pizza Patate e Rosmarino · 로마',
+  desc:'종잇장처럼 얇게 썬 감자와 로즈마리, 올리브오일을 올린 로마식 화이트 피자. 감자 가장자리가 바삭하게 구워지고 속은 포슬포슬합니다.',
+  tags:['white','veg'], level:'보통', dough:'napoli', doughs:['napoli','sameday'], cook:15,
+  oven:{pre:'25분', temp:'400°C', tempNote:'한 단계 낮게', time:'약 3분', turn:'1분 30초 후'},
+  why:'감자가 익을 시간이 필요해 온도를 조금 낮추고 시간을 늘립니다. 450°C면 감자가 익기 전에 테두리가 탑니다.',
+  draw:{base:'white', cheese:'lightshred', top:[['potato',15],['rosemary',9],['pepper']]},
+  groups:[
+    {g:'감자', items:[
+      {n:'감자', q:0.5, u:'개', note:'중간 크기, 약 80g'},
+      {n:'고운 소금', q:1, u:'g'},
+      {n:'올리브오일', q:1, u:'큰술'}
+    ]},
+    {g:'토핑', items:[
+      {n:'슈레드 모짜렐라', q:60, u:'g'},
+      {n:'생 로즈마리', q:1, u:'줄기', note:'잎만 떼기. 말린 것은 1/2작은술'},
+      {n:'파르미지아노 레지아노', q:10, u:'g', note:'곱게 갈아서'}
+    ]},
+    {g:'굽고 나서', items:[
+      {n:'굵은 후추', q:null, txt:'조금'},
+      {n:'올리브오일', q:0.5, u:'작은술'}
+    ]}
+  ],
+  prep:[
+    {h:'감자 썰기', d:8, p:'감자 껍질을 벗기고 채칼로 1~2mm 두께로 얇게 썹니다. 찬물에 5분 담가 전분을 빼고 키친타월로 물기를 완전히 닦습니다.'},
+    {h:'감자 양념', d:2, p:'감자에 소금, 올리브오일, 로즈마리 절반을 넣어 버무립니다. 소금이 감자 수분을 빼서 더 바삭해집니다.'}
+  ],
+  top:[
+    {h:'치즈 · 감자', d:3, p:'모짜렐라와 파르미지아노를 먼저 깔고, 감자를 바깥쪽부터 비늘처럼 살짝 겹쳐 둘러 놓습니다. 남은 로즈마리를 흩습니다.'}
+  ],
+  launchSec:90, turnSec:90,
+  finish:'꺼내서 후추를 갈아 올리고 올리브오일을 살짝 뿌립니다. 감자가 덜 익었으면 30초 더.',
+  tips:['감자 두께가 맛을 결정합니다. 2mm를 넘으면 3분 안에 익지 않습니다.','칼로 썰 때는 감자를 반으로 잘라 평평한 면을 바닥에 두면 안전합니다.','로마에서는 치즈 없이 감자와 오일만 올리기도 합니다. 치즈를 빼면 2분 30초.'],
+  subs:['생 로즈마리 → 말린 로즈마리, 타임','슈레드 모짜렐라 → 생 모짜렐라 60g']
+},
+{
+  id:'funghi', name:'버섯 마늘 비앙카', orig:'Pizza Bianca ai Funghi · 이탈리아',
+  desc:'마늘 오일에 버무린 양송이를 듬뿍 올린 화이트 피자. 마트에서 바로 살 수 있는 재료로 깊은 감칠맛을 냅니다.',
+  tags:['white','veg'], level:'쉬움', dough:'napoli', doughs:['napoli','sameday'], cook:12,
+  oven:{pre:'25분', temp:'420°C', tempNote:'최고보다 살짝 낮게', time:'약 2분 30초', turn:'1분 15초 후'},
+  why:'버섯에서 수분이 나오기 때문에 조금 더 오래 구워 수분을 날립니다. 마늘이 타지 않게 최고 온도는 피합니다.',
+  draw:{base:'white', cheese:'fresh', top:[['mushroom',13],['parsley'],['pepper']]},
+  groups:[
+    {g:'버섯 · 마늘 오일', items:[
+      {n:'양송이버섯', q:4, u:'개', note:'약 60g. 굽기 직전에 3mm 두께로'},
+      {n:'마늘', q:1, u:'쪽', note:'곱게 다지기'},
+      {n:'올리브오일', q:1, u:'큰술'},
+      {n:'소금', q:null, txt:'한 꼬집'}
+    ]},
+    {g:'토핑', items:[
+      {n:'생 모짜렐라', q:70, u:'g', note:'찢어서 물기 빼기'},
+      {n:'파르미지아노 레지아노', q:8, u:'g', note:'곱게 갈아서'}
+    ]},
+    {g:'굽고 나서', items:[
+      {n:'이탈리안 파슬리 (선택)', q:1, u:'큰술', note:'다져서'},
+      {n:'후추', q:null, txt:'조금'},
+      {n:'트러플오일 (있으면)', q:null, txt:'2~3방울'}
+    ]}
+  ],
+  prep:[
+    {h:'마늘 오일', d:2, p:'다진 마늘을 올리브오일에 섞어 둡니다. 볶지 않습니다.'},
+    {h:'버섯 썰기', d:4, p:'굽기 직전에 양송이를 3mm로 썰어 마늘 오일 절반과 소금에 버무립니다. 미리 썰면 색이 변하고 물이 나옵니다.'}
+  ],
+  top:[
+    {h:'베이스 · 토핑', d:3, p:'남은 마늘 오일을 도우에 바르고 모짜렐라를 흩은 뒤 버섯을 겹치지 않게 올립니다. 파르미지아노를 뿌립니다.'}
+  ],
+  launchSec:75, turnSec:75,
+  finish:'꺼내서 파슬리와 후추를 뿌리고, 트러플오일이 있으면 몇 방울 떨어뜨립니다.',
+  tips:['버섯을 겹쳐 올리면 찐 것처럼 물러집니다. 한 겹으로.','표고나 새송이를 섞어도 좋습니다. 새송이는 얇게 찢어서.','마늘 오일을 넉넉히 바르면 토마토 없이도 촉촉합니다.'],
+  subs:['양송이 → 표고, 새송이, 느타리','파슬리 → 쪽파 송송']
+},
+{
+  id:'burrata', name:'부라타 방울토마토', orig:'Burrata e Pomodorini · 이탈리아',
+  desc:'방울토마토를 올려 구운 피자 한가운데 차가운 부라타를 터뜨려 올립니다. 뜨거운 도우와 크리미한 치즈의 온도 차가 매력입니다.',
+  tags:['red','veg'], level:'쉬움', dough:'napoli', doughs:['napoli','sameday'], cook:9,
+  oven:{pre:'25분', temp:'450°C', tempNote:'최고 온도', time:'약 2분', turn:'1분 후 180°'},
+  why:'부라타는 굽고 나서 올리므로 마르게리타와 같은 조건으로 굽습니다. 방울토마토가 살짝 터질 정도면 충분합니다.',
+  draw:{base:'red', cheese:'burrata', top:[['cherry',10],['basil',5],['pepper']]},
+  groups:[
+    {g:'굽기 전', items:[
+      {n:'홀토마토 통조림', q:70, u:'g', note:'손으로 으깨기'},
+      {n:'고운 소금', q:0.7, u:'g'},
+      {n:'생 모짜렐라', q:40, u:'g', note:'찢어서 물기 빼기'},
+      {n:'방울토마토', q:6, u:'개', note:'반으로 자르기'},
+      {n:'올리브오일', q:1, u:'작은술'}
+    ]},
+    {g:'굽고 나서', items:[
+      {n:'부라타', q:0.5, u:'개', note:'약 60g. 굽기 30분 전 냉장고에서 꺼내기'},
+      {n:'생 바질', q:4, u:'잎'},
+      {n:'굵은 후추', q:null, txt:'조금'},
+      {n:'발사믹 글레이즈 (선택)', q:0.5, u:'작은술'}
+    ]}
+  ],
+  prep:[
+    {h:'재료 준비', d:5, p:'모짜렐라 물기를 빼고 소스를 만듭니다. 방울토마토는 반으로 잘라 단면이 위로 가게 두고 소금을 아주 조금 뿌려 둡니다. 부라타는 실온에 꺼내 둡니다.'}
+  ],
+  top:[
+    {h:'소스 · 토핑', d:2, p:'소스를 펴고 모짜렐라를 적게 흩은 뒤 방울토마토를 단면이 위로 가게 올립니다. 가운데는 부라타 자리로 조금 비워 둡니다. 오일을 두릅니다.'}
+  ],
+  launchSec:60, turnSec:60,
+  finish:'꺼내서 가운데에 부라타를 올려 칼끝으로 가르고, 바질과 후추, 발사믹 글레이즈를 뿌립니다.',
+  tips:['부라타를 같이 구우면 크림이 분리되어 버립니다. 반드시 굽고 나서.','방울토마토 단면을 아래로 두면 즙이 도우에 스며 눅눅해집니다.','부라타 1개(약 120g)로 2판을 만들 수 있습니다.'],
+  subs:['부라타 → 생 모짜렐라 한 덩이, 리코타','방울토마토 → 대추토마토']
+}
+];
+
+const TAGS = {beginner:'초보 추천', red:'토마토 베이스', white:'화이트', meat:'고기', veg:'채식'};
+
+/* ---------- 유틸 ---------- */
+const $ = (s,el=document)=>el.querySelector(s);
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function fmtDur(m){
+  if(m<60) return `${Math.round(m)}분`;
+  const h=Math.floor(m/60), r=Math.round(m%60);
+  return r? `${h}시간 ${r}분` : `${h}시간`;
+}
+function prepMin(r, doughId){
+  const d=DOUGHS[doughId||r.dough];
+  return d.stages.reduce((a,s)=>a+s.m,0);
+}
+function fracStr(v){
+  const w=Math.floor(v), f=Math.round((v-w)*4)/4;
+  const m={0:'',0.25:'¼',0.5:'½',0.75:'¾'};
+  if(f===1) return String(w+1);
+  return (w? String(w):'') + (m[f]||'') || '0';
+}
+function fmtQty(q,u,n){
+  if(q==null) return '';
+  const v=q*n;
+  if(u==='g'){
+    if(v<1) return `${(Math.round(v*100)/100).toString()}g`;
+    if(v<10) return `${(Math.round(v*10)/10).toString()}g`;
+    return `${Math.round(v)}g`;
+  }
+  if(u==='큰술'||u==='작은술') return `${fracStr(Math.round(v*4)/4)} ${u}`;
+  return `${fracStr(Math.round(v*2)/2)}${u}`;
+}
+
+/* ---------- 피자 그림 (SVG 생성) ---------- */
+function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+let uid=0;
+function pizzaSVG(r){
+  const R=rng(hash(r.id)), id='p'+(uid++);
+  const pt=(rr)=>{const a=R()*Math.PI*2, d=rr*Math.sqrt(R());return[Math.cos(a)*d,Math.sin(a)*d]};
+  const f=n=>n.toFixed(2);
+  let s=`<svg viewBox="-50 -50 100 100" role="img" aria-label="${esc(r.name)} 피자 그림"><defs>
+  <radialGradient id="${id}c"><stop offset="0.72" stop-color="#EBC88E"/><stop offset="0.9" stop-color="#D49A55"/><stop offset="1" stop-color="#94592A"/></radialGradient>
+  <radialGradient id="${id}s"><stop offset="0.6" stop-color="#C23A20"/><stop offset="1" stop-color="#9E2A16"/></radialGradient></defs>`;
+  s+=`<circle r="47" fill="url(#${id}c)"/>`;
+  for(let i=0;i<46;i++){const a=R()*Math.PI*2,d=40.5+R()*6;s+=`<circle cx="${f(Math.cos(a)*d)}" cy="${f(Math.sin(a)*d)}" r="${f(0.6+R()*2.2)}" fill="#2C170A" opacity="${f(0.35+R()*0.5)}"/>`}
+  const d=r.draw;
+  if(d.base==='red'){
+    s+=`<circle r="37" fill="url(#${id}s)"/>`;
+    for(let i=0;i<14;i++){const a=i/14*Math.PI*2+R()*.3;s+=`<circle cx="${f(Math.cos(a)*35)}" cy="${f(Math.sin(a)*35)}" r="${f(2.5+R()*2)}" fill="#B9341C"/>`}
+  } else {
+    s+=`<circle r="37.5" fill="#EBD3A0"/><circle r="36" fill="#F1DDB0" opacity=".8"/>`;
+  }
+  const melt=(n,rr,rmin,rmax,fill,brown)=>{for(let i=0;i<n;i++){const[x,y]=pt(rr);const rad=rmin+R()*(rmax-rmin);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(rad)}" fill="${fill}"/>`;if(brown&&R()<.6)s+=`<circle cx="${f(x+rad*.3)}" cy="${f(y-rad*.2)}" r="${f(rad*.35)}" fill="#E3B872" opacity=".8"/>`}};
+  if(d.cheese==='fresh') melt(8,27,5,8,'#FBF7EE',true);
+  if(d.cheese==='light') melt(5,26,5,7,'#FBF7EE',true);
+  if(d.cheese==='shred'){s+=`<circle r="35" fill="#F4DB97" opacity=".95"/>`;for(let i=0;i<55;i++){const[x,y]=pt(33);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(.8+R()*2.4)}" fill="${R()<.5?'#E6B45A':'#FAEBC0'}"/>`}}
+  if(d.cheese==='lightshred'){for(let i=0;i<40;i++){const[x,y]=pt(33);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(1.5+R()*3)}" fill="${R()<.4?'#EFC876':'#FAEFCB'}"/>`}}
+  if(d.cheese==='four'){s+=`<circle r="35" fill="#F6E2A8"/>`;melt(9,30,3,6,'#FCF8EE',true);for(let i=0;i<14;i++){const[x,y]=pt(31);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(1.6+R()*2.4)}" fill="#E9E4D4"/><circle cx="${f(x)}" cy="${f(y)}" r="${f(.6+R()*.9)}" fill="#7D9297"/>`}for(let i=0;i<30;i++){const[x,y]=pt(33);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(.5+R()*1.2)}" fill="#D9A24B" opacity=".7"/>`}}
+  if(d.cheese==='burrata'){melt(4,26,4,6,'#FBF7EE',true)}
+  const tops={
+    basil(n){for(let i=0;i<n;i++){const[x,y]=pt(28),a=R()*180;s+=`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(a)})"><ellipse rx="4.6" ry="2.5" fill="#2F7A3B"/><path d="M-4 0H4" stroke="#56A35F" stroke-width=".45"/></g>`}},
+    oil(){for(let i=0;i<6;i++){const[x,y]=pt(30);s+=`<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(2+R()*2)}" ry="${f(.8+R())}" fill="#F7E07A" opacity=".45"/>`}},
+    garlic(n){for(let i=0;i<n;i++){const[x,y]=pt(32);s+=`<ellipse cx="${f(x)}" cy="${f(y)}" rx="1.8" ry="1" transform="rotate(${f(R()*180)} ${f(x)} ${f(y)})" fill="#F6E9C8" stroke="#C9963F" stroke-width=".35"/>`}},
+    oregano(){for(let i=0;i<70;i++){const[x,y]=pt(34);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(.25+R()*.3)}" fill="#3F5224"/>`}},
+    pepperoni(n){const placed=[];let tries=0;while(placed.length<n&&tries<400){tries++;const[x,y]=pt(30);if(placed.some(p=>Math.hypot(p[0]-x,p[1]-y)<8.6))continue;placed.push([x,y]);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="4.4" fill="#8F2214"/><circle cx="${f(x)}" cy="${f(y)}" r="3.4" fill="#BB3B25"/><circle cx="${f(x-.8)}" cy="${f(y-.8)}" r="1.2" fill="#D35B3E" opacity=".7"/>`}},
+    walnut(n){for(let i=0;i<n;i++){const[x,y]=pt(28);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(1.4+R())}" fill="#8A5A30"/><circle cx="${f(x+.5)}" cy="${f(y-.4)}" r=".7" fill="#B07A45"/>`}},
+    honey(){for(let k=0;k<3;k++){let x=-28+R()*8,y=-20+k*16+R()*4;let p=`M${f(x)} ${f(y)}`;for(let j=0;j<5;j++){const nx=x+11,ny=y+(R()*10-5);p+=` Q${f(x+5.5)} ${f(ny+(R()*8-4))} ${f(nx)} ${f(ny)}`;x=nx;y=ny}s+=`<path d="${p}" fill="none" stroke="#E3A532" stroke-width="1.1" stroke-linecap="round" opacity=".85"/>`}},
+    potato(n){for(let i=0;i<n;i++){const a=i/n*Math.PI*2*2.2,d=8+i*(24/n);const x=Math.cos(a)*d,y=Math.sin(a)*d;s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(5.6+R()*1.2)}" fill="#F3D88F" stroke="#B9772F" stroke-width=".9"/><circle cx="${f(x+1)}" cy="${f(y-1)}" r="1.4" fill="#FBEBB8" opacity=".7"/>`}},
+    rosemary(n){for(let i=0;i<n;i++){const[cx,cy]=pt(28);for(let j=0;j<5;j++){const a=R()*180;s+=`<path d="M${f(cx)} ${f(cy)}l${f(Math.cos(a)*2.6)} ${f(Math.sin(a)*2.6)}" stroke="#355A30" stroke-width=".7" stroke-linecap="round"/>`}}},
+    pepper(){for(let i=0;i<40;i++){const[x,y]=pt(34);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(.2+R()*.25)}" fill="#1E1A17"/>`}},
+    parsley(){for(let i=0;i<50;i++){const[x,y]=pt(32);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(.35+R()*.4)}" fill="#3F7F2E"/>`}},
+    mushroom(n){for(let i=0;i<n;i++){const[x,y]=pt(29);s+=`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(R()*360)}) scale(1.25)"><path d="M-3.4 0A3.4 3.2 0 0 1 3.4 0Z" fill="#A9845E" stroke="#6E5032" stroke-width=".4"/><path d="M-1 0h2v2.6h-2Z" fill="#D9C2A0" stroke="#6E5032" stroke-width=".35"/></g>`}},
+    prosciutto(n){for(let i=0;i<n;i++){const[x,y]=pt(24),a=R()*180;s+=`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(a)})"><ellipse rx="8" ry="3.4" fill="#D47F7A"/><ellipse cy="1.6" rx="6.5" ry=".8" fill="#F3CFC6"/><ellipse cx="-2" cy="-1" rx="3" ry="1.1" fill="#C26A66"/></g>`}},
+    arugula(n){for(let i=0;i<n;i++){const[x,y]=pt(18);s+=`<ellipse cx="${f(x)}" cy="${f(y)}" rx="3.8" ry="1.5" transform="rotate(${f(R()*180)} ${f(x)} ${f(y)})" fill="${R()<.5?'#3B7A30':'#5A9640'}"/>`}},
+    parmesan(n){for(let i=0;i<n;i++){const[x,y]=pt(20);s+=`<rect x="${f(x-1.8)}" y="${f(y-.7)}" width="3.6" height="1.4" rx=".3" transform="rotate(${f(R()*180)} ${f(x)} ${f(y)})" fill="#F6E8BE"/>`}},
+    cherry(n){const placed=[];let t=0;while(placed.length<n&&t<400){t++;const[x,y]=pt(31);if(Math.hypot(x,y)<14||placed.some(p=>Math.hypot(p[0]-x,p[1]-y)<8))continue;placed.push([x,y]);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="3.8" fill="#CF331C"/><circle cx="${f(x)}" cy="${f(y)}" r="2.8" fill="#E86A4B"/><circle cx="${f(x-1)}" cy="${f(y)}" r=".45" fill="#F6CF86"/><circle cx="${f(x+1)}" cy="${f(y+.4)}" r=".45" fill="#F6CF86"/><circle cx="${f(x)}" cy="${f(y-1.1)}" r=".45" fill="#F6CF86"/>`}}
+  };
+  for(const [k,n] of d.top){ if(k!=='basil'||d.cheese!=='burrata') tops[k](n) }
+  if(d.cheese==='burrata'){
+    for(let i=0;i<9;i++){const a=i/9*Math.PI*2;s+=`<circle cx="${f(Math.cos(a)*9)}" cy="${f(Math.sin(a)*9)}" r="${f(4+R()*2)}" fill="#FCFAF4"/>`}
+    s+=`<circle r="10" fill="#FCFAF4"/><path d="M-6 1C-3-4 4-3 7 1C4 5-3 6-6 1Z" fill="#F1E6CC"/>`;
+    tops.basil(5);
+  }
+  return s+'</svg>';
+}
+
+/* ---------- 화면: 목록 ---------- */
+let filter='all';
+function viewHome(){
+  const chips=[['all','전체'],...Object.entries(TAGS)];
+  const list=RECIPES.filter(r=>filter==='all'||r.tags.includes(filter));
+  return `
+  <section class="intro">
+    <div>
+      <p class="eyebrow">가정용 450°C 전기 피자오븐</p>
+      <h1>집에서 굽는 <em>2분</em> 피자,<br>여덟 가지 레시피</h1>
+      <p>나폴리, 로마, 뉴욕의 피자 레시피를 루이지 오븐에 맞게 정리했습니다. 동네 마트와 온라인몰에서 구할 수 있는 재료만 골랐습니다. 피자를 누르면 재료와 만드는 법이 나옵니다.</p>
+    </div>
+    <dl class="spec">
+      <div><dt>최고 온도</dt><dd>450°C</dd></div>
+      <div><dt>소비 전력</dt><dd>1700W</dd></div>
+      <div><dt>피자 지름</dt><dd>최대 30cm</dd></div>
+      <div><dt>예열</dt><dd>약 25분</dd></div>
+    </dl>
+  </section>
+  <div class="filters" role="group" aria-label="분류">
+    ${chips.map(([k,v])=>`<button type="button" class="chip" data-filter="${k}" aria-pressed="${filter===k}">${v}</button>`).join('')}
+  </div>
+  <div class="grid">
+    ${list.map(r=>`
+      <a class="card" href="#${r.id}">
+        <div class="plate"><span class="badge">${r.level}</span>${pizzaSVG(r)}</div>
+        <div class="card-body">
+          <h3><small>${esc(r.orig)}</small>${esc(r.name)}</h3>
+          <p>${esc(r.desc)}</p>
+          <div class="tags">${r.tags.map(t=>`<span class="tag">${TAGS[t]}</span>`).join('')}</div>
+          <dl class="times">
+            <div><dt>조리시간</dt><dd>${fmtDur(r.cook)}</dd></div>
+            <div><dt>준비시간</dt><dd>${fmtDur(prepMin(r))}</dd></div>
+          </dl>
+        </div>
+      </a>`).join('')}
+  </div>
+  <p class="note" style="margin-top:12px">조리시간: 도우를 펴서 구워 꺼낼 때까지(1판, 예열 25분 별도). 준비시간: 반죽과 숙성을 모두 포함한 시간.</p>
+  <a class="guide-link" href="#guide">
+    <span><b style="color:var(--ink)">도우 · 오븐 가이드</b><br>도우 3종 비교, 루이지 사용 요령, 실패했을 때 확인할 것, 장보기 팁</span>
+    <span class="btn ghost">가이드 보기 →</span>
+  </a>`;
+}
+
+/* ---------- 화면: 상세 ---------- */
+const state={};
+function getState(r){ return state[r.id] ||= {n:2, dough:r.dough, done:new Set(), eat:null}; }
+function viewDetail(r){
+  const st=getState(r), dough=DOUGHS[st.dough];
+  const prep=prepMin(r,st.dough);
+  const groups=[{g:`도우 · ${dough.name}`, note:`1판 약 ${dough.ball}g`, items:dough.ing}, ...r.groups];
+  const ingHTML=groups.map((grp,gi)=>`
+    <div class="ing-group">
+      <h3>${esc(grp.g)} ${grp.note?`<span>${grp.note}</span>`:''}</h3>
+      ${grp.items.map((it,ii)=>{const key=`${gi}-${ii}`;const done=st.done.has(key);return `
+        <label class="ing${done?' done':''}">
+          <input type="checkbox" data-key="${key}" ${done?'checked':''}>
+          <span class="nm">${esc(it.n)}${it.note?`<span class="nt">${esc(it.note)}</span>`:''}</span>
+          <span class="qt">${it.q==null?esc(it.txt):fmtQty(it.q,it.u,st.n)}</span>
+        </label>`}).join('')}
+    </div>`).join('');
+
+  const doughSteps=dough.steps;
+  const cookSteps=[S.preheat(r.oven.temp), S.stretch, S.peel, ...r.top, S.launch(r.launchSec), S.turn(r.turnSec, `필로 꺼내 180° 돌려 다시 넣고 ${fmtSec(r.turnSec)} 더 굽습니다. ${r.finish}`), S.rest];
+  let num=0;
+  const stepHTML=(arr)=>`<ol class="steps">${arr.map(s=>{num++;return `
+    <li class="step"><span class="n mono">${String(num).padStart(2,'0')}</span>
+      <div><h4>${esc(s.h)} <span class="dur">${s.timer?fmtSec(s.timer):fmtDur(s.d)}</span></h4>
+      <p>${esc(s.p)}</p>
+      ${s.timer?`<button type="button" class="tbtn" data-timer="${s.timer}" data-tname="${esc(s.tname)}">▶ ${fmtSec(s.timer)} 타이머</button>`:''}</div>
+    </li>`}).join('')}</ol>`;
+
+  return `
+  <a class="back" href="#">← 전체 레시피</a>
+  <section class="hero">
+    <div class="plate">${pizzaSVG(r)}</div>
+    <div>
+      <p class="eyebrow">${r.tags.map(t=>TAGS[t]).join(' · ')}</p>
+      <h1>${esc(r.name)}</h1>
+      <p class="orig">${esc(r.orig)}</p>
+      <p class="lead">${esc(r.desc)}</p>
+      <dl class="facts">
+        <div><dt>조리시간</dt><dd>${fmtDur(r.cook)}<small>1판, 예열 별도</small></dd></div>
+        <div><dt>준비시간</dt><dd id="prep-val">${fmtDur(prep)}<small>${esc(dough.name)}</small></dd></div>
+        <div><dt>굽는 온도</dt><dd>${r.oven.temp}<small>${r.oven.time}</small></dd></div>
+        <div><dt>난이도</dt><dd>${r.level}<small>${r.tags.includes('beginner')?'처음 구워도 OK':'두세 번째 도전에'}</small></dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-ing">
+    <div class="sec-head">
+      <h2 id="h-ing">재료</h2>
+      <div class="controls">
+        <div><span class="ctrl-label">피자 개수</span>
+          <div class="stepper"><button type="button" id="n-minus" aria-label="한 판 줄이기">−</button><output id="n-val">${st.n}판</output><button type="button" id="n-plus" aria-label="한 판 늘리기">+</button></div></div>
+        ${r.doughs.length>1?`<div><span class="ctrl-label">도우</span><div class="seg" role="group" aria-label="도우 선택">${r.doughs.map(k=>`<button type="button" data-dough="${k}" aria-pressed="${st.dough===k}">${DOUGHS[k].name}</button>`).join('')}</div></div>`:''}
+      </div>
+    </div>
+    <div class="ing-grid">${ingHTML}</div>
+    <p class="note" style="margin-top:10px">체크하면서 장보기·계량에 쓰세요. 이스트처럼 적은 양은 0.1g 단위 저울이 있으면 편하고, 도우는 2판 이상 만드는 것이 계량이 쉽습니다.</p>
+  </section>
+
+  <section class="block" aria-labelledby="h-oven">
+    <div class="sec-head"><h2 id="h-oven">루이지 세팅</h2></div>
+    <dl class="oven">
+      <div><dt>예열</dt><dd>${r.oven.pre}<small>뚜껑 닫고</small></dd></div>
+      <div><dt>온도</dt><dd>${r.oven.temp}<small>${r.oven.tempNote}</small></dd></div>
+      <div><dt>굽는 시간</dt><dd>${r.oven.time}<small>1판 기준</small></dd></div>
+      <div><dt>회전</dt><dd>${r.oven.turn}<small>열선이 가까운 안쪽이 먼저 익음</small></dd></div>
+    </dl>
+    <p class="note oven-why">${esc(r.why)}</p>
+  </section>
+
+  <section class="block" aria-labelledby="h-steps">
+    <div class="sec-head"><h2 id="h-steps">레시피</h2></div>
+    <div class="phase"><h3><span class="pl">A</span>도우 만들기 <span class="sub">${esc(dough.name)} · ${fmtDur(prep)}</span></h3>${stepHTML(doughSteps)}</div>
+    <div class="phase"><h3><span class="pl">B</span>재료 손질 <span class="sub">도우 실온 복귀 중에</span></h3>${stepHTML(r.prep)}</div>
+    <div class="phase"><h3><span class="pl">C</span>펴기 · 토핑 · 굽기 <span class="sub">${fmtDur(r.cook)} + 예열</span></h3>${stepHTML(cookSteps)}</div>
+  </section>
+
+  <section class="block" aria-labelledby="h-plan">
+    <div class="sec-head"><h2 id="h-plan">시간 계획표</h2></div>
+    <div class="plan">
+      <div>
+        <label for="eat-at">먹고 싶은 시간</label>
+        <input type="datetime-local" id="eat-at" value="${toLocalInput(st.eat||defaultEat(r,st))}">
+        <p class="note">시간을 정하면 언제 반죽을 시작해야 하는지 거꾸로 계산합니다.</p>
+      </div>
+      <ul class="tl" id="timeline">${timelineHTML(r,st)}</ul>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-tips">
+    <div class="sec-head"><h2 id="h-tips">팁 · 대체 재료</h2></div>
+    <div class="tips">
+      <div class="tipbox"><h3>잘 굽는 요령</h3><ul>${r.tips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>
+      <div class="tipbox"><h3>재료가 없을 때</h3><ul>${r.subs.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>
+    </div>
+  </section>
+  <p style="margin-top:32px"><a class="btn ghost" href="#">← 다른 피자 보기</a></p>`;
+}
+function fmtSec(s){return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`}
+function toLocalInput(d){const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
+function defaultEat(r,st){
+  const need=prepMin(r,st.dough)+25+r.cook;
+  const d=new Date(Date.now()+need*60000);
+  if(d.getHours()<18 || need>600){ // 숙성이 긴 도우는 다음 가능한 저녁 7시
+    const e=new Date(d); e.setHours(19,0,0,0); if(e<d) e.setDate(e.getDate()+1); return e;
+  }
+  d.setMinutes(0,0,0); d.setHours(d.getHours()+1); return d;
+}
+function timelineHTML(r,st){
+  const eat=st.eat||defaultEat(r,st), dough=DOUGHS[st.dough];
+  const day=['일','월','화','수','목','금','토'];
+  const fmt=d=>`${d.getMonth()+1}/${d.getDate()}(${day[d.getDay()]}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  const bake=new Date(eat-r.cook*60000);
+  const items=[]; let t=new Date(bake-prepMin(r,st.dough)*60000);
+  for(const s of dough.stages){items.push({at:new Date(t),txt:`${s.t} (${fmtDur(s.m)})`}); t=new Date(+t+s.m*60000)}
+  items.push({at:new Date(bake-25*60000),txt:`루이지 예열 시작 (${r.oven.temp})`,cls:'hot'});
+  items.push({at:bake,txt:'도우 펴고 토핑, 굽기',cls:'hot'});
+  items.push({at:eat,txt:'첫 판 완성',cls:'eat'});
+  items.sort((a,b)=>a.at-b.at);
+  const past=items[0].at<new Date();
+  return items.map(i=>`<li class="${i.cls||''}"><span class="when">${fmt(i.at)}</span><span class="what">${esc(i.txt)}</span></li>`).join('')
+    + (past?`<li><span class="what" style="color:var(--accent)">시작 시간이 이미 지났습니다. 먹는 시간을 늦추거나 당일 도우를 골라 보세요.</span></li>`:'');
+}
+
+/* ---------- 화면: 가이드 ---------- */
+function viewGuide(){
+  const rows=Object.entries(DOUGHS).map(([k,d])=>{
+    const total=d.stages.reduce((a,s)=>a+s.m,0);
+    const used=RECIPES.filter(r=>r.doughs.includes(k)).map(r=>r.name);
+    const flour=d.ing[0], water=d.ing[1];
+    return `<tr><td><b>${d.name}</b><br><span class="note">${d.sub}</span></td>
+      <td>${esc(flour.n)}</td><td class="num">${Math.round(water.q/flour.q*100)}%</td>
+      <td class="num">${d.ball}g</td><td class="num">${fmtDur(total)}</td>
+      <td>${k==='ny'?'페퍼로니 기본. 쫄깃하고 색이 잘 남':k==='napoli'?'모든 나폴리·로마식 피자 기본':'숙성할 시간이 없을 때'}</td></tr>`}).join('');
+  const four=k=>DOUGHS[k].ing.map(i=>`${i.n.split(' (')[0]} ${fmtQty(i.q,i.u,4)}`).join(' · ');
+  return `
+  <a class="back" href="#">← 전체 레시피</a>
+  <section class="intro" style="align-items:start">
+    <div>
+      <p class="eyebrow">Unold Luigi 68816</p>
+      <h1>도우 · 오븐 가이드</h1>
+      <p>모든 레시피에 공통으로 쓰이는 도우와 오븐 사용 요령입니다. 첫 피자를 굽기 전에 한 번 읽어 두면 실패가 줄어듭니다.</p>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="g-dough">
+    <div class="sec-head"><h2 id="g-dough">도우 3종 비교</h2></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>도우</th><th>밀가루</th><th>수분율</th><th>1판 무게</th><th>준비시간</th><th>쓰임</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="tips" style="margin-top:16px">
+      <div class="tipbox"><h3>4판 분량 한눈에</h3><ul>
+        <li><b>나폴리</b> — ${four('napoli')}</li>
+        <li><b>당일</b> — ${four('sameday')}</li>
+        <li><b>뉴욕</b> — ${four('ny')}</li>
+      </ul></div>
+      <div class="tipbox"><h3>도우 보관</h3><ul>
+        <li>둥글린 반죽은 냉장 최대 48시간(뉴욕 도우 72시간)까지 괜찮습니다.</li>
+        <li>남는 반죽은 냉장 숙성 12시간 뒤 냉동하면 한 달 보관됩니다. 전날 밤 냉장 해동 후 실온 2시간.</li>
+        <li>굽기 전 반죽이 차가우면 펴는 중에 계속 줄어듭니다. 실온 복귀 시간을 꼭 지키세요.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="g-oven">
+    <div class="sec-head"><h2 id="g-oven">루이지 사용 요령</h2></div>
+    <dl class="oven">
+      <div><dt>최고 온도</dt><dd>450°C<small>나폴리식은 최고 온도로</small></dd></div>
+      <div><dt>피자 크기</dt><dd>26~28cm<small>최대 30cm. 볼 200~215g</small></dd></div>
+      <div><dt>첫 예열</dt><dd>25분<small>뚜껑을 닫은 채로</small></dd></div>
+      <div><dt>판 사이</dt><dd>3~5분<small>스톤 온도 회복</small></dd></div>
+    </dl>
+    <div class="tips" style="margin-top:16px">
+      <div class="tipbox"><h3>굽기 전에</h3><ul>
+        <li>처음 사용할 때는 설명서에 따라 빈 상태로 한 번 가열해 새 제품 냄새를 빼 주세요.</li>
+        <li>평평하고 열에 강한 곳에 두고 주변을 비워 둡니다. 겉면도 뜨거워집니다.</li>
+        <li>토핑은 모두 손질해 작업대에 늘어놓고 시작합니다. 굽는 시간이 2분이라 중간에 준비할 틈이 없습니다.</li>
+      </ul></div>
+      <div class="tipbox"><h3>굽는 동안</h3><ul>
+        <li>뚜껑은 넣고 꺼낼 때만 엽니다. 열 때마다 온도가 크게 떨어집니다.</li>
+        <li>안쪽(열선 쪽)이 먼저 익으니 굽는 시간 절반쯤에 180° 돌립니다.</li>
+        <li>스톤에 떨어진 덧가루는 타면서 연기가 납니다. 식은 뒤 마른 솔로 털어 주세요. 스톤은 세제로 씻지 않습니다.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="g-faq">
+    <div class="sec-head"><h2 id="g-faq">실패했을 때 확인할 것</h2></div>
+    <details><summary>바닥이 하얗고 덜 익어요</summary><p>스톤 예열이 부족합니다. 예열을 25~30분으로 늘리고, 여러 판일 때는 판 사이에 3~5분 쉬세요. 소스나 치즈가 너무 많아도 바닥이 젖어 덜 익습니다.</p></details>
+    <details><summary>테두리는 타는데 가운데가 안 익어요</summary><p>온도를 한 단계 낮추고 시간을 30초 늘립니다. 치즈와 소스를 줄이고, 도우 가운데를 너무 얇게 펴지 않았는지도 확인하세요.</p></details>
+    <details><summary>도우가 필에 붙어서 안 내려가요</summary><p>필에 덧가루(세몰리나가 가장 잘 미끄러짐)를 충분히 뿌리고, 토핑은 필 위에서 빠르게 올립니다. 넣기 전 필을 흔들어 도우가 움직이는지 꼭 확인하세요.</p></details>
+    <details><summary>펴도 펴도 도우가 줄어들어요</summary><p>반죽이 차갑거나 글루텐이 덜 쉬었습니다. 실온에 30분 더 두면 잘 늘어납니다. 억지로 당기면 구멍이 납니다.</p></details>
+    <details><summary>가운데가 질척해요</summary><p>생 모짜렐라의 물기를 충분히 빼지 않았거나 토핑이 많을 때 생깁니다. 모짜렐라는 1시간 이상 물기를 빼고, 1판 80g을 넘기지 마세요.</p></details>
+    <details><summary>테두리가 부풀지 않고 납작해요</summary><p>도우를 펼 때 테두리까지 눌렀거나 밀대를 썼을 가능성이 큽니다. 발효가 덜 됐을 때도 그렇습니다. 손가락으로 눌러 천천히 돌아오는 상태인지 확인하세요.</p></details>
+  </section>
+
+  <section class="block" aria-labelledby="g-shop">
+    <div class="sec-head"><h2 id="g-shop">장보기 · 도구</h2></div>
+    <div class="tips">
+      <div class="tipbox"><h3>재료</h3><ul>
+        <li><b>00 밀가루</b> — 이탈리아산 피자용 00 밀가루. 온라인몰에서 1kg 단위로 쉽게 구합니다. 없으면 강력분으로 대체.</li>
+        <li><b>홀토마토</b> — 이탈리아산 통조림. 산마르자노 품종 표기가 있으면 가장 좋습니다.</li>
+        <li><b>생 모짜렐라</b> — 물에 담긴 볼 형태. 대형마트 치즈 코너.</li>
+        <li><b>인스턴트 드라이이스트</b> — 제과제빵 코너. 개봉 후 냉동 보관.</li>
+        <li><b>세몰리나</b> — 덧가루용. 없으면 밀가루나 쌀가루.</li>
+      </ul></div>
+      <div class="tipbox"><h3>있으면 좋은 도구</h3><ul>
+        <li><b>전자저울</b> — 0.1g 단위면 이스트 계량이 쉽습니다.</li>
+        <li><b>피자 필</b> — 구성품을 먼저 확인하고, 없으면 30cm 이하 알루미늄 필.</li>
+        <li><b>스크래퍼</b> — 반죽 분할과 작업대 정리용.</li>
+        <li><b>밀폐용기</b> — 반죽 1덩이당 1개 (약 500ml).</li>
+        <li><b>적외선 온도계 (선택)</b> — 스톤 온도 확인. 380~430°C면 나폴리식 굽기 좋습니다.</li>
+      </ul></div>
+    </div>
+    <p class="note" style="margin-top:14px">레시피는 나폴리 피자 협회(AVPN) 방식의 반죽 비율, 뉴욕식 저온숙성 도우, 로마식 피자 비앙카 등 해외 레시피를 참고해 가정용 전기 오븐에 맞게 조정했습니다. 오븐 사양은 판매처 정보 기준이며, 사용 전 제품 설명서를 함께 확인하세요.</p>
+  </section>`;
+}
+
+/* ---------- 라우팅 ---------- */
+const app=$('#app');
+function render(){
+  const h=location.hash.replace('#','');
+  const r=RECIPES.find(x=>x.id===h);
+  $('#nav-home').toggleAttribute('aria-current',!r&&h!=='guide'); if(!r&&h!=='guide') $('#nav-home').setAttribute('aria-current','page');
+  $('#nav-guide').toggleAttribute('aria-current',h==='guide'); if(h==='guide') $('#nav-guide').setAttribute('aria-current','page');
+  app.innerHTML = h==='guide'? viewGuide() : r? viewDetail(r) : viewHome();
+  document.title = r? `${r.name} · 루이지 피자 노트` : '루이지 피자 노트';
+}
+function rerenderDetail(r){const y=scrollY;app.innerHTML=viewDetail(r);scrollTo(0,y)}
+window.addEventListener('hashchange',()=>{render();scrollTo(0,0)});
+
+app.addEventListener('click',e=>{
+  const fb=e.target.closest('[data-filter]');
+  if(fb){filter=fb.dataset.filter;render();return}
+  const r=RECIPES.find(x=>x.id===location.hash.slice(1)); if(!r) return;
+  const st=getState(r);
+  if(e.target.closest('#n-minus')){st.n=Math.max(1,st.n-1);rerenderDetail(r)}
+  else if(e.target.closest('#n-plus')){st.n=Math.min(12,st.n+1);rerenderDetail(r)}
+  else if(e.target.closest('[data-dough]')){st.dough=e.target.closest('[data-dough]').dataset.dough;st.done.clear();st.eat=null;rerenderDetail(r)}
+  else if(e.target.closest('[data-timer]')){const b=e.target.closest('[data-timer]');startTimer(+b.dataset.timer,b.dataset.tname)}
+});
+app.addEventListener('change',e=>{
+  const r=RECIPES.find(x=>x.id===location.hash.slice(1)); if(!r) return;
+  const st=getState(r);
+  if(e.target.matches('input[type=checkbox][data-key]')){
+    const k=e.target.dataset.key; e.target.checked? st.done.add(k):st.done.delete(k);
+    e.target.closest('.ing').classList.toggle('done',e.target.checked);
+  }
+  if(e.target.id==='eat-at'&&e.target.value){st.eat=new Date(e.target.value);$('#timeline').innerHTML=timelineHTML(r,st)}
+});
+
+/* ---------- 타이머 ---------- */
+let tState=null, ac=null;
+function beep(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();[0,.35,.7].forEach(t=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=880;g.gain.setValueAtTime(.18,ac.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+t+.3);o.connect(g).connect(ac.destination);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+.3)})}catch(_){}}
+function startTimer(sec,name){
+  try{ac=ac||new (window.AudioContext||window.webkitAudioContext)()}catch(_){}
+  clearInterval(tState?.iv);
+  tState={end:Date.now()+sec*1000,left:sec*1000,paused:false,iv:null};
+  $('#timer-name').textContent=name||'타이머'; $('#timer').hidden=false; $('#timer').classList.remove('ring'); $('#timer-pause').textContent='일시정지';
+  tick(); tState.iv=setInterval(tick,250);
+}
+function tick(){
+  if(!tState||tState.paused) return;
+  const left=Math.max(0,tState.end-Date.now()); tState.left=left;
+  $('#timer-time').textContent=fmtSec(Math.ceil(left/1000));
+  if(left<=0){clearInterval(tState.iv);$('#timer').classList.add('ring');$('#timer-name').textContent='시간 됐어요!';beep();try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(_){}}
+}
+$('#timer-pause').addEventListener('click',()=>{if(!tState||tState.left<=0)return;tState.paused=!tState.paused;if(!tState.paused)tState.end=Date.now()+tState.left;$('#timer-pause').textContent=tState.paused?'계속':'일시정지'});
+$('#timer-close').addEventListener('click',()=>{clearInterval(tState?.iv);tState=null;$('#timer').hidden=true});
+
+render();
+</script>
