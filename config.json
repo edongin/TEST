@@ -1,0 +1,32 @@
+{
+  "rules": [
+    {
+      "_설명": "샤오신 + 패드/태블릿/12.7 이 제목에 함께 있으면 알림 (샤오신 노트북 글은 제외)",
+      "include_any": ["샤오신", "샤오씬", "小新", "xiaoxin"],
+      "require_any": ["패드", "pad", "탭", "tab", "태블릿", "12.7"],
+      "exclude_any": []
+    },
+    {
+      "_설명": "샤오신이라는 말 없이 '레노버 ... 12.7' 로만 올라오는 글도 잡기",
+      "include_any": ["레노버", "lenovo"],
+      "require_any": ["12.7"],
+      "exclude_any": []
+    }
+  ],
+  "sources": [
+    {"name": "뽐뿌 국내", "type": "rss", "url": "https://www.ppomppu.co.kr/rss.php?id=ppomppu"},
+    {"name": "뽐뿌 해외", "type": "rss", "url": "https://www.ppomppu.co.kr/rss.php?id=ppomppu4"},
+    {"name": "뽐뿌 알리", "type": "rss", "url": "https://www.ppomppu.co.kr/rss.php?id=ppomppu8"},
+    {"name": "루리웹 핫딜", "type": "rss", "url": "https://bbs.ruliweb.com/market/board/1020/rss"},
+    {"name": "퀘이사존", "type": "html", "url": "https://quasarzone.com/bbs/qb_saleinfo",
+     "link_pattern": "/bbs/qb_saleinfo/views/\\d+"},
+    {"name": "클리앙 알뜰구매", "type": "html", "url": "https://www.clien.net/service/board/jirum",
+     "link_pattern": "/service/board/jirum/\\d+"},
+    {"name": "딜바다 해외", "type": "html", "url": "https://www.dealbada.com/bbs/board.php?bo_table=deal_oversea",
+     "link_pattern": "bo_table=deal_oversea&wr_id=\\d+"},
+    {"name": "에펨코리아 핫딜", "type": "html", "url": "https://www.fmkorea.com/hotdeal",
+     "link_pattern": "^(/\\d{8,}$|.*document_srl=\\d+)"},
+    {"name": "아카라이브 핫딜", "type": "html", "url": "https://arca.live/b/hotdeal",
+     "link_pattern": "^/b/hotdeal/\\d+"}
+  ]
+}
