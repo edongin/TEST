@@ -151,7 +151,8 @@ const SKIN = new Set(SKIN_NUMS);
 
 const SPEED = 6.5;        // 달리는 속도 (월드 단위/초)
 const SPACING = 15;       // 줄(오브젝트 묶음) 사이 거리 → 약 2.3초마다 하나
-const EVENT_T = 2.3;      // 덧셈/뺄셈 장면 길이(초)
+const EVENT_MIN = 1.7;    // 덧셈/뺄셈 장면 최소 길이(초). 실제 길이는 목소리 길이에 맞춰짐
+const AFTER_GAP = 0.6;    // 합쳐진 뒤 다음 숫자까지 거리 비율 (1이면 평소 간격)
 const READY_T = 1.6;      // 시작 전 "준비~ 출발!" 시간
 const LANE = 1.05;        // 3개 레인 간격
 const ROAD = 1.65;        // 길 반폭
@@ -161,18 +162,19 @@ const UNLOCK_ALL = true;  // 테스트용: 모든 스테이지 열기
 
 // rows: 줄 개수(=플레이 길이), max: 이 스테이지에서 만들 최대 숫자
 // plus/minus/wall: 더하기·빼기·장애물 숫자 범위, trap: 0이 되는 함정 허용
-// mix: 줄 종류 비율 (plus 하나, choice 더하기 둘 중 고르기, versus 더하기vs빼기, minus 빼기 하나, wall 장애물, wallplus 장애물+더하기)
+// mix: 줄 종류 비율 (plus 하나, choice 더하기 둘 중 고르기, versus 더하기vs빼기, minus 빼기 하나,
+//      wall 장애물(바위·나무), wallplus 장애물+더하기, wall2plus 장애물 두 개 사이로 더하기)
 const STAGES = [
-  { rows: 10, max: 10,  plus: [1, 2],   minus: null,    wall: null,    trap: false, mix: { plus: 3, choice: 2 } },
-  { rows: 10, max: 10,  plus: [1, 3],   minus: null,    wall: [1, 1],  trap: false, mix: { plus: 2, choice: 2, wall: 1, wallplus: 1 } },
-  { rows: 11, max: 15,  plus: [1, 3],   minus: [1, 2],  wall: [1, 2],  trap: true,  mix: { plus: 1, choice: 2, versus: 2, wall: 1, wallplus: 1 } },
-  { rows: 11, max: 20,  plus: [1, 5],   minus: [1, 3],  wall: [1, 2],  trap: true,  mix: { choice: 2, versus: 3, wall: 1, wallplus: 2 } },
-  { rows: 11, max: 30,  plus: [2, 6],   minus: [1, 4],  wall: [2, 3],  trap: true,  mix: { choice: 2, versus: 3, wall: 1, wallplus: 2 } },
-  { rows: 11, max: 40,  plus: [3, 9],   minus: [2, 5],  wall: [2, 4],  trap: true,  mix: { choice: 2, versus: 3, wall: 2, wallplus: 2 } },
-  { rows: 11, max: 50,  plus: [4, 10],  minus: [2, 6],  wall: [2, 5],  trap: true,  mix: { choice: 2, versus: 3, wall: 2, wallplus: 2, minus: 1 } },
-  { rows: 11, max: 64,  plus: [5, 15],  minus: [3, 8],  wall: [3, 6],  trap: true,  mix: { choice: 2, versus: 3, wall: 2, wallplus: 2, minus: 1 } },
-  { rows: 11, max: 81,  plus: [8, 20],  minus: [3, 10], wall: [4, 8],  trap: true,  mix: { choice: 2, versus: 3, wall: 2, wallplus: 2, minus: 1 } },
-  { rows: 11, max: 100, plus: [10, 30], minus: [4, 12], wall: [5, 10], trap: true,  mix: { choice: 2, versus: 3, wall: 2, wallplus: 2, minus: 1 } },
+  { rows: 11, max: 10,  plus: [1, 2],   minus: null,    wall: null,    trap: false, mix: { plus: 3, choice: 2 } },
+  { rows: 11, max: 10,  plus: [1, 3],   minus: null,    wall: [1, 1],  trap: false, mix: { plus: 2, choice: 2, wall: 1, wallplus: 2 } },
+  { rows: 12, max: 15,  plus: [1, 3],   minus: [1, 2],  wall: [1, 2],  trap: true,  mix: { plus: 1, choice: 2, versus: 2, wall: 1, wallplus: 2 } },
+  { rows: 12, max: 20,  plus: [1, 5],   minus: [1, 3],  wall: [1, 2],  trap: true,  mix: { choice: 2, versus: 2, wall: 2, wallplus: 2 } },
+  { rows: 12, max: 30,  plus: [2, 6],   minus: [1, 4],  wall: [2, 3],  trap: true,  mix: { choice: 2, versus: 2, wall: 2, wallplus: 2, wall2plus: 1 } },
+  { rows: 12, max: 40,  plus: [3, 9],   minus: [2, 5],  wall: [2, 4],  trap: true,  mix: { choice: 2, versus: 2, wall: 2, wallplus: 3, wall2plus: 2 } },
+  { rows: 12, max: 50,  plus: [4, 10],  minus: [2, 6],  wall: [2, 5],  trap: true,  mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, minus: 1 } },
+  { rows: 12, max: 64,  plus: [5, 15],  minus: [3, 8],  wall: [3, 6],  trap: true,  mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, minus: 1 } },
+  { rows: 12, max: 81,  plus: [8, 20],  minus: [3, 10], wall: [4, 8],  trap: true,  mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, minus: 1 } },
+  { rows: 12, max: 100, plus: [10, 30], minus: [4, 12], wall: [5, 10], trap: true,  mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, minus: 1 } },
 ];
 
 /* =========================================================
@@ -224,6 +226,34 @@ const sfx = {
 };
 // 받침에 따라 은/는 (일·삼·육·칠·팔·십·백 → 은)
 function josa(n) { return [0, 1, 3, 6, 7, 8].includes(n % 10) ? '은' : '는'; }
+// voice/*.mp3: Supertonic(오픈소스 TTS)으로 미리 만든 목소리 조각
+//   p{n} "일 더하기", m{n} "일 빼기", b{n} "칠은", r{n} "팔이에요!", ready/go/finish/over
+const VOICE = { buf: {}, busy: {} };
+let vSrc = [];
+function vload(k) {
+  const a = audio();
+  if (!a || VOICE.buf[k] || VOICE.busy[k]) return;
+  VOICE.busy[k] = true;
+  fetch('voice/' + k + '.mp3').then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); })
+    .then(b => new Promise((res, rej) => a.decodeAudioData(b, res, rej)))
+    .then(buf => { VOICE.buf[k] = buf; }).catch(() => { VOICE.busy[k] = false; });
+}
+function vstop() {
+  vSrc.forEach(s => { try { s.stop(); } catch (e) {} }); vSrc = [];
+  if ('speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {}
+}
+// 조각들을 이어서 재생. 성공하면 끝나는 시점(초 후), 파일이 아직 없으면 -1
+function vplay(keys, delay, gap) {
+  const a = actx;
+  if (!soundOn || !a || !keys.every(k => VOICE.buf[k])) return -1;
+  let t = a.currentTime + (delay || 0);
+  for (const k of keys) {
+    const src = a.createBufferSource(); src.buffer = VOICE.buf[k]; src.connect(a.destination);
+    src.start(t); vSrc.push(src); t += VOICE.buf[k].duration + (gap == null ? 0.04 : gap);
+  }
+  return t - a.currentTime;
+}
+function speak(key, fallback) { vstop(); if (vplay([key]) < 0) say(fallback); }
 function say(text) {
   if (!soundOn || !('speechSynthesis' in window)) return;
   try {
@@ -302,7 +332,7 @@ function weightedType(mix) {
   for (const k of keys) { r -= mix[k]; if (r <= 0) return k; }
   return keys[0];
 }
-function makeRow() {
+function makeRow(gap) {
   const cfg = G.cfg, cur = G.cur, lanes = shuffle([-LANE, 0, LANE]);
   let type = G.rowCount === 0 ? 'plus' : weightedType(cfg.mix);
   const pc = plusCands(cur);
@@ -312,7 +342,8 @@ function makeRow() {
   if (!pc.length && (type === 'plus' || type === 'choice')) type = mc.length ? 'minus' : 'wall';
   const objs = [];
   const num = (v, x) => objs.push({ kind: 'num', v, x, taken: false, ph: Math.random() * 6 });
-  const wall = (p, x) => objs.push({ kind: 'wall', v: -p, x, taken: false });
+  const look = Math.random() < 0.5 ? 'rock' : 'tree';
+  const wall = (p, x) => objs.push({ kind: 'wall', v: -p, x, taken: false, look, seed: Math.random() * 100 });
   switch (type) {
     case 'plus': if (pc.length) num(pick(pc), lanes[0]); break;
     case 'choice': {
@@ -335,14 +366,23 @@ function makeRow() {
       if (wc.length) wall(pick(wc), lanes[0]);
       if (pc.length) num(pick(pc), lanes[1]);
       break;
+    case 'wall2plus':
+      if (wc.length) { const p = pick(wc); wall(p, lanes[0]); wall(p, lanes[1]); }
+      if (pc.length) num(pick(pc), lanes[2]);
+      break;
   }
   if (!objs.length) { if (pc.length) num(pick(pc), lanes[0]); else if (mc.length) num(-pick(mc), lanes[0]); }
-  G.rows.push({ z: G.dist + SPACING, objs, resolved: false, born: G.runT });
+  for (const o of objs) { // 이 줄에서 나올 수 있는 말을 미리 불러두기
+    const r = Math.max(0, cur + o.v);
+    vload((o.v > 0 ? 'p' : 'm') + cur); vload('b' + Math.abs(o.v)); vload('r' + r);
+  }
+  G.rows.push({ z: G.dist + gap, objs, resolved: false, born: G.runT });
   G.rowCount++;
 }
-function spawnNext() {
-  if (G.rowCount < G.cfg.rows) makeRow();
-  else if (!G.finish) G.finish = { z: G.dist + SPACING };
+function spawnNext(gap) {
+  gap = gap || SPACING;
+  if (G.rowCount < G.cfg.rows) makeRow(gap);
+  else if (!G.finish) G.finish = { z: G.dist + gap };
 }
 
 /* ---------- 장식 (나무, 꽃, 구름) ---------- */
@@ -370,7 +410,8 @@ function startStage(i) {
   $('menu').hidden = true; $('result').hidden = true; $('hud').hidden = false; $('nowNum').hidden = false;
   $('stageLabel').textContent = '스테이지 ' + (i + 1);
   updateHud();
-  say('준비');
+  ['ready', 'go', 'finish', 'over'].forEach(vload);
+  setTimeout(() => speak('ready', '준비'), 150);
 }
 function updateHud() {
   $('nowNum').textContent = G.cur;
@@ -378,6 +419,7 @@ function updateHud() {
   $('progFill').style.width = Math.round(clamp(p, 0, 1) * 100) + '%';
 }
 function showMenu() {
+  vstop();
   G.state = 'menu'; G.cur = 1; G.rows = []; G.finish = null; G.event = null;
   $('hud').hidden = true; $('nowNum').hidden = true; $('result').hidden = true; $('menu').hidden = false;
   renderStageGrid();
@@ -430,17 +472,28 @@ function resolveRow(row) {
 function startEvent(o) {
   o.taken = true;
   const a = G.cur, b = Math.abs(o.v), op = o.v > 0 ? '+' : '−', r = Math.max(0, a + o.v);
-  G.event = { a, b, op, r, t: 0, kind: o.kind, burst: false };
+  const e = G.event = { a, b, op, r, t: 0, kind: o.kind, look: o.look, burst: false, T1: 0.95, T2: 1.2, end: EVENT_MIN };
   G.state = 'event';
-  if (o.kind === 'wall') { sfx.hit(); G.shake = 14; burst(W / 2, FY - 60, 18, ['#8a6a4a', '#c9a77c', '#fff']); }
+  if (o.kind === 'wall') { sfx.hit(); G.shake = 14; burst(W / 2, FY - 60, 18, o.look === 'tree' ? ['#3fae49', '#8a5a35', '#fff'] : ['#8a8f98', '#c4c8ce', '#fff']); }
   else if (o.v > 0) sfx.plus(); else sfx.minus();
-  say(a + ' ' + (op === '+' ? '더하기' : '빼기') + ' ' + b + josa(b) + ' ' + r);
+  // "일 더하기 칠은" → (8이 나타날 때) "팔이에요!"
+  vstop();
+  const lead = o.kind === 'wall' ? 0.25 : 0.12;
+  const d1 = vplay([(op === '+' ? 'p' : 'm') + a, 'b' + b], lead);
+  if (d1 > 0) {
+    e.T2 = Math.max(1.0, d1 + 0.02); e.T1 = e.T2 - 0.3;
+    const d2 = vplay(['r' + r], e.T2);
+    e.end = Math.max(EVENT_MIN, d2 + 0.12);
+  } else {
+    say(a + ' ' + (op === '+' ? '더하기' : '빼기') + ' ' + b + josa(b) + ' ' + r);
+    e.end = 2.1; e.T1 = 1.1; e.T2 = 1.4;
+  }
 }
 function endEvent() {
   const e = G.event;
   G.cur = e.r;
-  if (e.r < 1) { G.state = 'over'; G.endT = 0; sfx.over(); setTimeout(() => say('앗, 0이 되었어요. 다시 해 볼까?'), 200); }
-  else { G.state = 'run'; G.event = null; spawnNext(); }
+  if (e.r < 1) { G.state = 'over'; G.endT = 0; sfx.over(); setTimeout(() => speak('over', '앗, 0이 되었어요. 다시 해 볼까?'), 200); }
+  else { G.state = 'run'; G.event = null; spawnNext(SPACING * AFTER_GAP); }
   updateHud();
 }
 
@@ -508,23 +561,23 @@ function update(dt) {
   }
   if (G.state === 'ready') {
     G.readyT += dt; G.runT += dt * 0.4;
-    if (G.readyT >= READY_T) { G.state = 'run'; sfx.go(); say('출발!'); spawnNext(); updateHud(); }
+    if (G.readyT >= READY_T) { G.state = 'run'; sfx.go(); speak('go', '출발!'); spawnNext(); updateHud(); }
   }
   if (G.state === 'run') {
     for (const row of G.rows) if (!row.resolved && row.z - G.dist <= 0) { resolveRow(row); break; }
     if (G.state === 'run' && G.finish && G.finish.z - G.dist <= 0) {
-      G.state = 'clear'; G.endT = 0; sfx.clear(); say('도착! ' + G.cur);
+      G.state = 'clear'; G.endT = 0; sfx.clear(); speak('finish', '도착! 잘했어요!');
       for (let i = 0; i < 4; i++) burst(rnd(W * 0.2, W * 0.8), rnd(H * 0.2, H * 0.5), 22, ['#ff6b8b', '#ffd23f', '#5ad1ff', '#7be07b', '#c792ff'], true);
       updateHud();
     }
   }
   if (G.state === 'event') {
     G.event.t += dt;
-    if (!G.event.burst && G.event.t >= 1.55) {
+    if (!G.event.burst && G.event.t >= G.event.T2) {
       G.event.burst = true;
       if (G.event.r > 0) { sfx.pop(); burst(W / 2, H * 0.47, 26, ['#ffd23f', '#ff8a1f', '#7be07b', '#5ad1ff'], true); }
     }
-    if (G.event.t >= EVENT_T) endEvent();
+    if (G.event.t >= G.event.end) endEvent();
   }
   if (G.state === 'clear' || G.state === 'over') {
     G.endT += dt;
@@ -674,24 +727,52 @@ function drawNum(o, z, fade) {
   badge(label, p.x, by - Math.max(h, s * 0.8) - s * 0.2, Math.max(13, s * 0.24), plus ? '#1fa84a' : '#e5484d');
   ctx.globalAlpha = 1;
 }
+function minusMark(label, x, y, size) {
+  ctx.font = font(size); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, size * 0.22); ctx.strokeStyle = '#fff'; ctx.strokeText(label, x, y);
+  ctx.fillStyle = '#e5484d'; ctx.fillText(label, x, y);
+}
+function drawRock(o, p, s) {
+  const w = s * 0.92, h = s * 0.62, cx = p.x, cy = p.y - h * 0.5;
+  ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx, p.y, w * 0.55, s * 0.09, 0, 0, 7); ctx.fill();
+  // 울퉁불퉁한 바위 (오브젝트마다 모양이 조금씩 다름)
+  ctx.beginPath();
+  for (let i = 0; i <= 12; i++) {
+    const a = Math.PI + i / 12 * Math.PI, j = 1 + 0.09 * Math.sin(o.seed + i * 2.3);
+    ctx.lineTo(cx + Math.cos(a) * w * 0.5 * j, p.y - 2 + Math.sin(a) * h * j);
+  }
+  ctx.closePath();
+  const g = ctx.createLinearGradient(cx, p.y - h, cx, p.y);
+  g.addColorStop(0, '#b9bec6'); g.addColorStop(1, '#7d838d');
+  ctx.fillStyle = g; ctx.fill();
+  ctx.lineWidth = Math.max(1.5, s * 0.03); ctx.strokeStyle = '#5c626b'; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(cx - w * 0.18, p.y - h * 0.72, w * 0.12, h * 0.08, -0.4, 0, 7); ctx.fill();
+  minusMark('−' + Math.abs(o.v), cx, cy + h * 0.05, Math.max(15, s * 0.36));
+}
+function drawTree(o, p, s) {
+  const cx = p.x;
+  ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx, p.y, s * 0.42, s * 0.09, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#8a5a35'; ctx.fillRect(cx - s * 0.07, p.y - s * 0.3, s * 0.14, s * 0.3);
+  // 동글동글한 작은 나무
+  const r = s * 0.36, ty = p.y - s * 0.3 - r * 0.85;
+  ctx.fillStyle = '#2f9a3d';
+  ctx.beginPath(); ctx.arc(cx - r * 0.55, ty + r * 0.15, r * 0.65, 0, 7); ctx.arc(cx + r * 0.55, ty + r * 0.15, r * 0.65, 0, 7); ctx.arc(cx, ty - r * 0.25, r * 0.75, 0, 7); ctx.fill();
+  ctx.fillStyle = '#43b552'; ctx.beginPath(); ctx.arc(cx - r * 0.3, ty - r * 0.45, r * 0.32, 0, 7); ctx.fill();
+  ctx.lineWidth = Math.max(1.5, s * 0.025); ctx.strokeStyle = '#237a2f';
+  ctx.beginPath(); ctx.arc(cx - r * 0.55, ty + r * 0.15, r * 0.65, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + r * 0.55, ty + r * 0.15, r * 0.65, 0, 7); ctx.stroke();
+  // 숫자 팻말
+  const sw = s * 0.52, sh = s * 0.3, sy = ty - sh * 0.15;
+  ctx.fillStyle = '#fff'; rrect(cx - sw / 2, sy - sh / 2, sw, sh, sh * 0.3); ctx.fill();
+  ctx.strokeStyle = '#e5484d'; ctx.lineWidth = Math.max(2, s * 0.03); ctx.stroke();
+  const fs = Math.max(13, s * 0.26);
+  ctx.font = font(fs); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#e5484d'; ctx.fillText('−' + Math.abs(o.v), cx, sy + 1);
+}
 function drawWall(o, z, fade) {
-  const p = proj(o.x, 0, z), s = p.s, w = s * 0.95, h = s * 0.55;
+  const p = proj(o.x, 0, z);
   ctx.globalAlpha = fade;
-  ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, w * 0.55, s * 0.08, 0, 0, 7); ctx.fill();
-  // 기둥
-  ctx.fillStyle = '#7a5434';
-  ctx.fillRect(p.x - w * 0.42, p.y - h, w * 0.1, h); ctx.fillRect(p.x + w * 0.32, p.y - h, w * 0.1, h);
-  // 줄무늬 판
-  const bx = p.x - w / 2, byy = p.y - h * 0.95, bh = h * 0.5;
-  ctx.save(); rrect(bx, byy, w, bh, bh * 0.2); ctx.clip();
-  ctx.fillStyle = '#fff'; ctx.fillRect(bx, byy, w, bh);
-  ctx.fillStyle = '#ff7a1a';
-  for (let i = -2; i < 8; i++) { ctx.beginPath(); ctx.moveTo(bx + i * w / 5, byy + bh); ctx.lineTo(bx + i * w / 5 + w / 10, byy + bh); ctx.lineTo(bx + i * w / 5 + w / 10 + bh, byy); ctx.lineTo(bx + i * w / 5 + bh, byy); ctx.fill(); }
-  ctx.restore();
-  ctx.strokeStyle = '#5a3c22'; ctx.lineWidth = Math.max(1.5, s * 0.025); rrect(bx, byy, w, bh, bh * 0.2); ctx.stroke();
-  // 돌멩이
-  ctx.fillStyle = '#9aa0a8'; ctx.beginPath(); ctx.ellipse(p.x, p.y - h * 0.12, w * 0.3, h * 0.16, 0, 0, 7); ctx.fill();
-  badge('−' + Math.abs(o.v), p.x, byy - s * 0.26, Math.max(13, s * 0.24), '#e5484d');
+  if (o.look === 'tree') drawTree(o, p, p.s * 1.25); else drawRock(o, p, p.s * 1.05);
   ctx.globalAlpha = 1;
 }
 function drawFinish(z) {
@@ -724,7 +805,7 @@ function drawPlayer() {
   ctx.fillStyle = 'rgba(0,0,0,0.22)';
   ctx.beginPath(); ctx.ellipse(p.x, p.y, u * (0.42 - bob / u * 0.6), u * 0.1, 0, 0, 7); ctx.fill();
   let n = G.cur;
-  if (G.state === 'event' && G.event.t >= 1.3) n = Math.max(1, G.event.r);
+  if (G.state === 'event' && G.event.t >= G.event.T2) n = Math.max(1, G.event.r);
   if (G.state === 'over') n = G.event ? G.event.a : 1;
   ctx.save();
   ctx.translate(p.x, p.y - bob);
@@ -781,7 +862,7 @@ function drawSegs(segs, cx, y, size) {
 }
 function drawEvent() {
   const e = G.event, t = e.t, plus = e.op === '+';
-  const fin = clamp((EVENT_T - t) / 0.22, 0, 1), fadeIn = clamp(t / 0.18, 0, 1), A = Math.min(fin, fadeIn);
+  const fin = clamp((e.end - t) / 0.2, 0, 1), fadeIn = clamp(t / 0.18, 0, 1), A = Math.min(fin, fadeIn);
   ctx.fillStyle = 'rgba(30,50,90,' + (0.35 * A) + ')'; ctx.fillRect(0, 0, W, H);
   const pw = Math.min(W - 32, 540), ph = Math.min(H * 0.52, 430), cx = W / 2, cy = H * 0.5;
   const k = easeOutBack(t / 0.3) * (0.85 + 0.15 * fin);
@@ -789,9 +870,9 @@ function drawEvent() {
   const col = plus ? '#1fa84a' : '#e5484d';
   ctx.fillStyle = '#fff'; rrect(cx - pw / 2, cy - ph / 2, pw, ph, 30); ctx.fill();
   ctx.lineWidth = 6; ctx.strokeStyle = plus ? '#7be07b' : '#ff9a9e'; ctx.stroke();
-  if (e.kind === 'wall') text('쿵!', cx, cy - ph / 2 + 26, 30, '#e5484d', '#fff');
+  if (e.kind === 'wall') text(e.look === 'tree' ? '나무에 쿵!' : '바위에 쿵!', cx, cy - ph / 2 + 28, 28, '#e5484d', '#fff');
   const boxH = ph * 0.48, base = cy + ph * 0.12, eqY = cy + ph * 0.33, eqSize = Math.min(64, ph * 0.17);
-  const T1 = 1.2, T2 = 1.55;
+  const T1 = e.T1, T2 = e.T2;
   const mid = e.op;
   if (t < T2) {
     const m = easeInOut((t - T1) / (T2 - T1));
