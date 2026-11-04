@@ -3,7 +3,8 @@
 다운로드해서 폰에서 바로 열 수 있도록 인터넷 없이 동작하는 버전을 만든다.
 필요: pip install pillow fonttools brotli
 사용: python3 build_offline.py [Jua-Regular.ttf 경로]
-글꼴 경로를 안 주면 기기 기본 글꼴을 쓴다.
+      python3 build_offline.py --font-from 숫자달리기.html   (이전 한 파일 버전에 든 글꼴을 그대로 씀)
+글꼴을 안 주면 기기 기본 글꼴을 쓴다.
 """
 import base64, io, json, os, re, sys
 from PIL import Image
@@ -16,11 +17,11 @@ def b64(data):
     return base64.b64encode(data).decode('ascii')
 
 
-def skins():
+def skins(folder='skins'):
     out = {}
-    for f in sorted(os.listdir(os.path.join(HERE, 'skins'))):
+    for f in sorted(os.listdir(os.path.join(HERE, folder))):
         n = int(f.split('.')[0])
-        im = Image.open(os.path.join(HERE, 'skins', f)).convert('RGBA')
+        im = Image.open(os.path.join(HERE, folder, f)).convert('RGBA')
         buf = io.BytesIO()
         im.save(buf, 'WEBP', quality=85, method=6)  # 투명 배경 유지, PNG보다 훨씬 작음
         out[n] = 'data:image/webp;base64,' + b64(buf.getvalue())
@@ -48,9 +49,14 @@ def main():
     html = open(os.path.join(HERE, 'index.html'), encoding='utf-8').read()
     # 인터넷 글꼴 링크 제거 → 내장 글꼴로 대체
     html = re.sub(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com[^>]*>\n?', '', html)
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 2 and sys.argv[1] == '--font-from':
+        old = open(sys.argv[2], encoding='utf-8').read()
+        m = re.search(r'@font-face \{ font-family: "Jua";[^}]*\}\n', old)
+        assert m, '글꼴을 찾지 못함'
+        html = html.replace('<style>\n', '<style>\n' + m.group(0), 1)
+    elif len(sys.argv) > 1:
         html = html.replace('<style>\n', '<style>\n' + font_face(sys.argv[1], html), 1)
-    embed = json.dumps({'skins': skins(), 'voice': voices()}, separators=(',', ':'))
+    embed = json.dumps({'skins': skins(), 'back': skins('skins_back'), 'voice': voices()}, separators=(',', ':'))
     html = html.replace("<script>\n'use strict';", '<script>window.EMBED=' + embed + ';</script>\n<script>\n\'use strict\';', 1)
     assert 'window.EMBED=' in html
     open(OUT, 'w', encoding='utf-8').write(html)
