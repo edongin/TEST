@@ -33,6 +33,7 @@
 `voice/*.mp3`는 오픈소스 TTS [Supertonic 3](https://github.com/supertone-inc/supertonic)(코드 MIT, 모델 OpenRAIL-M)를
 [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)로 미리 만든 한국어 음성 조각입니다. 인터넷 API 없이 게임과 함께 배포됩니다.
 
-- `p{n}` "일 더하기", `m{n}` "일 빼기", `b{n}` "칠은", `r{n}` "팔이에요!", `ready`/`go`/`finish`/`over`
-- 게임은 "일 더하기 칠은"을 먼저 재생하고, 결과 숫자가 나타나는 순간 "팔이에요!"를 이어 붙입니다.
+- `p{n}` "일 더하기", `m{n}` "일 빼기", `b{n}` "칠은", `r{n}` "바로 팔!", `ready`/`go`/`finish`/`over`
+- 게임은 "일 더하기 칠은"을 먼저 재생하고, 결과 숫자가 나타나는 순간 "바로 팔!"을 이어 붙입니다.
+- 말하기 속도는 기본보다 조금 느린 0.88배입니다.
 - 파일을 못 불러오면 휴대폰 기본 음성으로 대신 읽습니다.
