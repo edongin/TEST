@@ -3,7 +3,7 @@
 만 4세 아이용 덧셈·뺄셈 러너 게임. HTML 파일 하나(`index.html`)와 숫자 스킨 이미지(`skins/`)로 되어 있습니다.
 
 ## 실행
-- 폰에서: 이 폴더를 웹에 올리면 바로 됩니다(GitHub Pages 등). `index.html`과 `skins/` 폴더가 같은 위치에 있어야 합니다.
+- 폰에서: 이 폴더를 웹에 올리면 바로 됩니다(GitHub Pages 등). `index.html`, `skins/`, `voice/` 폴더가 같은 위치에 있어야 합니다.
 - PC에서: 이 폴더에서 `python3 -m http.server` 실행 후 `http://localhost:8000` 접속. 키보드 ←/→ 로도 움직일 수 있습니다.
 
 ## 규칙
