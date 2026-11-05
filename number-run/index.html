@@ -158,6 +158,9 @@ h1 { margin: 0; font-weight: 400; font-size: 44px; line-height: 1; text-wrap: ba
 const SKIN_NUMS = Array.from({length: 50}, (_, i) => i + 1)
   .concat([54, 55, 56, 60, 63, 64, 70, 72, 80, 81, 90, 100]);
 const SKIN = new Set(SKIN_NUMS);
+// 100보다 큰 숫자는 100과 다른 숫자가 손잡은 모습 (예: 123 = 100 + 23). 최대 200
+const MAXN = 200;
+function valid(n) { return n >= 1 && n <= MAXN && SKIN.has(n > 100 ? n - 100 : n); }
 
 const SPEED = 6.5;        // 달리는 속도 (월드 단위/초)
 const SPACING = 15;       // 줄(오브젝트 묶음) 사이 거리 → 약 2.3초마다 하나
@@ -185,15 +188,28 @@ const STAGES = [
   { rows: 12, max: 50,  plus: [4, 10],  minus: [2, 6],  wall: [2, 5],  trap: true,  mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, wall3plus: 1, minus: 1 } },
   { rows: 12, max: 64,  plus: [5, 15],  minus: [3, 8],  wall: [3, 6],  trap: true,  mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, wall3plus: 1, minus: 1 } },
   { rows: 12, max: 81,  plus: [8, 20],  minus: [3, 10], wall: [4, 8],  trap: true,  mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, wall3plus: 1, minus: 1 } },
-  { rows: 12, max: 100, plus: [10, 30], minus: [4, 12], wall: [5, 10], trap: true,  mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, wall3plus: 1, minus: 1 } },
+  { rows: 12, max: 100, cap: 200, plus: [10, 30], minus: [4, 12], wall: [5, 10], trap: true,  mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, wall3plus: 1, minus: 1 } },
+  // 11~20: 100이 넘는 숫자, 점점 빨라지고 장애물이 많아짐 (speed: 기본 속도의 배수)
+  { rows: 12, max: 110, cap: 200, speed: 1.04, plus: [8, 30],  minus: [4, 14],  wall: [5, 12],  trap: true, mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, wall3plus: 1, minus: 1 } },
+  { rows: 12, max: 120, cap: 200, speed: 1.07, plus: [10, 32], minus: [5, 15],  wall: [5, 14],  trap: true, mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 2, wall3plus: 2, minus: 1 } },
+  { rows: 12, max: 130, cap: 200, speed: 1.10, plus: [10, 34], minus: [5, 16],  wall: [6, 15],  trap: true, mix: { choice: 1, versus: 2, wall: 2, wallplus: 3, wall2plus: 3, wall3plus: 2, minus: 1 } },
+  { rows: 12, max: 140, cap: 200, speed: 1.13, plus: [12, 36], minus: [6, 18],  wall: [6, 16],  trap: true, mix: { choice: 1, versus: 2, wall: 3, wallplus: 3, wall2plus: 3, wall3plus: 2, minus: 1 } },
+  { rows: 12, max: 150, cap: 200, speed: 1.16, plus: [12, 38], minus: [6, 20],  wall: [7, 18],  trap: true, mix: { choice: 1, versus: 2, wall: 3, wallplus: 3, wall2plus: 3, wall3plus: 2, minus: 2 } },
+  { rows: 12, max: 160, cap: 200, speed: 1.19, plus: [14, 40], minus: [7, 22],  wall: [8, 20],  trap: true, mix: { choice: 1, versus: 2, wall: 3, wallplus: 3, wall2plus: 3, wall3plus: 3, minus: 2 } },
+  { rows: 12, max: 170, cap: 200, speed: 1.22, plus: [14, 42], minus: [8, 24],  wall: [8, 22],  trap: true, mix: { choice: 1, versus: 2, wall: 3, wallplus: 3, wall2plus: 3, wall3plus: 3, minus: 2 } },
+  { rows: 12, max: 180, cap: 200, speed: 1.25, plus: [15, 45], minus: [9, 26],  wall: [9, 24],  trap: true, mix: { choice: 1, versus: 2, wall: 3, wallplus: 3, wall2plus: 4, wall3plus: 3, minus: 2 } },
+  { rows: 12, max: 190, cap: 200, speed: 1.28, plus: [15, 48], minus: [10, 28], wall: [10, 26], trap: true, mix: { choice: 1, versus: 2, wall: 3, wallplus: 3, wall2plus: 4, wall3plus: 4, minus: 2 } },
+  { rows: 12, max: 200, cap: 200, speed: 1.30, plus: [16, 50], minus: [10, 30], wall: [10, 28], trap: true, mix: { choice: 1, versus: 2, wall: 3, wallplus: 3, wall2plus: 4, wall3plus: 4, minus: 2 } },
 ];
 
 // 어려움 모드: 길 옆은 물(빠지면 실패), 중간에 길이 끊어짐(위로 스와이프해서 점프)
-// 배열은 스테이지 1~10 순서
+// 배열은 스테이지 1~20 순서
 const HARD = {
-  gapChance:  [0.35, 0.4, 0.45, 0.5, 0.5, 0.55, 0.55, 0.6, 0.6, 0.65], // 숫자 줄 앞에 끊어진 길이 나올 확률
-  fullChance: [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.5, 0.55, 0.6],  // 그중 길 전체가 끊어질 확률
-  maxHoles:   [1, 2, 2, 2, 3, 3, 3, 3, 3, 3],                           // 일부만 끊어질 때 최대 몇 칸
+  gapChance:  [0.35, 0.4, 0.45, 0.5, 0.5, 0.55, 0.55, 0.6, 0.6, 0.65, 0.66, 0.68, 0.7, 0.72, 0.74, 0.76, 0.78, 0.8, 0.82, 0.85], // 숫자 줄 앞에 끊어진 길이 나올 확률
+  fullChance: [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.5, 0.55, 0.6, 0.6, 0.62, 0.64, 0.66, 0.68, 0.7, 0.72, 0.74, 0.76, 0.78],  // 그중 길 전체가 끊어질 확률
+  maxHoles:   [1, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], // 일부만 끊어질 때 최대 몇 칸
+  double:     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.15, 0.18, 0.21, 0.24, 0.27, 0.3, 0.33, 0.36], // 끊어진 길이 두 번 연달아 나올 확률
+  gapGrow: 0.07,    // 11단계부터 단계마다 끊어진 길이가 이만큼 길어짐
   gapLen: 2.2,      // 끊어진 길이 (월드 단위, 약 0.34초 분량)
   jumpT: 0.75,      // 점프 체공 시간(초) → 약 4.9 거리를 날아감
   jumpH: 1.0,       // 점프 높이
@@ -356,7 +372,7 @@ const G = {
   dist: 0, runT: 0, rows: [], rowCount: 0, finish: null, event: null,
   readyT: 0, endT: 0, shake: 0, deco: [], parts: [], clouds: [], dustT: 0,
   buddies: [], buddyT: 1, rockets: [], fwT: 0,
-  hard: false, modeHard: false, gaps: [], air: -1, fall: null,
+  hard: false, modeHard: false, gaps: [], air: -1, fall: null, speed: SPEED,
   theme: { from: 'day', to: 'day', k: 1, t: 0 }, car: null, carCount: 0,
 };
 
@@ -369,10 +385,11 @@ function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 /* ---------- 숫자 만들기: 결과가 항상 "스킨이 있는 숫자"가 되도록 ---------- */
 function plusCands(cur) {
   const cfg = G.cfg, out = [];
-  if (cur >= cfg.max) return out;
-  for (let a = cfg.plus[0]; a <= cfg.plus[1]; a++) if (SKIN.has(cur + a) && cur + a <= cfg.max) out.push(a);
-  if (!out.length) { // 범위 안에 맞는 게 없으면 가장 가까운 스킨 숫자로
-    for (let a = 1; cur + a <= 100; a++) if (SKIN.has(cur + a)) { out.push(a); break; }
+  const cap = cfg.cap || cfg.max; // 이 숫자까지는 더하기가 계속 나옴
+  if (cur >= cap) return out;
+  for (let a = cfg.plus[0]; a <= cfg.plus[1]; a++) if (valid(cur + a) && cur + a <= cap) out.push(a);
+  if (!out.length) { // 범위 안에 맞는 게 없으면 가장 가까운 숫자로
+    for (let a = 1; cur + a <= cap; a++) if (valid(cur + a)) { out.push(a); break; }
   }
   return out;
 }
@@ -381,10 +398,10 @@ function minusCands(cur, range, allowZero) {
   if (!range) return out;
   for (let b = range[0]; b <= range[1]; b++) {
     const r = cur - b;
-    if ((r >= 1 && SKIN.has(r)) || (r === 0 && allowZero)) out.push(b);
+    if ((r >= 1 && valid(r)) || (r === 0 && allowZero)) out.push(b);
   }
   if (!out.length) { // 범위 밖이라도 스킨이 있는 숫자로 떨어지는 가장 작은 빼기
-    for (let b = 1; b < cur; b++) if (SKIN.has(cur - b) && b >= range[0]) { out.push(b); break; }
+    for (let b = 1; b < cur; b++) if (valid(cur - b) && b >= range[0]) { out.push(b); break; }
     if (!out.length && allowZero && cur <= range[1]) out.push(cur);
   }
   return out;
@@ -458,7 +475,7 @@ function makeRow(gap) {
 // 끊어진 길: 길 전체 또는 일부 칸. 일부일 때는 지금 칸이나 바로 옆 칸을 꼭 남겨서
 // 크게 움직이지 않아도 지나갈 수 있게 함. 점프하면 어떤 경우든 넘을 수 있음
 function makeGap(z) {
-  const st = G.stage, full = Math.random() < HARD.fullChance[st];
+  const st = G.stage, full = Math.random() < HARD.fullChance[st], len = gapLenFor(st);
   let holes;
   if (full) holes = [[-ROAD - 0.6, ROAD + 0.6]];
   else {
@@ -473,9 +490,11 @@ function makeGap(z) {
     for (const h of holes) { const last = merged[merged.length - 1]; if (last && h[0] <= last[1] + 0.01) last[1] = Math.max(last[1], h[1]); else merged.push(h.slice()); }
     holes = merged;
   }
-  G.gaps.push({ z, len: HARD.gapLen, holes, full, cued: false });
+  G.gaps.push({ z, len, holes, full, cued: false });
+  return len;
 }
 // 어려움은 끊어진 길 때문에 시간이 더 걸려서 숫자 줄을 2개 줄임 (한 판 30~50초 유지)
+function gapLenFor(st) { return HARD.gapLen + Math.max(0, st - 9) * HARD.gapGrow; }
 function rowsTotal() { return G.cfg.rows - (G.hard ? HARD.fewerRows : 0); }
 function onHole(g, x) { return g.holes.some(([a, b]) => x > a + HARD.holeMargin && x < b - HARD.holeMargin); }
 function startCar() {
@@ -494,8 +513,17 @@ function spawnNext(gap) {
   if (!G.hard && !G.car && G.state === 'run' && G.carCount < CAR.maxPerRun && G.rowCount >= 2 &&
       G.rowCount < rowsTotal() - 1 && Math.random() < CAR.chance) startCar();
   if (G.hard && G.rowCount > 0 && Math.random() < HARD.gapChance[G.stage]) {
-    gap = Math.max(gap, SPACING * 1.2); // 끊어진 길이 있을 땐 조금 더 멀리서 보이게
-    makeGap(G.dist + gap * 0.5 - HARD.gapLen / 2);
+    const len = gapLenFor(G.stage);
+    if (Math.random() < HARD.double[G.stage]) {
+      // 두 번 연달아: 첫 번째를 넘고 착지한 뒤 다시 뛸 여유를 둠
+      const between = G.speed * HARD.jumpT + 1.5;
+      gap = Math.max(gap, SPACING * 1.2 + len + between);
+      const z1 = G.dist + SPACING * 0.45;
+      makeGap(z1); makeGap(z1 + len + between);
+    } else {
+      gap = Math.max(gap, SPACING * 1.2); // 끊어진 길이 있을 땐 조금 더 멀리서 보이게
+      makeGap(G.dist + gap * 0.5 - len / 2);
+    }
   }
   if (G.rowCount < rowsTotal()) makeRow(gap);
   else if (!G.finish) G.finish = { z: G.dist + gap };
@@ -553,7 +581,7 @@ function initWorld() {
 const $ = id => document.getElementById(id);
 function startStage(i) {
   audio();
-  G.hard = G.modeHard; G.gaps = []; G.air = -1; G.fall = null; G.car = null; G.carCount = 0;
+  G.hard = G.modeHard; G.gaps = []; G.air = -1; G.fall = null; G.speed = SPEED * (STAGES[i].speed || 1); G.car = null; G.carCount = 0;
   const th0 = THEME_ORDER[i % THEME_ORDER.length]; G.theme = { from: th0, to: th0, k: 1, t: 0 };
   G.stage = i; G.cfg = STAGES[i]; G.cur = 1; G.px = 0; G.targetX = 0; G.vx = 0;
   G.rows = []; G.rowCount = 0; G.finish = null; G.event = null; G.parts = [];
@@ -573,7 +601,7 @@ function updateHud() {
 function showMenu() {
   vstop();
   G.state = 'menu'; G.cur = 1; G.rows = []; G.finish = null; G.event = null;
-  G.hard = false; G.gaps = []; G.air = -1; G.fall = null; G.car = null; G.px = G.targetX = 0; initWorld();
+  G.hard = false; G.gaps = []; G.air = -1; G.fall = null; G.speed = SPEED; G.car = null; G.px = G.targetX = 0; initWorld();
   $('hud').hidden = true; $('nowNum').hidden = true; $('result').hidden = true; $('menu').hidden = false;
   renderStageGrid();
   if ('speechSynthesis' in window) speechSynthesis.cancel();
@@ -585,7 +613,7 @@ function showResult(win) {
   $('resTitle').textContent = win ? '도착!' : G.fall ? '풍덩!' : '앗!';
   $('resTitle').style.color = win ? 'var(--accent)' : 'var(--minus)';
   const n = win || G.fall ? G.cur : (G.event ? G.event.a : 1);
-  $('resImg').src = skinURL(SKIN.has(n) ? n : 1);
+  $('resImg').src = n > 100 ? (valid(n) ? pairURL(n) : skinURL(100)) : skinURL(SKIN.has(n) ? n : 1);
   $('resImg').style.opacity = win ? 1 : 0.45;
   if (win) {
     const s = starsFor(G.cur);
@@ -789,7 +817,7 @@ function update(dt) {
   }
   if (running) {
     updateBuddies(dt);
-    const sp = G.state === 'menu' ? SPEED * 0.55 : SPEED;
+    const sp = G.state === 'menu' ? SPEED * 0.55 : G.speed;
     G.dist += sp * dt; G.runT += dt * (G.state === 'menu' ? 0.7 : 1);
     G.dustT -= dt;
     if (G.dustT <= 0) {
@@ -822,7 +850,7 @@ function update(dt) {
   if (G.state === 'clear' || G.state === 'over') {
     G.endT += dt;
     if (G.state === 'clear') {
-      G.dist += SPEED * dt * Math.max(0, 1 - G.endT * 2.5); // 금방 멈춤
+      G.dist += G.speed * dt * Math.max(0, 1 - G.endT * 2.5); // 금방 멈춤
       G.fwT -= dt;
       if (G.fwT <= 0 && G.endT < 2.6) { launchRocket(); G.fwT = rnd(0.18, 0.4); }
     }
@@ -867,8 +895,38 @@ function skinSize(n, boxH, maxW) {
   if (w > maxW) { w = maxW; h = w / ar; }
   return { w, h };
 }
+// 100보다 큰 숫자: 왼쪽 100, 오른쪽 나머지가 손잡고 섬. c = 그릴 캔버스, ph = 달리기 위상(없으면 가만히)
+function drawPair(c, n, cx, by, boxH, maxW, ph) {
+  const r = n - 100, A = skinSize(100, boxH, maxW), B = skinSize(r, boxH * 0.92, maxW * 0.85);
+  let gapW = A.w * 0.2, total = A.w + gapW + B.w, k = Math.min(1, (maxW * 1.7) / total);
+  const aw = A.w * k, ah = A.h * k, bw = B.w * k, bh = B.h * k; gapW *= k; total *= k;
+  const bobA = ph == null ? 0 : Math.max(0, Math.sin(ph)) * ah * 0.04;
+  const bobB = ph == null ? 0 : Math.max(0, -Math.sin(ph)) * bh * 0.05;
+  const ax = cx - total / 2, bx = ax + aw + gapW;
+  // 맞잡은 손: 두 친구 사이 팔과 손
+  const hy = by - Math.min(ah, bh) * 0.42 - (bobA + bobB) / 2, mx = ax + aw + gapW / 2, lw = Math.max(2, Math.min(ah, bh) * 0.06);
+  const armB = (BACK_META[r] && BACK_META[r].arm) || '#888888';
+  c.lineCap = 'round';
+  c.strokeStyle = '#c96160'; c.lineWidth = lw; c.beginPath(); c.moveTo(ax + aw - lw * 0.6, hy - lw - bobA * 0.5); c.lineTo(mx - lw * 0.3, hy); c.stroke();
+  c.strokeStyle = armB; c.beginPath(); c.moveTo(bx + lw * 0.6, hy - lw - bobB * 0.5); c.lineTo(mx + lw * 0.3, hy); c.stroke();
+  c.fillStyle = '#d96f6e'; c.beginPath(); c.arc(mx - lw * 0.35, hy, lw * 0.85, 0, 7); c.fill();
+  c.fillStyle = armB; c.beginPath(); c.arc(mx + lw * 0.35, hy + lw * 0.1, lw * 0.8, 0, 7); c.fill();
+  const ia = imgs[100], ib = imgs[r];
+  if (ia) c.drawImage(ia, ax, by - ah - bobA, aw, ah);
+  if (ib) c.drawImage(ib, bx, by - bh - bobB, bw, bh);
+  return { w: total, h: Math.max(ah, bh) };
+}
+// 덧셈 장면처럼 자리가 정해진 곳: 손잡은 두 친구도 그 폭 안에 들어가게
+function slotW(n, w) { return n > 100 ? w / 1.7 : w; }
+// 결과 화면용: 손잡은 모습을 그림 파일로
+function pairURL(n) {
+  const c = document.createElement('canvas'); c.width = 520; c.height = 340;
+  drawPair(c.getContext('2d'), n, 260, 336, 330, 300, null);
+  try { return c.toDataURL(); } catch (e) { return skinURL(100); }
+}
 // 발(아래 가운데) 기준으로 스킨 그리기. 스킨이 없는 숫자는 블록으로 대신 그림
 function drawSkin(n, cx, by, boxH, maxW) {
+  if (n > 100 && valid(n)) return drawPair(ctx, n, cx, by, boxH, maxW, G.state === 'run' || G.state === 'ready' || G.state === 'menu' ? G.runT * 11 : null);
   const { w, h } = skinSize(n, boxH, maxW), im = imgs[n];
   if (im) ctx.drawImage(im, cx - w / 2, by - h, w, h);
   else {
@@ -954,7 +1012,8 @@ function drawCar(n, cx, gy, u, ph, color, k) {
   for (const sg of [-1, 1]) { rrect(cx + sg * cw * 0.36 - u * 0.12, gy - wh, u * 0.24, wh, u * 0.07); ctx.fill(); }
   // 캐릭터 (몸 아래쪽은 차에 가려짐)
   const im = (BACK_VIEW && backs[n]) || imgs[n];
-  if (im) {
+  if (n > 100) drawSkin(n, cx, top + chh * 0.55 + Math.sin(ph * 2.6) * u * 0.02, u * 1.1, cw * 0.62);
+  else if (im) {
     const { w, h } = skinSize(n, u * 1.25, cw * 0.82);
     ctx.drawImage(im, cx - w / 2, top + chh * 0.55 - h + Math.sin(ph * 2.6) * u * 0.02, w, h);
   }
@@ -1432,7 +1491,7 @@ function drawEvent() {
     ctx.globalAlpha = A * (1 - m * 0.9);
     // 왼쪽: 지금 숫자, 오른쪽: 만난 숫자
     const enter = easeOutBack((t - 0.1) / 0.35);
-    drawSkin(e.a, cx - off, base, boxH * sc, pw * 0.36 * sc);
+    drawSkin(e.a, cx - off, base, boxH * sc, slotW(e.a, pw * 0.36) * sc);
     ctx.save(); ctx.translate(cx + off, base); ctx.scale(enter, enter);
     if (!plus) { ctx.globalAlpha *= 0.85; }
     drawSkin(e.b, 0, 0, boxH * sc, pw * 0.36 * sc);
@@ -1447,7 +1506,7 @@ function drawEvent() {
     ctx.save(); ctx.translate(cx, base); ctx.scale(m, m);
     if (e.r > 0) {
       ctx.fillStyle = 'rgba(255,214,77,0.35)'; ctx.beginPath(); ctx.arc(0, -boxH * 0.5, boxH * 0.62, 0, 7); ctx.fill();
-      drawSkin(e.r, 0, 0, boxH * 1.05, pw * 0.6);
+      drawSkin(e.r, 0, 0, boxH * 1.05, slotW(e.r, pw * 0.9));
     } else {
       ctx.setLineDash([10, 8]); ctx.strokeStyle = '#b8c0d4'; ctx.lineWidth = 4;
       rrect(-boxH * 0.3, -boxH * 0.8, boxH * 0.6, boxH * 0.7, 14); ctx.stroke(); ctx.setLineDash([]);
