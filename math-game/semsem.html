@@ -1,0 +1,841 @@
+<title>셈셈 갈림길</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: one phone-sized column. Start / play / result / records are screens swapped in place.
+   Play screen = big question band on top, square island field below, progress strip at the bottom.
+   Deliberately one bright daytime look (kids' game), colors set explicitly. */
+:root {
+  --sky: #e7f5fb;
+  --ink: #22324a;
+  --muted: #5d6f86;
+  --water: #79c3e6;
+  --water-deep: #4c9fd0;
+  --grass: #8fd16a;
+  --grass-edge: #5ea844;
+  --road: #f3d9a4;
+  --road-edge: #d8b779;
+  --stone: #fffaf0;
+  --accent: #ff7a59;
+  --accent-ink: #ffffff;
+  --ok: #23a866;
+  --bad: #e5484d;
+  --card: #ffffff;
+  --line: #cfe3ee;
+  --display: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --body: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: light;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--sky);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.app {
+  max-width: 520px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.screen { display: flex; flex-direction: column; gap: 16px; flex: 1; }
+
+h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(40px, 12vw, 56px);
+  line-height: 1.05;
+  margin: 0;
+  text-align: center;
+  color: var(--ink);
+}
+h1 span { color: var(--accent); }
+.tagline { text-align: center; margin: 0; color: var(--muted); }
+.hero-art { display: flex; justify-content: center; }
+.hero-art svg { width: 120px; height: 120px; }
+
+.group { display: flex; flex-direction: column; gap: 8px; }
+.group-label { font-family: var(--display); font-size: 20px; }
+.chips { display: grid; gap: 8px; }
+.chips.ops { grid-template-columns: repeat(5, 1fr); }
+.chips.levels { grid-template-columns: repeat(5, 1fr); }
+.chips.counts { grid-template-columns: repeat(2, 1fr); }
+.chip {
+  font-family: var(--display);
+  font-size: 20px;
+  padding: 10px 4px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1.2;
+}
+.chip small { display: block; font-family: var(--body); font-size: 12px; color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: #fff1ec; }
+.chip:focus-visible, .btn:focus-visible { outline: 3px solid var(--water-deep); outline-offset: 2px; }
+.level-desc { margin: 0; font-size: 14px; color: var(--muted); min-height: 1.5em; }
+
+.btn {
+  font-family: var(--display);
+  font-size: 22px;
+  padding: 14px 20px;
+  border-radius: 18px;
+  border: 0;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--line);
+  cursor: pointer;
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 0 #d95e3f; font-size: 26px; }
+.btn.primary:active { transform: translateY(2px); box-shadow: 0 2px 0 #d95e3f; }
+.btn.small { font-size: 16px; padding: 8px 14px; border-radius: 12px; }
+.row { display: flex; gap: 10px; }
+.row > .btn { flex: 1; }
+
+/* ---------- play ---------- */
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.topbar .info { font-family: var(--display); font-size: 18px; color: var(--muted); }
+.question {
+  background: var(--card);
+  border-radius: 22px;
+  box-shadow: 0 3px 0 var(--line);
+  padding: 12px 12px 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.q-text {
+  font-family: var(--display);
+  font-size: clamp(40px, 12vw, 64px);
+  line-height: 1.1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.q-text.long { font-size: clamp(32px, 9.5vw, 52px); }
+.timer {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--display);
+  font-size: 34px;
+  background: var(--sky);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.timer.hurry { background: var(--bad); color: #fff; animation: beat 1s ease-in-out infinite; }
+@keyframes beat { 50% { transform: scale(1.08); } }
+
+.field-wrap { position: relative; width: 100%; max-width: 460px; margin: 0 auto; touch-action: none; }
+#field { display: block; width: 100%; height: auto; aspect-ratio: 1; max-width: 100%; border-radius: 24px; }
+.road, .stone-g { transition: opacity 0.5s ease, transform 0.5s ease; transform-box: fill-box; transform-origin: center; }
+.road-g.gone { opacity: 0; pointer-events: none; }
+.road-g.gone .road { transform: scaleX(0.4) scaleY(0.4); }
+.road-g { transition: opacity 0.6s ease; cursor: pointer; }
+.stone-circle { fill: var(--stone); stroke: var(--ink); stroke-width: 4; transition: fill 0.2s, stroke 0.2s; }
+.stone-text { font-family: var(--display); fill: var(--ink); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.road-g.ok .stone-circle { fill: var(--ok); stroke: var(--ok); }
+.road-g.ok .stone-text { fill: #fff; }
+.road-g.bad .stone-circle { fill: var(--bad); stroke: var(--bad); }
+.road-g.bad .stone-text { fill: #fff; }
+#hero { transition: transform 0.45s ease-in-out; }
+#hero.instant { transition: none; }
+#heroBody { transform-box: fill-box; transform-origin: 50% 100%; }
+#hero.walking #heroBody { animation: hop 0.15s ease-in-out infinite alternate; }
+@keyframes hop { to { transform: translateY(-4px); } }
+#hero.sink #heroBody { transition: transform 0.6s ease-in, opacity 0.6s ease-in; transform: translateY(16px) scale(0.6); opacity: 0; }
+
+.feedback {
+  font-family: var(--display);
+  font-size: 26px;
+  text-align: center;
+  min-height: 1.4em;
+  margin: 0;
+}
+.feedback.ok { color: var(--ok); }
+.feedback.bad { color: var(--bad); }
+.pips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.pip { width: 14px; height: 14px; border-radius: 50%; background: var(--line); }
+.pip.ok { background: var(--ok); }
+.pip.bad { background: var(--bad); }
+.pip.now { box-shadow: 0 0 0 3px var(--accent); }
+.help { text-align: center; color: var(--muted); font-size: 14px; margin: 0; }
+
+/* ---------- result ---------- */
+.result-card {
+  background: var(--card);
+  border-radius: 24px;
+  padding: 24px 16px;
+  text-align: center;
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+  box-shadow: 0 3px 0 var(--line);
+}
+.result-meta { font-size: 16px; color: var(--muted); margin: 0; }
+.score-big { font-family: var(--display); font-size: clamp(64px, 20vw, 96px); line-height: 1; margin: 6px 0; font-variant-numeric: tabular-nums; }
+.score-big small { font-size: 0.45em; color: var(--muted); }
+.result-line { font-family: var(--display); font-size: 24px; margin: 0; }
+.result-sub { margin: 0; color: var(--muted); font-size: 15px; }
+.best-badge { font-family: var(--display); color: var(--accent); font-size: 18px; margin: 0; }
+.wrong-list { background: var(--card); border-radius: 18px; padding: 14px 16px; box-shadow: 0 3px 0 var(--line); }
+.wrong-list h3 { margin: 0 0 8px; font-family: var(--display); font-weight: 400; font-size: 20px; }
+.wrong-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.wrong-list li { display: flex; justify-content: space-between; gap: 12px; font-size: 18px; font-variant-numeric: tabular-nums; }
+.wrong-list li b { font-family: var(--display); font-weight: 400; }
+.wrong-list li span { color: var(--muted); font-size: 15px; text-align: right; }
+
+/* ---------- records ---------- */
+h2 { font-family: var(--display); font-weight: 400; font-size: 32px; margin: 0; }
+.panel { background: var(--card); border-radius: 18px; padding: 14px; box-shadow: 0 3px 0 var(--line); }
+.panel h3 { margin: 0 0 10px; font-family: var(--display); font-weight: 400; font-size: 20px; }
+.table-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 4px; text-align: center; border-bottom: 1px solid var(--line); font-size: 15px; }
+th { font-family: var(--display); font-weight: 400; color: var(--muted); }
+td.op { font-family: var(--display); text-align: left; padding-left: 2px; }
+td.empty { color: #b3c2d0; }
+td.full { color: var(--ok); font-weight: 700; }
+.recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.recent li { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.recent li:last-child { border-bottom: 0; }
+.recent .when { font-size: 13px; color: var(--muted); }
+.recent .sc { font-family: var(--display); font-size: 20px; }
+.empty-note { color: var(--muted); margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  #hero, .road-g, .road, .stone-g { transition: none; }
+  .timer.hurry, #hero.walking #heroBody { animation: none; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+          <g id="boy">
+            <!-- legs -->
+            <rect x="-11" y="12" width="9" height="16" rx="4" fill="#33435e"/>
+            <rect x="2" y="12" width="9" height="16" rx="4" fill="#33435e"/>
+            <ellipse cx="-6.5" cy="29" rx="7" ry="4" fill="#e9573f"/>
+            <ellipse cx="6.5" cy="29" rx="7" ry="4" fill="#e9573f"/>
+            <!-- arms -->
+            <rect x="-21" y="-11" width="8" height="18" rx="4" fill="#ffd2ad" transform="rotate(14 -17 -11)"/>
+            <rect x="13" y="-11" width="8" height="18" rx="4" fill="#ffd2ad" transform="rotate(-14 17 -11)"/>
+            <!-- shirt -->
+            <path d="M-15 -14 Q0 -19 15 -14 L16 14 Q0 17 -16 14 Z" fill="#3c8ee6"/>
+            <path d="M-6 -16 L0 -9 L6 -16" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round"/>
+            <rect x="-16" y="4" width="32" height="5" fill="#2f74c2"/>
+            <!-- head -->
+            <circle cx="0" cy="-36" r="25" fill="#ffd9b8"/>
+            <circle cx="-25" cy="-34" r="5" fill="#ffd2ad"/>
+            <circle cx="25" cy="-34" r="5" fill="#ffd2ad"/>
+            <!-- hair -->
+            <path d="M-26 -38 Q-27 -64 0 -63 Q27 -64 26 -38 Q20 -50 8 -50 L12 -44 Q0 -51 -10 -48 L-8 -54 Q-20 -50 -26 -38 Z" fill="#4a2e1f"/>
+            <!-- face -->
+            <ellipse cx="-9" cy="-33" rx="3.2" ry="4.2" fill="#22324a"/>
+            <ellipse cx="9" cy="-33" rx="3.2" ry="4.2" fill="#22324a"/>
+            <circle cx="-8" cy="-34.5" r="1.2" fill="#fff"/>
+            <circle cx="10" cy="-34.5" r="1.2" fill="#fff"/>
+            <ellipse cx="-16" cy="-25" rx="4.5" ry="2.6" fill="#ff9d8a" opacity="0.7"/>
+            <ellipse cx="16" cy="-25" rx="4.5" ry="2.6" fill="#ff9d8a" opacity="0.7"/>
+            <path d="M-6 -23 Q0 -17 6 -23" fill="none" stroke="#22324a" stroke-width="2.4" stroke-linecap="round"/>
+          </g>
+        </defs>
+</svg>
+<div class="app">
+  <!-- START -->
+  <section class="screen" id="startScreen">
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="-50 -70 100 110"><use href="#boy"/></svg>
+    </div>
+    <h1>셈셈 <span>갈림길</span></h1>
+    <p class="tagline">문제를 보고 정답이 있는 길로 달려가요!</p>
+
+    <div class="group">
+      <div class="group-label">어떤 셈을 할까요?</div>
+      <div class="chips ops" id="opChips"></div>
+    </div>
+    <div class="group">
+      <div class="group-label">난이도</div>
+      <div class="chips levels" id="levelChips"></div>
+      <p class="level-desc" id="levelDesc"></p>
+    </div>
+    <div class="group">
+      <div class="group-label">문제 수</div>
+      <div class="chips counts" id="countChips"></div>
+    </div>
+    <button class="btn primary" id="startBtn">시작하기</button>
+    <div class="row">
+      <button class="btn small" id="recordsBtn">기록 보기</button>
+      <button class="btn small" id="soundBtn" aria-pressed="true">소리 켜짐</button>
+    </div>
+  </section>
+
+  <!-- PLAY -->
+  <section class="screen" id="playScreen" hidden>
+    <div class="topbar">
+      <span class="info" id="playInfo">덧셈 · 1단계</span>
+      <button class="btn small" id="quitBtn">그만하기</button>
+    </div>
+    <div class="question">
+      <div class="q-text" id="qText" aria-live="polite">3 + 4 = ?</div>
+      <div class="timer" id="timer" aria-label="남은 시간">10</div>
+    </div>
+    <div class="field-wrap" id="fieldWrap">
+      <svg id="field" viewBox="0 0 400 400" role="img" aria-label="섬과 네 갈래 길">
+        <rect width="400" height="400" fill="var(--water)"/>
+        <g fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round">
+          <path d="M30 120 q12 -8 24 0"/><path d="M330 70 q12 -8 24 0"/><path d="M80 330 q12 -8 24 0"/>
+          <path d="M300 300 q12 -8 24 0"/><path d="M120 30 q12 -8 24 0"/><path d="M260 370 q12 -8 24 0"/>
+        </g>
+        <g id="roads"></g>
+        <circle id="groundShadow" cx="200" cy="206" r="110" fill="var(--water-deep)"/>
+        <circle id="ground" cx="200" cy="200" r="110" fill="var(--grass)" stroke="var(--grass-edge)" stroke-width="6"/>
+        <g id="hero" style="transform: translate(200px, 194px)">
+          <ellipse cx="0" cy="30" rx="20" ry="5" fill="#000" opacity="0.15"/>
+          <g id="heroBody"><use href="#boy"/></g>
+        </g>
+      </svg>
+    </div>
+    <p class="feedback" id="feedback" aria-live="polite"></p>
+    <div class="pips" id="pips"></div>
+    <p class="help">방향키·WASD, 화면 밀기, 또는 정답 숫자를 눌러서 이동해요.</p>
+  </section>
+
+  <!-- RESULT -->
+  <section class="screen" id="resultScreen" hidden>
+    <div class="result-card">
+      <p class="result-meta" id="resultMeta">덧셈 · 1단계</p>
+      <div class="score-big" id="resultScore">8<small> / 10</small></div>
+      <p class="result-line" id="resultLine">10문제 중 8개 맞혔어요!</p>
+      <p class="result-sub" id="resultSub"></p>
+      <p class="best-badge" id="bestBadge" hidden>새 최고 기록!</p>
+    </div>
+    <div class="wrong-list" id="wrongBox" hidden>
+      <h3>틀린 문제 다시 보기</h3>
+      <ul id="wrongList"></ul>
+    </div>
+    <button class="btn primary" id="againBtn">한 번 더</button>
+    <div class="row">
+      <button class="btn small" id="homeBtn">처음으로</button>
+      <button class="btn small" id="resultRecordsBtn">기록 보기</button>
+    </div>
+  </section>
+
+  <!-- RECORDS -->
+  <section class="screen" id="recordsScreen" hidden>
+    <div class="topbar">
+      <h2>기록</h2>
+      <button class="btn small" id="recordsBack">돌아가기</button>
+    </div>
+    <div class="panel">
+      <h3>단계별 최고 점수</h3>
+      <div class="table-scroll"><table id="bestTable"></table></div>
+    </div>
+    <div class="panel">
+      <h3>최근 기록</h3>
+      <ul class="recent" id="recentList"></ul>
+    </div>
+    <button class="btn small" id="clearBtn">기록 모두 지우기</button>
+  </section>
+</div>
+
+<script>
+(() => {
+  const STORE = "semsem-v1";
+  const TIME = 10;          // seconds per question
+  const HINT_AT = 3;        // wrong roads crumble when this many seconds remain
+  const R_MAX = 110, R_MIN = 26;
+
+  const OPS = [
+    { id: "add", name: "덧셈", sym: "+" },
+    { id: "sub", name: "뺄셈", sym: "−" },
+    { id: "mul", name: "곱셈", sym: "×" },
+    { id: "div", name: "나눗셈", sym: "÷" },
+    { id: "mix", name: "혼합", sym: "±×÷" },
+  ];
+  const LEVEL_DESC = {
+    add: ["합이 10까지", "한 자리 + 한 자리", "두 자리 + 한 자리", "두 자리 + 두 자리", "세 자리 덧셈"],
+    sub: ["10 안에서 빼기", "20 안에서 빼기", "두 자리 − 한 자리", "두 자리 − 두 자리", "세 자리 뺄셈"],
+    mul: ["2~5단 (×5까지)", "2~9단 (×5까지)", "구구단 전체", "두 자리 × 한 자리", "두 자리 × 두 자리"],
+    div: ["2~5단 나누기", "2~9단 나누기 (몫 5까지)", "구구단 나누기", "두 자리 몫", "큰 수 나누기"],
+    mix: ["덧셈·뺄셈 섞기", "사칙연산 섞기", "세 수 덧셈·뺄셈", "곱하고 더하기·빼기", "괄호와 계산 순서"],
+  };
+
+  // ---------- storage ----------
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STORE) || "null");
+      if (s && Array.isArray(s.records)) return s;
+    } catch (e) {}
+    return { records: [], op: "add", level: 1, count: 10, sound: true };
+  }
+  const data = load();
+  function persist() { try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) {} }
+
+  // ---------- question generator ----------
+  const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  function addQ(lv) {
+    let a, b;
+    if (lv === 1) { a = ri(1, 9); b = ri(1, 10 - a); }
+    else if (lv === 2) { a = ri(2, 9); b = ri(2, 9); }
+    else if (lv === 3) { a = ri(10, 89); b = ri(2, 9); }
+    else if (lv === 4) { a = ri(11, 89); b = ri(11, 99); }
+    else { a = ri(100, 899); b = ri(25, 599); }
+    return { text: `${a} + ${b}`, ans: a + b, parts: [a, b] };
+  }
+  function subQ(lv) {
+    const q = addQ(lv);
+    const [a, b] = q.parts;
+    return { text: `${q.ans} − ${a}`, ans: b, parts: [a, b] };
+  }
+  function mulQ(lv) {
+    let a, b;
+    if (lv === 1) { a = ri(2, 5); b = ri(1, 5); }
+    else if (lv === 2) { a = ri(2, 9); b = ri(1, 5); }
+    else if (lv === 3) { a = ri(2, 9); b = ri(2, 9); }
+    else if (lv === 4) { a = ri(11, 49); b = ri(2, 9); }
+    else { a = ri(11, 39); b = ri(11, 19); }
+    return { text: `${a} × ${b}`, ans: a * b, parts: [a, b] };
+  }
+  function divQ(lv) {
+    let d, q;
+    if (lv === 1) { d = ri(2, 5); q = ri(1, 5); }
+    else if (lv === 2) { d = ri(2, 9); q = ri(1, 5); }
+    else if (lv === 3) { d = ri(2, 9); q = ri(2, 9); }
+    else if (lv === 4) { d = ri(2, 9); q = ri(11, 30); }
+    else { d = ri(11, 19); q = ri(11, 29); }
+    return { text: `${d * q} ÷ ${d}`, ans: q, parts: [d, q] };
+  }
+  function mixQ(lv) {
+    if (lv === 1) return pick([addQ, subQ])(2);
+    if (lv === 2) return pick([addQ, subQ, mulQ, divQ])(pick([2, 3]));
+    if (lv === 3) {
+      const a = ri(10, 40), b = ri(2, 20), c = ri(2, a + b - 1);
+      return Math.random() < 0.5
+        ? { text: `${a} + ${b} − ${c}`, ans: a + b - c, parts: [b, c] }
+        : { text: `${a + b} − ${b} + ${c % 20 + 1}`, ans: a + (c % 20 + 1), parts: [b, c % 20 + 1] };
+    }
+    if (lv === 4) {
+      const a = ri(2, 9), b = ri(2, 9), c = ri(1, 20);
+      if (Math.random() < 0.5) return { text: `${a} × ${b} + ${c}`, ans: a * b + c, parts: [a, b] };
+      const c2 = ri(1, a * b - 1);
+      return { text: `${a} × ${b} − ${c2}`, ans: a * b - c2, parts: [a, b] };
+    }
+    const kind = ri(0, 3);
+    if (kind === 0) { const a = ri(2, 30), b = ri(2, 9), c = ri(2, 9); return { text: `${a} + ${b} × ${c}`, ans: a + b * c, parts: [b, c] }; }
+    if (kind === 1) { const a = ri(1, 9), b = ri(1, 9), c = ri(2, 9); return { text: `(${a} + ${b}) × ${c}`, ans: (a + b) * c, parts: [a, c] }; }
+    if (kind === 2) { const b = ri(2, 9), q = ri(2, 9), c = ri(1, 30); return { text: `${b * q} ÷ ${b} + ${c}`, ans: q + c, parts: [b, q] }; }
+    const a = ri(3, 9), b = ri(3, 9), c = ri(1, a * b - 1);
+    return { text: `${a} × ${b} − ${c}`, ans: a * b - c, parts: [a, b] };
+  }
+  const GEN = { add: addQ, sub: subQ, mul: mulQ, div: divQ, mix: mixQ };
+
+  function makeChoices(q) {
+    const ans = q.ans;
+    const deltas = [1, -1, 2, -2, 3, -3, 10, -10];
+    q.parts.forEach(p => { if (p > 1) deltas.push(p, -p); });
+    if (ans >= 100) deltas.push(100, -100, 20, -20);
+    const set = new Set([ans]);
+    let guard = 0;
+    while (set.size < 4 && guard++ < 200) {
+      const v = ans + pick(deltas);
+      if (v >= 0) set.add(v);
+    }
+    let fill = ans + 4;
+    while (set.size < 4) set.add(fill++);
+    return [...set].sort(() => Math.random() - 0.5);
+  }
+
+  // ---------- sound ----------
+  let audio = null;
+  function beep(ok) {
+    if (!data.sound) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      const notes = ok ? [660, 880] : [300, 220];
+      notes.forEach((f, i) => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = ok ? "triangle" : "square";
+        o.frequency.value = f;
+        const t = audio.currentTime + i * 0.12;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        o.connect(g).connect(audio.destination);
+        o.start(t); o.stop(t + 0.2);
+      });
+    } catch (e) {}
+  }
+
+  // ---------- DOM ----------
+  const $ = id => document.getElementById(id);
+  const screens = ["startScreen", "playScreen", "resultScreen", "recordsScreen"];
+  let recordsReturn = "startScreen";
+  function show(id) { screens.forEach(s => ($(s).hidden = s !== id)); window.scrollTo(0, 0); }
+
+  function chipGroup(el, items, current, onPick) {
+    el.innerHTML = "";
+    items.forEach(it => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.type = "button";
+      b.innerHTML = it.label;
+      b.setAttribute("aria-pressed", String(it.value === current));
+      b.addEventListener("click", () => onPick(it.value));
+      el.appendChild(b);
+    });
+  }
+  function renderStart() {
+    chipGroup($("opChips"), OPS.map(o => ({ value: o.id, label: o.name })), data.op, v => { data.op = v; persist(); renderStart(); });
+    chipGroup($("levelChips"), [1, 2, 3, 4, 5].map(n => ({ value: n, label: `${n}<small>단계</small>` })), data.level, v => { data.level = v; persist(); renderStart(); });
+    chipGroup($("countChips"), [10, 20].map(n => ({ value: n, label: `${n}문제` })), data.count, v => { data.count = v; persist(); renderStart(); });
+    $("levelDesc").textContent = `${data.level}단계: ${LEVEL_DESC[data.op][data.level - 1]}`;
+    $("soundBtn").textContent = data.sound ? "소리 켜짐" : "소리 꺼짐";
+    $("soundBtn").setAttribute("aria-pressed", String(data.sound));
+  }
+
+  // field geometry
+  const DIRS = {
+    up:    { dx: 0,  dy: -1, key: ["ArrowUp", "w", "W"] },
+    down:  { dx: 0,  dy: 1,  key: ["ArrowDown", "s", "S"] },
+    left:  { dx: -1, dy: 0,  key: ["ArrowLeft", "a", "A"] },
+    right: { dx: 1,  dy: 0,  key: ["ArrowRight", "d", "D"] },
+  };
+  const DIR_LIST = ["up", "down", "left", "right"];
+  const STONE_DIST = 150, STONE_R = 44, ROAD_W = 64;
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const roadEls = {};
+  (function buildRoads() {
+    const g = $("roads");
+    DIR_LIST.forEach(dir => {
+      const { dx, dy } = DIRS[dir];
+      const grp = document.createElementNS(SVGNS, "g");
+      grp.setAttribute("class", "road-g");
+      const road = document.createElementNS(SVGNS, "rect");
+      road.setAttribute("class", "road");
+      const len = STONE_DIST;
+      if (dx === 0) {
+        road.setAttribute("x", 200 - ROAD_W / 2);
+        road.setAttribute("y", dy < 0 ? 200 - len : 200);
+        road.setAttribute("width", ROAD_W);
+        road.setAttribute("height", len);
+      } else {
+        road.setAttribute("x", dx < 0 ? 200 - len : 200);
+        road.setAttribute("y", 200 - ROAD_W / 2);
+        road.setAttribute("width", len);
+        road.setAttribute("height", ROAD_W);
+      }
+      road.setAttribute("fill", "var(--road)");
+      road.setAttribute("stroke", "var(--road-edge)");
+      road.setAttribute("stroke-width", "4");
+      const stone = document.createElementNS(SVGNS, "g");
+      stone.setAttribute("class", "stone-g");
+      const c = document.createElementNS(SVGNS, "circle");
+      c.setAttribute("class", "stone-circle");
+      c.setAttribute("cx", 200 + dx * STONE_DIST);
+      c.setAttribute("cy", 200 + dy * STONE_DIST);
+      c.setAttribute("r", STONE_R);
+      const t = document.createElementNS(SVGNS, "text");
+      t.setAttribute("class", "stone-text");
+      t.setAttribute("x", 200 + dx * STONE_DIST);
+      t.setAttribute("y", 200 + dy * STONE_DIST + 2);
+      stone.append(c, t);
+      grp.append(road, stone);
+      grp.addEventListener("click", () => choose(dir));
+      g.appendChild(grp);
+      roadEls[dir] = { grp, text: t };
+    });
+  })();
+
+  // ---------- game ----------
+  let game = null;
+  let raf = 0, lastT = 0;
+
+  function startGame() {
+    game = {
+      op: data.op, level: data.level, total: data.count,
+      index: 0, correct: 0, beforeHint: 0, results: [], wrong: [],
+      q: null, answerDir: null, timeLeft: TIME, phase: "ask", crumbled: false,
+    };
+    $("playInfo").textContent = `${opName(game.op)} · ${game.level}단계`;
+    show("playScreen");
+    nextQuestion();
+  }
+  const opName = id => OPS.find(o => o.id === id).name;
+
+  function nextQuestion() {
+    const q = GEN[game.op](game.level);
+    const choices = makeChoices(q);
+    game.q = q;
+    game.choices = {};
+    DIR_LIST.forEach((dir, i) => {
+      game.choices[dir] = choices[i];
+      if (choices[i] === q.ans) game.answerDir = dir;
+      const { grp, text } = roadEls[dir];
+      grp.setAttribute("class", "road-g");
+      const s = String(choices[i]);
+      text.textContent = s;
+      text.setAttribute("font-size", s.length <= 2 ? 44 : s.length === 3 ? 36 : 29);
+    });
+    const qt = $("qText");
+    qt.textContent = `${q.text} = ?`;
+    qt.classList.toggle("long", q.text.length > 9);
+    $("feedback").textContent = "";
+    $("feedback").className = "feedback";
+    const hero = $("hero");
+    hero.classList.add("instant");
+    hero.classList.remove("walking", "sink");
+    hero.style.transform = "translate(200px, 194px)";
+    void hero.getBoundingClientRect();
+    hero.classList.remove("instant");
+    game.timeLeft = TIME;
+    game.crumbled = false;
+    game.phase = "ask";
+    renderPips();
+    drawTime();
+    lastT = performance.now();
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(tick);
+  }
+
+  function drawTime() {
+    const t = Math.max(0, game.timeLeft);
+    const r = R_MIN + (R_MAX - R_MIN) * (t / TIME);
+    $("ground").setAttribute("r", r.toFixed(1));
+    $("groundShadow").setAttribute("r", r.toFixed(1));
+    const timer = $("timer");
+    timer.textContent = Math.ceil(t);
+    timer.classList.toggle("hurry", t <= HINT_AT && t > 0);
+  }
+
+  function tick(now) {
+    if (!game || game.phase !== "ask") return;
+    const dt = Math.min(0.1, (now - lastT) / 1000);
+    lastT = now;
+    game.timeLeft -= dt;
+    if (!game.crumbled && game.timeLeft <= HINT_AT) crumble();
+    drawTime();
+    if (game.timeLeft <= 0) { timeOut(); return; }
+    raf = requestAnimationFrame(tick);
+  }
+
+  function crumble() {
+    game.crumbled = true;
+    DIR_LIST.forEach(dir => { if (dir !== game.answerDir) roadEls[dir].grp.classList.add("gone"); });
+  }
+
+  function choose(dir) {
+    if (!game || game.phase !== "ask") return;
+    if (game.crumbled && dir !== game.answerDir) return; // that road is gone
+    game.phase = "moving";
+    cancelAnimationFrame(raf);
+    const { dx, dy } = DIRS[dir];
+    const hero = $("hero");
+    hero.classList.add("walking");
+    const stop = STONE_DIST - STONE_R - 12; // stand right in front of the answer stone
+    hero.style.transform = `translate(${200 + dx * stop}px, ${194 + dy * stop}px)`;
+    setTimeout(() => resolve(dir), 460);
+  }
+
+  function resolve(dir) {
+    $("hero").classList.remove("walking");
+    const ok = dir === game.answerDir;
+    const fb = $("feedback");
+    if (ok) {
+      game.correct++;
+      if (!game.crumbled) game.beforeHint++;
+      roadEls[dir].grp.classList.add("ok");
+      fb.textContent = pick(["정답! 잘했어요", "딩동댕!", "맞았어요!", "최고예요!"]);
+      fb.className = "feedback ok";
+    } else {
+      roadEls[dir].grp.classList.add("bad");
+      roadEls[game.answerDir].grp.classList.add("ok");
+      fb.textContent = `아쉬워요! 정답은 ${game.q.ans}`;
+      fb.className = "feedback bad";
+      game.wrong.push({ text: game.q.text, ans: game.q.ans, given: String(game.choices[dir]) });
+    }
+    game.results.push(ok);
+    beep(ok);
+    finishQuestion(ok ? 900 : 1500);
+  }
+
+  function timeOut() {
+    game.phase = "feedback";
+    game.timeLeft = 0;
+    drawTime();
+    $("hero").classList.add("sink");
+    roadEls[game.answerDir].grp.classList.add("ok");
+    roadEls[game.answerDir].grp.classList.remove("gone");
+    const fb = $("feedback");
+    fb.textContent = `시간이 끝났어요! 정답은 ${game.q.ans}`;
+    fb.className = "feedback bad";
+    game.results.push(false);
+    game.wrong.push({ text: game.q.text, ans: game.q.ans, given: "시간 초과" });
+    beep(false);
+    finishQuestion(1600);
+  }
+
+  function finishQuestion(delay) {
+    game.phase = "feedback";
+    renderPips();
+    setTimeout(() => {
+      if (!game) return;
+      game.index++;
+      if (game.index >= game.total) endGame();
+      else nextQuestion();
+    }, delay);
+  }
+
+  function renderPips() {
+    const el = $("pips");
+    el.innerHTML = "";
+    for (let i = 0; i < game.total; i++) {
+      const p = document.createElement("span");
+      p.className = "pip" + (i < game.results.length ? (game.results[i] ? " ok" : " bad") : "") + (i === game.index && game.phase === "ask" ? " now" : "");
+      el.appendChild(p);
+    }
+    el.setAttribute("aria-label", `${game.total}문제 중 ${game.index + 1}번째, ${game.correct}개 맞힘`);
+  }
+
+  function bestFor(op, level) {
+    let best = null;
+    data.records.forEach(r => {
+      if (r.op === op && r.level === level) {
+        if (!best || r.score / r.total > best.score / best.total || (r.score / r.total === best.score / best.total && r.total > best.total)) best = r;
+      }
+    });
+    return best;
+  }
+
+  function endGame() {
+    const g = game;
+    game = null;
+    const prevBest = bestFor(g.op, g.level);
+    const rec = { t: Date.now(), op: g.op, level: g.level, total: g.total, score: g.correct, beforeHint: g.beforeHint };
+    data.records.unshift(rec);
+    data.records = data.records.slice(0, 200);
+    persist();
+
+    $("resultMeta").textContent = `${opName(g.op)} · ${g.level}단계 · ${g.total}문제`;
+    $("resultScore").innerHTML = `${g.correct}<small> / ${g.total}</small>`;
+    const ratio = g.correct / g.total;
+    const cheer = ratio === 1 ? "모두 맞혔어요! 대단해요!" : ratio >= 0.8 ? "아주 잘했어요!" : ratio >= 0.5 ? "좋아요, 조금만 더!" : "다시 한 번 도전해 봐요!";
+    $("resultLine").textContent = `${g.total}문제 중 ${g.correct}개 맞혔어요. ${cheer}`;
+    $("resultSub").textContent = `길이 사라지기 전에 맞힌 문제: ${g.beforeHint}개`;
+    $("bestBadge").hidden = !(g.correct > 0 && (!prevBest || ratio > prevBest.score / prevBest.total));
+    const wl = $("wrongList");
+    wl.innerHTML = "";
+    g.wrong.forEach(w => {
+      const li = document.createElement("li");
+      li.innerHTML = `<b></b><span></span>`;
+      li.querySelector("b").textContent = `${w.text} = ${w.ans}`;
+      li.querySelector("span").textContent = w.given === "시간 초과" ? "시간 초과" : `고른 답 ${w.given}`;
+      wl.appendChild(li);
+    });
+    $("wrongBox").hidden = g.wrong.length === 0;
+    show("resultScreen");
+  }
+
+  function renderRecords() {
+    const table = $("bestTable");
+    let html = "<thead><tr><th></th>" + [1, 2, 3, 4, 5].map(n => `<th>${n}단계</th>`).join("") + "</tr></thead><tbody>";
+    OPS.forEach(o => {
+      html += `<tr><td class="op">${o.name}</td>`;
+      for (let lv = 1; lv <= 5; lv++) {
+        const b = bestFor(o.id, lv);
+        if (!b) html += `<td class="empty">–</td>`;
+        else html += `<td class="${b.score === b.total ? "full" : ""}">${b.score}/${b.total}</td>`;
+      }
+      html += "</tr>";
+    });
+    table.innerHTML = html + "</tbody>";
+
+    const list = $("recentList");
+    list.innerHTML = "";
+    if (!data.records.length) {
+      list.innerHTML = `<li class="empty-note">아직 기록이 없어요. 게임을 한 판 하면 여기에 쌓여요.</li>`;
+    } else {
+      data.records.slice(0, 15).forEach(r => {
+        const d = new Date(r.t);
+        const when = `${d.getMonth() + 1}월 ${d.getDate()}일 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        const li = document.createElement("li");
+        li.innerHTML = `<div><div>${opName(r.op)} · ${r.level}단계</div><div class="when">${when}</div></div><div class="sc">${r.score} / ${r.total}</div>`;
+        list.appendChild(li);
+      });
+    }
+    $("clearBtn").textContent = "기록 모두 지우기";
+    $("clearBtn").dataset.armed = "";
+    $("clearBtn").hidden = !data.records.length;
+  }
+  function openRecords(from) { recordsReturn = from; renderRecords(); show("recordsScreen"); }
+
+  // ---------- input ----------
+  document.addEventListener("keydown", e => {
+    if (!game || $("playScreen").hidden) return;
+    for (const dir of DIR_LIST) {
+      if (DIRS[dir].key.includes(e.key)) { e.preventDefault(); choose(dir); return; }
+    }
+  });
+  let touchStart = null;
+  const wrap = $("fieldWrap");
+  wrap.addEventListener("pointerdown", e => { touchStart = { x: e.clientX, y: e.clientY }; });
+  wrap.addEventListener("pointerup", e => {
+    if (!touchStart) return;
+    const dx = e.clientX - touchStart.x, dy = e.clientY - touchStart.y;
+    touchStart = null;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) return; // a tap, handled by click on the stone
+    if (Math.abs(dx) > Math.abs(dy)) choose(dx > 0 ? "right" : "left");
+    else choose(dy > 0 ? "down" : "up");
+  });
+
+  $("startBtn").addEventListener("click", () => {
+    // create the audio context inside the tap so browsers allow sound
+    if (data.sound && !audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    startGame();
+  });
+  $("soundBtn").addEventListener("click", () => { data.sound = !data.sound; persist(); renderStart(); });
+  $("recordsBtn").addEventListener("click", () => openRecords("startScreen"));
+  $("resultRecordsBtn").addEventListener("click", () => openRecords("resultScreen"));
+  $("recordsBack").addEventListener("click", () => { if (recordsReturn === "startScreen") renderStart(); show(recordsReturn); });
+  $("againBtn").addEventListener("click", startGame);
+  $("homeBtn").addEventListener("click", () => { renderStart(); show("startScreen"); });
+
+  let quitTimer = 0;
+  $("quitBtn").addEventListener("click", () => {
+    const b = $("quitBtn");
+    if (b.dataset.armed) {
+      clearTimeout(quitTimer);
+      b.dataset.armed = ""; b.textContent = "그만하기";
+      cancelAnimationFrame(raf);
+      game = null;
+      renderStart(); show("startScreen");
+      return;
+    }
+    b.dataset.armed = "1"; b.textContent = "한 번 더 누르면 그만해요";
+    quitTimer = setTimeout(() => { b.dataset.armed = ""; b.textContent = "그만하기"; }, 2500);
+  });
+  $("clearBtn").addEventListener("click", () => {
+    const b = $("clearBtn");
+    if (b.dataset.armed) { data.records = []; persist(); renderRecords(); return; }
+    b.dataset.armed = "1"; b.textContent = "정말 지울까요? 한 번 더 누르세요";
+  });
+
+  document.addEventListener("visibilitychange", () => { lastT = performance.now(); });
+
+  renderStart();
+})();
+</script>
