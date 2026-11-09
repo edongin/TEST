@@ -1,0 +1,62 @@
+"""index.html + skins/ + voice/ + 글꼴을 한 파일(숫자합체.html)로 묶는다.
+
+폰에 파일 하나만 받아서 인터넷 없이 열 수 있는 버전을 만든다.
+필요: pip install pillow fonttools brotli
+사용: python3 build_offline.py [Jua-Regular.ttf 경로]
+글꼴을 안 주면 기기 기본 글꼴을 쓴다.
+"""
+import base64, io, json, os, re, sys
+from PIL import Image
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+OUT = os.path.join(HERE, '숫자합체.html')
+
+
+def b64(data):
+    return base64.b64encode(data).decode('ascii')
+
+
+def skins():
+    out = {}
+    d = os.path.join(HERE, 'skins')
+    for f in sorted(os.listdir(d)):
+        if not f.endswith('.png'):
+            continue
+        im = Image.open(os.path.join(d, f)).convert('RGBA')
+        buf = io.BytesIO()
+        im.save(buf, 'WEBP', quality=85, method=6)  # 투명 배경 유지, PNG보다 훨씬 작음
+        out[int(f[:-4])] = 'data:image/webp;base64,' + b64(buf.getvalue())
+    return out
+
+
+def voices():
+    d = os.path.join(HERE, 'voice')
+    return {f[:-4]: b64(open(os.path.join(d, f), 'rb').read()) for f in sorted(os.listdir(d)) if f.endswith('.mp3')}
+
+
+def font_face(ttf, html):
+    # 게임에 실제로 나오는 글자만 남겨서 용량을 줄임
+    from fontTools import subset
+    chars = set(html) | set(map(chr, range(32, 127))) | set('−★')
+    opts = subset.Options(); opts.flavor = 'woff2'; opts.layout_features = ['*']
+    font = subset.load_font(ttf, opts)
+    sub = subset.Subsetter(opts); sub.populate(text=''.join(chars)); sub.subset(font)
+    buf = io.BytesIO(); subset.save_font(font, buf, opts)
+    return ('@font-face { font-family: "Jua"; font-display: block; '
+            'src: url(data:font/woff2;base64,%s) format("woff2"); }\n' % b64(buf.getvalue()))
+
+
+def main():
+    html = open(os.path.join(HERE, 'index.html'), encoding='utf-8').read()
+    html = re.sub(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com[^>]*>\n?', '', html)
+    if len(sys.argv) > 1:
+        html = html.replace('<style>\n', '<style>\n' + font_face(sys.argv[1], html), 1)
+    embed = json.dumps({'skins': skins(), 'voice': voices()}, separators=(',', ':'))
+    html = html.replace("<script>\n'use strict';", '<script>window.EMBED=' + embed + ';</script>\n<script>\n\'use strict\';', 1)
+    assert 'window.EMBED=' in html
+    open(OUT, 'w', encoding='utf-8').write(html)
+    print(OUT, round(os.path.getsize(OUT) / 1e6, 2), 'MB')
+
+
+if __name__ == '__main__':
+    main()
