@@ -14,9 +14,9 @@
     }
   ],
   "sources": [
-    {"name": "뽐뿌 국내", "type": "rss", "url": "https://www.ppomppu.co.kr/rss.php?id=ppomppu"},
-    {"name": "뽐뿌 해외", "type": "rss", "url": "https://www.ppomppu.co.kr/rss.php?id=ppomppu4"},
-    {"name": "뽐뿌 알리", "type": "rss", "url": "https://www.ppomppu.co.kr/rss.php?id=ppomppu8"},
+    {"name": "뽐뿌 국내", "enabled": false, "type": "rss", "url": "https://www.ppomppu.co.kr/rss.php?id=ppomppu"},
+    {"name": "뽐뿌 해외", "enabled": false, "type": "rss", "url": "https://www.ppomppu.co.kr/rss.php?id=ppomppu4"},
+    {"name": "뽐뿌 알리", "enabled": false, "type": "rss", "url": "https://www.ppomppu.co.kr/rss.php?id=ppomppu8"},
     {"name": "루리웹 핫딜", "type": "rss", "url": "https://bbs.ruliweb.com/market/board/1020/rss"},
     {"name": "퀘이사존", "type": "html", "url": "https://quasarzone.com/bbs/qb_saleinfo",
      "link_pattern": "/bbs/qb_saleinfo/views/\\d+"},
