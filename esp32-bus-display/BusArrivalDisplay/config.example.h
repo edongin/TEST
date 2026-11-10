@@ -64,9 +64,9 @@
 #define TFT_MOSI 3    // 화면 SDI   (터치 T_DIN 도 같은 핀에)
 #define TFT_MISO 0    // 터치 T_DO  (화면의 SDO 는 연결하지 않음)
 #define TFT_CS   1    // 화면 CS
-#define TFT_DC   15   // 화면 DC
-#define TFT_RST  -1   // 화면 RESET 은 3V3 에 연결 (핀이 모자라서 명령으로 초기화)
-#define TFT_BL   28   // 화면 LED (백라이트). 3V3 에 직접 꽂았다면 -1
+#define TFT_DC   21   // 화면 D/C
+#define TFT_RST  20   // 화면 RESET
+#define TFT_BL   -1   // 화면 LED 는 3.3V 에 연결 (항상 켜짐). GPIO 에 연결했다면 그 번호
 
 // 이 버튼을 누르면 바로 새로고침 (보드의 BT2 버튼). 안 쓰면 -1
 #define REFRESH_BUTTON_PIN 10
@@ -77,7 +77,7 @@
 #define UHF_LCD_BL_PIN 12  // 보드의 1.14인치 작은 화면 백라이트
 #define UHF_SD_CS_PIN  17  // SD 카드
 
-// 나중에 터치를 쓸 때: T_CS -> GP21, T_IRQ -> GP20 (T_CLK, T_DIN, T_DO 는 위와 같은 핀)
+// 나중에 터치를 쓸 때: T_CS -> GP15, T_IRQ -> GP28 (T_CLK, T_DIN, T_DO 는 위와 같은 핀)
 
 #else
 // ESP32 에서는 0 = [B] 개발보드 + ILI9341 모듈, 1 = [C] CYD
