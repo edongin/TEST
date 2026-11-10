@@ -1,0 +1,5 @@
+# 와이파이 비밀번호와 인증키가 들어 있으므로 올리지 않음
+BusArrivalDisplay/config.h
+.pio/
+test_native/.deps/
+test_native/test_parse
