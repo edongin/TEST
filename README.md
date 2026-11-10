@@ -68,4 +68,4 @@ python3 -m unittest discover -s tests
 
 ## 다른 프로젝트
 
-- [ESP32 버스 도착 알림판](esp32-bus-display/README.md): 공공데이터포털 버스 도착정보 API로 집 앞 정류장의 버스 도착 시간을 ILI9341 화면에 보여줍니다.
+- [버스 도착 알림판 (Pico W / ESP32)](esp32-bus-display/README.md): 공공데이터포털 버스 도착정보 API로 집 앞 정류장의 버스 도착 시간을 ILI9341 화면에 보여줍니다.

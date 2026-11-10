@@ -5,10 +5,10 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <U8g2_for_Adafruit_GFX.h>
-#include <time.h>
 
 #include "app_config.h"
 #include "arrival_text.h"
+#include "platform.h"
 
 // ----- 화면 배치 (가로 320 x 세로 240) -----
 static const int16_t W = 320;
@@ -26,8 +26,11 @@ static const int16_t TEXT_W = W - TEXT_X - 6;
 #define FONT_ROUTE_BIG u8g2_font_helvB18_tf
 #define FONT_ROUTE_MID u8g2_font_helvB14_tf
 
-// 화면이 쓰는 SPI 통로. 다른 통로는 나중에 터치용으로 남겨 둡니다.
-#if TFT_USE_HSPI && defined(HSPI)
+// 화면이 쓰는 SPI 통로
+#if defined(ARDUINO_ARCH_RP2040)
+// Pico W: SPI0 (GP0~GP3). 나중에 터치도 같은 통로를 함께 씁니다.
+#define tftSpi SPI
+#elif TFT_USE_HSPI && defined(HSPI)  // ESP32: 다른 통로는 나중에 터치용으로 남겨 둠
 static SPIClass tftSpi(HSPI);
 #elif defined(VSPI)
 static SPIClass tftSpi(VSPI);
@@ -109,7 +112,14 @@ void displayBegin() {
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, HIGH);
   }
+#if defined(ARDUINO_ARCH_RP2040)
+  // 핀만 정해 두면 tft.begin() 안에서 SPI 가 시작됩니다. CS 는 라이브러리가 직접 제어.
+  tftSpi.setSCK(TFT_SCLK);
+  tftSpi.setTX(TFT_MOSI);
+  if (TFT_MISO >= 0) tftSpi.setRX(TFT_MISO);
+#else
   tftSpi.begin(TFT_SCLK, TFT_MISO, TFT_MOSI, TFT_CS);
+#endif
   tft.begin(TFT_SPI_HZ);
   tft.setRotation(TFT_ROTATION);
   tft.invertDisplay(TFT_INVERT_COLORS);
@@ -165,7 +175,7 @@ void displayMessage(const char* title, const char* line1, const char* line2) {
 static void drawHeader(const char* station) {
   char clock[8] = "";
   struct tm now;
-  if (getLocalTime(&now, 0)) strftime(clock, sizeof(clock), "%H:%M", &now);
+  if (platformLocalTime(&now)) strftime(clock, sizeof(clock), "%H:%M", &now);
 
   char key[sizeof(headerCache)];
   snprintf(key, sizeof(key), "%s|%s", station, clock);

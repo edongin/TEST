@@ -50,13 +50,41 @@
 // 노선이 한 화면에 다 안 들어가면 몇 초마다 다음 페이지로 넘길지
 #define PAGE_INTERVAL_SEC 6
 
-// ----- 보드 종류 -----
-//   0 = ESP32 개발보드 + ILI9341 SPI 화면 모듈을 점퍼선으로 연결 (README 의 연결표대로)
-//   1 = ESP32-2432S028R (일명 CYD, 화면 일체형 보드)
+// ----- 보드와 화면 연결 -----
+// Arduino IDE 에서 고른 보드에 따라 아래 셋 중 하나가 자동으로 쓰입니다.
+//   - "Raspberry Pi Pico W" 를 고르면  -> [A] UHF Reader for Pico W 보드 + ILI9341 모듈
+//   - "ESP32 Dev Module" 을 고르면     -> [B] ESP32 개발보드 + ILI9341 모듈, 또는 [C] CYD
+
+#if defined(ARDUINO_ARCH_RP2040)
+// [A] SB Components "UHF Reader for Pico W" + ILI9341 3.2인치 SPI 모듈
+//     README 의 "Pico W 배선표" 대로 연결하세요.
+#define UHF_READER_BOARD 1  // 일반 Pico W 에 직접 연결했다면 0
+
+#define TFT_SCLK 2    // 화면 SCK   (터치 T_CLK 도 같은 핀에)
+#define TFT_MOSI 3    // 화면 SDI   (터치 T_DIN 도 같은 핀에)
+#define TFT_MISO 0    // 터치 T_DO  (화면의 SDO 는 연결하지 않음)
+#define TFT_CS   1    // 화면 CS
+#define TFT_DC   15   // 화면 DC
+#define TFT_RST  -1   // 화면 RESET 은 3V3 에 연결 (핀이 모자라서 명령으로 초기화)
+#define TFT_BL   28   // 화면 LED (백라이트). 3V3 에 직접 꽂았다면 -1
+
+// 이 버튼을 누르면 바로 새로고침 (보드의 BT2 버튼). 안 쓰면 -1
+#define REFRESH_BUTTON_PIN 10
+
+// UHF 리더 보드에 이미 붙어 있는 부품 (바꿀 필요 없음)
+#define UHF_EN_PIN     26  // RFID 모듈 켜기/끄기
+#define UHF_BUZZER_PIN 22  // 부저
+#define UHF_LCD_BL_PIN 12  // 보드의 1.14인치 작은 화면 백라이트
+#define UHF_SD_CS_PIN  17  // SD 카드
+
+// 나중에 터치를 쓸 때: T_CS -> GP21, T_IRQ -> GP20 (T_CLK, T_DIN, T_DO 는 위와 같은 핀)
+
+#else
+// ESP32 에서는 0 = [B] 개발보드 + ILI9341 모듈, 1 = [C] CYD
 #define BOARD_CYD 0
 
 #if BOARD_CYD
-// CYD 는 보드 안에서 이미 연결되어 있으므로 바꿀 필요 없음
+// [C] ESP32-2432S028R (CYD). 보드 안에서 이미 연결되어 있으므로 바꿀 필요 없음
 #define TFT_SCLK 14
 #define TFT_MISO 12
 #define TFT_MOSI 13
@@ -66,16 +94,20 @@
 #define TFT_BL   21
 #define TFT_USE_HSPI 1
 #else
-// ESP32 개발보드(ESP32-WROOM-32) + ILI9341 3.2인치/2.8인치 SPI 모듈
-// 화면 핀 -> ESP32 핀 (VCC 는 3V3, GND 는 GND 에 연결)
+// [B] ESP32 개발보드(ESP32-WROOM-32) + ILI9341 SPI 모듈
 #define TFT_SCLK 18   // SCK
 #define TFT_MISO 19   // SDO(MISO)
 #define TFT_MOSI 23   // SDI(MOSI)
 #define TFT_CS   5    // CS
-#define TFT_DC   26   // DC (D/C, RS 라고 적힌 모듈도 있음)
+#define TFT_DC   26   // DC
 #define TFT_RST  4    // RESET
 #define TFT_BL   22   // LED (백라이트). 3V3 에 직접 꽂았다면 -1
 #define TFT_USE_HSPI 0
+// 나중에 터치: T_CLK 25, T_DIN 32, T_DO 39(VN), T_CS 33, T_IRQ 36(VP)
+#endif
+
+// 이 버튼을 누르면 바로 새로고침 (BOOT 버튼 = 0번 핀). 안 쓰면 -1
+#define REFRESH_BUTTON_PIN 0
 #endif
 
 // 화면 통신 속도. 점퍼선이 길어서 화면에 줄이 가거나 깨지면 20000000 으로 낮추세요.
@@ -83,9 +115,3 @@
 
 #define TFT_ROTATION 1     // 1 또는 3 = 가로 화면. 화면이 뒤집혀 보이면 1 <-> 3
 #define TFT_INVERT_COLORS false  // 색이 반전돼 보이면 true
-
-// 이 버튼을 누르면 바로 새로고침 (개발보드와 CYD 모두 BOOT 버튼 = 0번 핀). 안 쓰면 -1
-#define REFRESH_BUTTON_PIN 0
-
-// 나중에 터치를 쓸 때의 배선 (지금 버스 알림판 코드에서는 쓰지 않음)
-// 터치 핀 -> ESP32 핀: T_CLK 25, T_DIN 32, T_DO 39(VN), T_CS 33, T_IRQ 36(VP)

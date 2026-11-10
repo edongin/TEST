@@ -1,6 +1,8 @@
-# ESP32 버스 도착 알림판
+# 버스 도착 알림판 (Raspberry Pi Pico W / ESP32)
 
-공공데이터포털의 **버스 도착정보 API**를 불러와서, ESP32에 연결한 ILI9341 화면(2.8인치/3.2인치)에 우리 집 앞 정류장의 버스 도착 시간을 보여줍니다.
+공공데이터포털의 **버스 도착정보 API**를 불러와서, ILI9341 화면(3.2인치/2.8인치)에 우리 집 앞 정류장의 버스 도착 시간을 보여줍니다.
+
+기본 구성은 **SB Components "UHF Reader for Pico W" 보드 + ILI9341 3.2인치 터치 모듈**입니다. ESP32 개발보드나 CYD 보드에서도 같은 코드가 동작합니다.
 
 ```
 ┌──────────────────────────────────────────┐
@@ -22,52 +24,102 @@
 - 첫 번째와 두 번째 버스의 남은 시간, 남은 정류장 수, 빈자리 수(경기도 광역버스) 표시
 - API를 부르지 않는 동안에도 남은 시간이 화면에서 계속 줄어듦 (호출 수 절약)
 - 먼저 오는 버스부터 정렬, 원하는 노선만 골라 보기
-- 밤에는 화면 끄기, BOOT 버튼으로 바로 새로고침
+- 밤에는 화면 끄기, 버튼으로 바로 새로고침 (Pico W 보드는 BT2, ESP32는 BOOT)
 - Wi-Fi가 끊기거나 API가 실패하면 마지막 정보를 그대로 두고 아래에 경고만 표시
 
 ---
 
-## 1. 준비물
+## 1. 준비물 (Pico W 구성)
 
-### 기본: ESP32 개발보드 + ILI9341 화면 모듈 (점퍼선 연결, 납땜 없음)
-| 부품 | 고를 때 기준 | 대략 가격 |
+| 부품 | 하는 일 | 비고 |
 |---|---|---|
-| **ILI9341 TFT LCD 모듈** (3.2인치 또는 2.8인치) | 설명에 **SPI**라고 적혀 있고, 한 줄에 핀이 14개 정도인 것. "16bit", "병렬", "메가용"은 안 됨 | 1.5만~2.5만 원 |
-| **ESP32 개발보드** | **ESP32-WROOM-32** 칩, USB 단자 달린 것 (ESP32-DevKitC, NodeMCU-32S 등) | 1만~1.5만 원 |
-| **점퍼선** | **암-암(Female-Female)**, 20cm 정도, 15가닥 이상 (터치까지 쓰면 14가닥 필요) | 2천 원 안팎 |
-| USB 케이블 | 개발보드 단자에 맞고 **데이터 전송이 되는** 것 (충전 전용은 안 됨) | |
-| 휴대폰 충전기 | 5V 1A 이상 | |
+| **UHF Reader for Pico W** (SB Components, SKU26678) | **두뇌 + Wi‑Fi**. 보드에 Raspberry Pi Pico W가 붙어 있음 | RFID 기능은 이 프로젝트에서 쓰지 않고 꺼 둠 |
+| **ILI9341 3.2인치 TFT LCD 모듈(터치)** | 버스 정보를 보여주는 화면 | 감압식 터치 (XPT2046) |
+| 핀헤더 1x40 | 보드의 GPIO 구멍에 납땜 | 6핀씩 2조각만 씀 |
+| 브레드보드 830핀 | 한 핀을 두 곳에 나눠 연결 | 170핀 미니도 가능 |
+| 점퍼선 M/F, F/F | 연결 | |
+| USB‑A ↔ Micro 5핀 케이블 | 프로그램 업로드 + 전원 | **데이터 전송이 되는 케이블**이어야 업로드 가능 |
+| 휴대폰 충전기 (5V 1A 이상) | 상시 전원 | |
 
-### 화면 연결 (9가닥)
-| 화면 모듈 핀 | ESP32 개발보드 핀 | 하는 일 |
-|---|---|---|
-| VCC | **3V3** | 전원 |
-| GND | GND | 접지 |
-| CS | GPIO 5 | 화면 선택 |
-| RESET | GPIO 4 | 화면 초기화 |
-| DC (D/C, RS) | GPIO 26 | 명령/데이터 구분 |
-| SDI (MOSI) | GPIO 23 | ESP32 → 화면 데이터 |
-| SCK | GPIO 18 | 통신 박자 |
-| LED | GPIO 22 | 백라이트 (밤에 끄기용) |
-| SDO (MISO) | GPIO 19 | 화면 → ESP32 데이터 |
+### 보드에서 쓸 수 있는 핀
+UHF 리더 보드는 화면·RFID·SD카드·버튼이 이미 대부분의 핀을 쓰고 있어서, 밖으로 나온 핀은 아래 **두 줄(각 6개)**뿐입니다.
 
-### 터치 연결 (5가닥, 나중에 터치 게임 등을 할 때)
-지금 버스 알림판은 터치를 쓰지 않지만, 처음부터 함께 꽂아 두면 나중에 다시 배선할 필요가 없습니다.
-
-| 화면 모듈 핀 | ESP32 개발보드 핀 |
+| 줄 | 핀 (보드에 적힌 이름) |
 |---|---|
-| T_CLK | GPIO 25 |
-| T_CS | GPIO 33 |
-| T_DIN | GPIO 32 |
-| T_DO | GPIO 39 (보드에 **VN** 또는 **SN**으로 적혀 있음) |
-| T_IRQ | GPIO 36 (보드에 **VP** 또는 **SP**로 적혀 있음) |
+| GPIO 줄 1 | 5V, GP0, GP1, GP2, GP3, GND |
+| GPIO 줄 2 | 3V3, GP21, GP20, GP28, GP15, GND |
 
-> 개발보드마다 핀 순서가 다르므로, 보드에 인쇄된 핀 이름(예: `D23`, `G23`, `IO23`)을 보고 꽂으세요.
-> 화면이 켜지지 않으면 LED 선을 GPIO 22 대신 **3V3**에 꽂고 `config.h`에서 `TFT_BL -1`로 바꿔 보세요.
-> 배선은 **USB를 뺀 상태에서** 하세요.
+이 8개 핀(GP0~3, GP15, GP20, GP21, GP28)으로 3.2인치 화면과 터치를 모두 연결합니다.
 
-### 다른 방법: CYD 보드 (화면 일체형)
-**ESP32-2432S028R** (일명 CYD)은 ESP32와 2.8인치 화면이 붙어 있어 배선이 필요 없습니다. 이 보드를 쓴다면 `config.h`에서 `BOARD_CYD 1`로 바꾸기만 하면 됩니다.
+### 1‑1. 핀헤더 납땜
+GPIO 줄 두 곳이 **구멍만 뚫려 있다면** 핀헤더를 납땜해야 합니다. (이미 핀이 꽂혀 있으면 넘어가세요.)
+
+1. 1x40 핀헤더를 **6핀씩 두 조각** 잘라냅니다 (니퍼나 손으로 꺾으면 잘림).
+2. 짧은 쪽을 보드 구멍에 끼우고 뒷면에서 납땜합니다. 모두 12군데입니다.
+3. 납땜 인두가 없다면 가까운 메이커스페이스나 납땜 인두(1만~2만 원)를 이용하세요.
+
+### 1‑2. 배선 (Pico W 배선표)
+**USB를 뺀 상태에서** 연결하세요.
+
+| 화면 모듈 핀 | 보드 핀 | 비고 |
+|---|---|---|
+| VCC | **3V3** | 브레드보드에서 RESET과 나눔 |
+| GND | GND | |
+| CS | **GP1** | |
+| RESET | **3V3** | 핀이 모자라서 3V3에 고정 (코드에서 명령으로 초기화) |
+| DC | **GP15** | |
+| SDI (MOSI) | **GP3** | 터치 T_DIN과 나눔 |
+| SCK | **GP2** | 터치 T_CLK와 나눔 |
+| LED | **GP28** | 백라이트 (밤에 끄기용) |
+| SDO (MISO) | 연결 안 함 | 터치 신호와 부딪히지 않게 비워 둠 |
+| T_CLK | **GP2** | (나중에 터치용) |
+| T_CS | **GP21** | (나중에 터치용) |
+| T_DIN | **GP3** | (나중에 터치용) |
+| T_DO | **GP0** | (나중에 터치용) |
+| T_IRQ | **GP20** | (나중에 터치용) |
+
+**한 핀을 두 곳에 연결하는 법 (브레드보드)**
+GP2, GP3, 3V3는 화면 모듈의 두 핀에 함께 연결해야 합니다.
+
+```
+보드 GP2 ──(M/F 선)──▶ 브레드보드 한 줄(예: 10번 줄) ◀──(M/F 선)── 화면 SCK
+                                                  ◀──(M/F 선)── 화면 T_CLK
+```
+
+- 브레드보드는 **같은 번호 줄의 구멍 5개(a~e)가 서로 연결**되어 있습니다.
+- M/F 선의 암(F)쪽을 보드나 화면의 핀에, 수(M)쪽을 브레드보드 구멍에 꽂습니다.
+- 3V3도 같은 방법으로 한 줄을 만들어 화면 VCC와 RESET에 나눠 줍니다.
+- 나머지 1:1 연결(GND, CS, DC, LED, T_CS, T_DO, T_IRQ)은 F/F 선으로 바로 꽂으면 됩니다.
+
+> 화면이 켜지지 않으면 LED 선을 GP28 대신 **3V3 줄**에 꽂고 `config.h`에서 `TFT_BL -1`로 바꿔 보세요.
+
+### 1‑3. 전원
+- **업로드할 때**: Pico W의 **Micro USB**를 PC에 연결합니다.
+- **평소 사용**: Micro USB 또는 보드의 **USB‑C (PWR ONLY)** 단자를 휴대폰 충전기에 꽂아 둡니다.
+- 보드에 배터리 단자와 충전 회로가 있어서, 리튬 배터리를 달면 잠깐 뽑아도 꺼지지 않게 할 수 있습니다 (선택).
+
+<details>
+<summary>ESP32 개발보드나 CYD 보드로 만들 때 (펼치기)</summary>
+
+`config.h`의 `BOARD_CYD`로 고르고, Arduino IDE에서 보드를 `ESP32 Dev Module`로 선택합니다.
+
+**ESP32 개발보드 + ILI9341 모듈 배선**
+
+| 화면 핀 | ESP32 핀 |
+|---|---|
+| VCC | 3V3 |
+| GND | GND |
+| CS | GPIO 5 |
+| RESET | GPIO 4 |
+| DC | GPIO 26 |
+| SDI (MOSI) | GPIO 23 |
+| SCK | GPIO 18 |
+| LED | GPIO 22 |
+| SDO (MISO) | GPIO 19 |
+| T_CLK / T_CS / T_DIN / T_DO / T_IRQ | GPIO 25 / 33 / 32 / 39(VN) / 36(VP) |
+
+**CYD (ESP32-2432S028R)** 는 배선이 필요 없고 `BOARD_CYD 1`로만 바꾸면 됩니다.
+</details>
 
 ---
 
@@ -139,30 +191,35 @@
 
 ## 5. 업로드하기
 
+> 보드에는 원래 MicroPython(RFID 예제용)이 들어 있습니다. 이 프로그램을 올리면 그것이 지워집니다.
+> 되돌리고 싶으면 [제조사 펌웨어](https://github.com/sbcshop/UHF_Reader_Pico_W_Software)의 `uhfreader_picow_firmware.uf2`를 아래 BOOTSEL 방법으로 다시 넣으면 됩니다.
+
 ### 방법 A. Arduino IDE (처음이라면 추천)
 1. [Arduino IDE](https://www.arduino.cc/en/software) 설치
 2. **파일 → 기본 설정 → 추가 보드 관리자 URL**에 아래 주소를 넣습니다.
    ```
-   https://espressif.github.io/arduino-esp32/package_esp32_index.json
+   https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
    ```
-3. **보드 매니저**에서 `esp32` (Espressif Systems) 설치
+3. **보드 매니저**에서 `Raspberry Pi Pico/RP2040/RP2350` (Earle F. Philhower, III) 설치
 4. **라이브러리 매니저**에서 아래 3개를 설치합니다. 의존 라이브러리도 같이 설치하라고 하면 "모두 설치"를 누르세요.
    - `ArduinoJson` (Benoit Blanchon, 7.x)
    - `Adafruit ILI9341`
    - `U8g2_for_Adafruit_GFX`
 5. `BusArrivalDisplay/BusArrivalDisplay.ino` 열기
-6. **도구** 메뉴 설정
-   - 보드: `ESP32 Dev Module`
-   - Partition Scheme: `Huge APP (3MB No OTA/1MB SPIFFS)`
-   - 포트: 보드가 연결된 포트
-7. 업로드(→) 버튼. "Connecting..."에서 멈추면 보드의 **BOOT 버튼**을 누르고 있다가 업로드가 시작되면 뗍니다.
+6. **도구 → 보드**: `Raspberry Pi Pico W`
+7. **처음 한 번은 BOOTSEL 모드로 연결합니다.**
+   1. USB를 뺀 상태에서 Pico W 위의 흰색 **BOOTSEL** 버튼을 누른 채로
+   2. Micro USB를 PC에 꽂고 버튼을 뗍니다.
+   3. PC에 `RPI-RP2`라는 USB 드라이브가 보이면 성공입니다. (안 보이면 케이블이 충전 전용일 가능성이 큽니다.)
+   4. **도구 → 포트**에서 `UF2 Board`를 고릅니다.
+8. 업로드(→) 버튼을 누릅니다. 다음부터는 BOOTSEL 없이 일반 포트로 바로 업로드됩니다.
 
-포트가 안 보이면 USB 드라이버(CH340 또는 CP2102)를 설치하세요.
+**ESP32로 만드는 경우**: 2번 주소 대신 `https://espressif.github.io/arduino-esp32/package_esp32_index.json`, 보드 매니저에서 `esp32` 설치, 보드는 `ESP32 Dev Module`, Partition Scheme은 `Huge APP`을 고릅니다.
 
 ### 방법 B. PlatformIO (VS Code)
-이 폴더(`esp32-bus-display`)를 열고 실행합니다.
+이 폴더(`esp32-bus-display`)를 열고 실행합니다. 기본값은 Pico W이고, ESP32는 `-e esp32dev`를 붙입니다.
 ```bash
-pio run -t upload
+pio run -e pico_w -t upload
 ```
 ```bash
 pio device monitor
@@ -188,13 +245,16 @@ pio device monitor
 
 | 증상 | 해결 |
 |---|---|
-| 화면이 하얗거나 아무것도 안 나옴 | 배선을 연결표와 다시 비교 (특히 DC, CS, SCK, SDI). 화면 모듈의 VCC가 3V3에 꽂혀 있는지 확인 |
+| 화면이 하얗거나 아무것도 안 나옴 | 배선을 연결표와 다시 비교 (특히 DC, CS, SCK, SDI). 화면 모듈의 VCC와 RESET이 3V3에 꽂혀 있는지 확인 |
+| (Pico W) 화면이 계속 하얌 | RESET을 3V3에 고정한 구성이라 USB를 완전히 뺐다가 다시 꽂아 보기. 그래도 안 되면 화면 VCC를 3V3 대신 GPIO 줄 1의 **5V**에 연결 |
+| (Pico W) PC에 `RPI-RP2` 드라이브가 안 보임 | 데이터 전송이 되는 Micro USB 케이블로 바꾸기. BOOTSEL을 누른 채로 꽂았는지 확인 |
+| (Pico W) 보드의 작은 화면이 켜져 있음 | 정상입니다. 이 프로그램이 시작되면 꺼집니다 |
 | 화면이 아예 어두움 | LED 선을 3V3에 꽂고 `TFT_BL -1` |
 | 화면에 줄이 가거나 글자가 깨짐 | 점퍼선을 짧은 것으로 바꾸거나 `TFT_SPI_HZ`를 `20000000`으로 낮추기 |
 | (CYD) 화면이 안 나옴 | USB 포트 2개짜리 CYD는 화면 칩이 ST7789라서 이 코드로는 안 될 수 있음 |
 | 색이 반전되어 보임 | `TFT_INVERT_COLORS true` |
 | 화면이 뒤집혀 보임 | `TFT_ROTATION`을 1 ↔ 3으로 변경 |
-| "Wi-Fi 연결 실패" | 이름/비밀번호 확인. ESP32는 **2.4GHz만** 지원 (5GHz 안 됨) |
+| "Wi-Fi 연결 실패" | 이름/비밀번호 확인. Pico W와 ESP32 모두 **2.4GHz만** 지원 (5GHz 안 됨) |
 | "인증키 미등록" | 승인 후 1~2시간 기다리기. 그 API를 활용신청했는지 확인 |
 | "오늘 호출 한도 초과" | `UPDATE_INTERVAL_SEC` 늘리기, `ACTIVE_START_HOUR`/`ACTIVE_END_HOUR`로 켜 두는 시간 줄이기 |
 | 노선이 하나도 안 나옴 | 정류장 ID가 맞는지, `ROUTE_FILTER`의 노선 번호가 정확한지 확인 |
@@ -213,11 +273,12 @@ pio device monitor
 | `BusArrivalDisplay/bus_fetch.cpp` | 인터넷으로 API 호출 |
 | `BusArrivalDisplay/arrival_text.cpp` | "6분 (4정거장 전)" 같은 화면 문구 만들기 |
 | `BusArrivalDisplay/display.cpp` | 화면 그리기 (한글 글꼴, 바뀐 줄만 다시 그림) |
+| `BusArrivalDisplay/platform.cpp` | 보드마다 다른 부분 (Pico W / ESP32의 Wi‑Fi, 시계, UHF 보드 부품 끄기) |
 | `BusArrivalDisplay/config.example.h` | 설정 예시 |
 | `test_native/` | PC에서 응답 해석을 확인하는 테스트 |
 
 ### PC에서 테스트 실행
-API 응답 해석과 화면 문구는 ESP32 없이 PC에서 확인할 수 있습니다.
+API 응답 해석과 화면 문구는 보드 없이 PC에서 확인할 수 있습니다.
 ```bash
 cd test_native && make
 ```

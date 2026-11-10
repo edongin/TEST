@@ -3,7 +3,9 @@
 #include <Arduino.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
+#if !defined(ARDUINO_ARCH_RP2040)
 #include <WiFiClientSecure.h>
+#endif
 
 #include "app_config.h"
 
@@ -20,21 +22,28 @@ bool fetchArrivals(bus::Result& out) {
     return false;
   }
 
-  // 아래 두 클라이언트는 http 보다 먼저 만들어져야 http 가 끝날 때까지 살아 있습니다.
-  WiFiClientSecure secureClient;
-  WiFiClient plainClient;
   HTTPClient http;
-  http.setConnectTimeout(8000);
   http.setTimeout(10000);
-
   bool started;
+
+#if defined(ARDUINO_ARCH_RP2040)
+  // Pico W: HTTPClient 가 https 연결을 직접 처리합니다.
+  // 공개된 버스 정보라서 서버 인증서 검사는 생략합니다 (인증서 갱신 때 멈추지 않도록).
+  // (setInsecure 는 https 연결을 만들어 버리므로 https 주소일 때만 부릅니다)
+  if (strncmp(url, "https://", 8) == 0) http.setInsecure();
+  started = http.begin(String(url));
+#else
+  // ESP32: 아래 두 클라이언트는 http 보다 오래 살아 있어야 해서 static 으로 둡니다.
+  static WiFiClientSecure secureClient;
+  static WiFiClient plainClient;
+  http.setConnectTimeout(8000);
   if (strncmp(url, "https://", 8) == 0) {
-    // 공개된 버스 정보라서 서버 인증서 검사는 생략합니다 (인증서 갱신 때 멈추지 않도록).
-    secureClient.setInsecure();
+    secureClient.setInsecure();  // 인증서 검사 생략 (위와 같은 이유)
     started = http.begin(secureClient, url);
   } else {
     started = http.begin(plainClient, url);
   }
+#endif
   if (!started) {
     bus::copyUtf8(out.error, sizeof(out.error), "요청 주소 오류");
     return false;

@@ -1,5 +1,5 @@
 // =============================================================================
-//  ESP32 버스 도착 알림판
+//  버스 도착 알림판 (Raspberry Pi Pico W / ESP32)
 //  공공데이터포털 버스 도착정보 API 를 불러와서 ILI9341 화면에 보여줍니다.
 //  설정은 config.h 에서 합니다 (config.example.h 를 복사해서 만드세요).
 // =============================================================================
@@ -10,6 +10,7 @@
 #include "bus_api.h"
 #include "bus_fetch.h"
 #include "display.h"
+#include "platform.h"
 
 static const char* APP_TITLE = "버스 도착 알림판";
 static const uint32_t RETRY_AFTER_ERROR_MS = 30 * 1000UL;
@@ -38,10 +39,7 @@ static const char* stationTitle() {
   return "정류장 " STATION_ID;
 }
 
-static bool timeIsSet(struct tm* now) {
-  // NTP 로 시간을 받기 전에는 1970년이라서 연도로 확인합니다.
-  return getLocalTime(now, 0) && now->tm_year >= (2024 - 1900);
-}
+static bool timeIsSet(struct tm* now) { return platformLocalTime(now); }
 
 static bool inActiveHours() {
   struct tm now;
@@ -62,11 +60,9 @@ static void updateFooterTime() {
 }
 
 static void connectWifi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.setAutoReconnect(true);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
   displayMessage(APP_TITLE, "Wi-Fi 연결 중...", WIFI_SSID);
+  platformWifiBegin(WIFI_SSID, WIFI_PASSWORD);
+
   Serial.printf("[Wi-Fi] %s 에 연결 중", WIFI_SSID);
   for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) {
     delay(500);
@@ -76,6 +72,7 @@ static void connectWifi() {
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("[Wi-Fi] 연결됨, IP %s\n", WiFi.localIP().toString().c_str());
+    platformStartClock();
     displayMessage(APP_TITLE, "도착 정보 불러오는 중...", stationTitle());
   } else {
     Serial.println("[Wi-Fi] 연결 실패, 계속 다시 시도합니다");
@@ -95,7 +92,8 @@ static void doFetch() {
     return;
   }
 
-  nextFetchAtMs = now + min((uint32_t)(UPDATE_INTERVAL_SEC * 1000UL), RETRY_AFTER_ERROR_MS);
+  const uint32_t intervalMs = UPDATE_INTERVAL_SEC * 1000UL;
+  nextFetchAtMs = now + (intervalMs < RETRY_AFTER_ERROR_MS ? intervalMs : RETRY_AFTER_ERROR_MS);
   if (haveData) {
     // 예전 정보는 계속 보여주고, 아래쪽에 경고만 띄웁니다.
     snprintf(warning, sizeof(warning), "갱신 실패: %s", incoming.error);
@@ -109,15 +107,14 @@ static void doFetch() {
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.println("\n=== 버스 도착 알림판 시작 ===");
+  Serial.printf("\n=== 버스 도착 알림판 시작 (%s) ===\n", platformBoardName());
+
+  platformBoardInit();
 
   if (REFRESH_BUTTON_PIN >= 0) pinMode(REFRESH_BUTTON_PIN, INPUT_PULLUP);
 
   displayBegin();
   connectWifi();
-
-  // 한국 시간(KST, UTC+9) 으로 시계 맞추기
-  configTzTime("KST-9", "pool.ntp.org", "time.google.com");
   nextFetchAtMs = millis();
 }
 
@@ -141,17 +138,19 @@ void loop() {
     nextFetchAtMs = now;  // 켜지자마자 새 정보
   }
 
-  // 2) Wi-Fi 가 끊기면 10초마다 다시 연결
+  // 2) Wi-Fi 가 끊기면 20초마다 다시 연결
   bool online = WiFi.status() == WL_CONNECTED;
-  if (!online && now - lastReconnectMs > 10000) {
+  if (!online && now - lastReconnectMs > 20000) {
     lastReconnectMs = now;
     Serial.println("[Wi-Fi] 끊김, 다시 연결 시도");
-    WiFi.reconnect();
+    platformWifiReconnect(WIFI_SSID, WIFI_PASSWORD);
+    now = millis();
   }
   if (online && wifiLost) {
     Serial.println("[Wi-Fi] 다시 연결됨");
     nextFetchAtMs = now;
   }
+  if (online) platformStartClock();  // 처음 연결됐을 때 한 번만 실제로 시작됨
   wifiLost = !online;
 
   // 3) 버튼을 누르면 바로 새로고침
