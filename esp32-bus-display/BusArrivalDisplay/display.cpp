@@ -26,8 +26,11 @@ static const int16_t TEXT_W = W - TEXT_X - 6;
 #define FONT_ROUTE_BIG u8g2_font_helvB18_tf
 #define FONT_ROUTE_MID u8g2_font_helvB14_tf
 
-#ifdef HSPI
+// 화면이 쓰는 SPI 통로. 다른 통로는 나중에 터치용으로 남겨 둡니다.
+#if TFT_USE_HSPI && defined(HSPI)
 static SPIClass tftSpi(HSPI);
+#elif defined(VSPI)
+static SPIClass tftSpi(VSPI);
 #else
 static SPIClass tftSpi(FSPI);
 #endif
@@ -107,7 +110,7 @@ void displayBegin() {
     digitalWrite(TFT_BL, HIGH);
   }
   tftSpi.begin(TFT_SCLK, TFT_MISO, TFT_MOSI, TFT_CS);
-  tft.begin(40000000);
+  tft.begin(TFT_SPI_HZ);
   tft.setRotation(TFT_ROTATION);
   tft.invertDisplay(TFT_INVERT_COLORS);
 
@@ -129,12 +132,22 @@ void displayBegin() {
 }
 
 void displaySetSleep(bool sleep) {
-  if (TFT_BL >= 0) digitalWrite(TFT_BL, sleep ? LOW : HIGH);
-  tft.sendCommand(sleep ? ILI9341_DISPOFF : ILI9341_DISPON);
-  if (!sleep) {
+  if (sleep) {
     tft.fillScreen(C_BG);
-    clearCaches();
+    // 백라이트를 끌 수 없으면 화면만 검게 칠해 둡니다.
+    // (백라이트가 켜진 채 DISPOFF 를 보내면 화면이 하얗게 보임)
+    if (TFT_BL >= 0) {
+      tft.sendCommand(ILI9341_DISPOFF);
+      digitalWrite(TFT_BL, LOW);
+    }
+  } else {
+    if (TFT_BL >= 0) {
+      tft.sendCommand(ILI9341_DISPON);
+      digitalWrite(TFT_BL, HIGH);
+    }
+    tft.fillScreen(C_BG);
   }
+  clearCaches();
 }
 
 void displayMessage(const char* title, const char* line1, const char* line2) {

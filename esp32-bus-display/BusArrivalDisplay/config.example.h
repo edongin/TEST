@@ -50,19 +50,42 @@
 // 노선이 한 화면에 다 안 들어가면 몇 초마다 다음 페이지로 넘길지
 #define PAGE_INTERVAL_SEC 6
 
-// ----- 디스플레이 핀 -----
-// 기본값은 "ESP32-2432S028R" (일명 CYD, 2.8인치 ILI9341 화면 일체형 보드) 입니다.
-// 따로 산 ILI9341 화면을 연결했다면 아래 숫자를 실제 연결한 핀으로 바꾸세요.
+// ----- 보드 종류 -----
+//   0 = ESP32 개발보드 + ILI9341 SPI 화면 모듈을 점퍼선으로 연결 (README 의 연결표대로)
+//   1 = ESP32-2432S028R (일명 CYD, 화면 일체형 보드)
+#define BOARD_CYD 0
+
+#if BOARD_CYD
+// CYD 는 보드 안에서 이미 연결되어 있으므로 바꿀 필요 없음
 #define TFT_SCLK 14
 #define TFT_MISO 12
 #define TFT_MOSI 13
 #define TFT_CS   15
 #define TFT_DC   2
-#define TFT_RST  -1   // 리셋 핀이 없으면 -1
-#define TFT_BL   21   // 백라이트 핀. 없으면 -1
+#define TFT_RST  -1
+#define TFT_BL   21
+#define TFT_USE_HSPI 1
+#else
+// ESP32 개발보드(ESP32-WROOM-32) + ILI9341 3.2인치/2.8인치 SPI 모듈
+// 화면 핀 -> ESP32 핀 (VCC 는 3V3, GND 는 GND 에 연결)
+#define TFT_SCLK 18   // SCK
+#define TFT_MISO 19   // SDO(MISO)
+#define TFT_MOSI 23   // SDI(MOSI)
+#define TFT_CS   5    // CS
+#define TFT_DC   26   // DC (D/C, RS 라고 적힌 모듈도 있음)
+#define TFT_RST  4    // RESET
+#define TFT_BL   22   // LED (백라이트). 3V3 에 직접 꽂았다면 -1
+#define TFT_USE_HSPI 0
+#endif
+
+// 화면 통신 속도. 점퍼선이 길어서 화면에 줄이 가거나 깨지면 20000000 으로 낮추세요.
+#define TFT_SPI_HZ 27000000
 
 #define TFT_ROTATION 1     // 1 또는 3 = 가로 화면. 화면이 뒤집혀 보이면 1 <-> 3
 #define TFT_INVERT_COLORS false  // 색이 반전돼 보이면 true
 
-// 이 버튼을 누르면 바로 새로고침 (CYD 의 BOOT 버튼 = 0번 핀). 안 쓰면 -1
+// 이 버튼을 누르면 바로 새로고침 (개발보드와 CYD 모두 BOOT 버튼 = 0번 핀). 안 쓰면 -1
 #define REFRESH_BUTTON_PIN 0
+
+// 나중에 터치를 쓸 때의 배선 (지금 버스 알림판 코드에서는 쓰지 않음)
+// 터치 핀 -> ESP32 핀: T_CLK 25, T_DIN 32, T_DO 39(VN), T_CS 33, T_IRQ 36(VP)
