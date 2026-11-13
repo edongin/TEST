@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>혼자 치는 리치마작</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@900&family=Yuji+Syuku&display=swap">
 <style>
 /* Layout: 녹색 펠트 탁자(왼쪽, 상대 3명 위 · 정보 가운데 · 내 패 아래) + 오른쪽에 붙은 도움말 족보 */
 :root{
@@ -9,10 +9,10 @@
   --bg:#0b1f1a; --felt:#17574a; --felt-2:#0f4035; --rail:#3a2619;
   --panel:#112e27; --panel-2:#183b32; --line:rgba(243,239,226,.14);
   --ink:#f3efe2; --muted:#a8bdb3; --gold:#e6b23c; --red:#e2574c; --blue:#7fb2ff;
-  --tile:#fbf8ec; --tile-2:#ece5cf; --tile-back:#dc9a1f; --tile-back-2:#b97a10;
+  --tile:#fefefb; --tile-2:#e8e8e0; --tile-back:#e8961c; --tile-back-2:#c47a0c;
   --f-display:"Black Han Sans","IBM Plex Sans KR",system-ui,sans-serif;
   --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
-  --f-tile:"Noto Serif KR","Nanum Myeongjo","Batang",serif;
+  --f-tile:"Yuji Syuku","Noto Serif KR","Nanum Myeongjo","Batang",serif;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -91,17 +91,35 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outl
   background:var(--red);padding:.05em .5em;border-radius:.3em;opacity:0;pointer-events:none;z-index:7;white-space:nowrap;box-shadow:0 4px 18px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.6)}
 #say0{left:50%;top:80%}#say1{left:80%;top:50%}#say2{left:50%;top:20%}#say3{left:20%;top:50%}
 .say.on{opacity:1;transform:translate(-50%,-50%) scale(1);transition:transform .18s cubic-bezier(.2,1.6,.4,1),opacity .1s}
-#banner{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;z-index:40;opacity:0}
-#banner span{font-family:var(--f-display);font-size:clamp(90px,22vw,220px);color:var(--gold);text-shadow:0 6px 0 #5c1611,0 0 60px rgba(230,178,60,.7);-webkit-text-stroke:3px #5c1611}
-#banner.on{opacity:1}#banner.on span{animation:slam .9s cubic-bezier(.2,1.5,.4,1) both}
-@keyframes slam{0%{transform:scale(3) rotate(-8deg);opacity:0}45%{transform:scale(1) rotate(-4deg);opacity:1}100%{transform:scale(1.06) rotate(-4deg)}}
+.act.shine{position:relative;font-size:clamp(30px,6.4cqw,48px);padding:.4em 1.1em;border-color:#fff6c9;color:#fff;text-shadow:0 2px 0 #7a130d;
+  background:linear-gradient(110deg,#b3261e 0%,#ef5a4d 30%,#fff1b8 50%,#ef5a4d 70%,#b3261e 100%);background-size:260% 100%;
+  animation:actin .2s cubic-bezier(.2,1.5,.4,1) both,pulse .55s ease-in-out .2s infinite alternate,sweep 1.3s linear infinite}
+.act.shine::before,.act.shine::after{content:"✦";position:absolute;color:#fff6c9;text-shadow:0 0 10px #ffd75e,0 0 20px #ffb400;font-size:.8em;animation:twinkle .8s ease-in-out infinite alternate;pointer-events:none}
+.act.shine::before{left:-.35em;top:-.45em}.act.shine::after{right:-.3em;bottom:-.4em;animation-delay:.4s;font-size:.6em}
+@keyframes pulse{from{transform:scale(1);box-shadow:0 5px 0 rgba(0,0,0,.45),0 0 14px 3px rgba(255,215,94,.65)}to{transform:scale(1.09);box-shadow:0 5px 0 rgba(0,0,0,.45),0 0 44px 14px rgba(255,215,94,1)}}
+@keyframes sweep{from{background-position:130% 0}to{background-position:-130% 0}}
+@keyframes twinkle{from{transform:scale(.3) rotate(0);opacity:.3}to{transform:scale(1.3) rotate(90deg);opacity:1}}
+/* 론!/쯔모! 외침 말풍선 */
+#banner{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;z-index:40;opacity:0;background:radial-gradient(circle,rgba(0,0,0,.05),rgba(0,0,0,.55))}
+#banner svg{width:min(88vw,760px);height:auto;overflow:visible;filter:drop-shadow(0 14px 0 rgba(0,0,0,.45))}
+#banner.on{opacity:1}#banner.on svg{animation:slam .95s cubic-bezier(.2,1.6,.35,1) both}
+@keyframes slam{0%{transform:scale(.15) rotate(-14deg);opacity:0}22%{transform:scale(1.18) rotate(-5deg);opacity:1}30%{transform:scale(1) rotate(-5deg) translate(-10px,6px)}38%{transform:scale(1.04) rotate(-5deg) translate(10px,-6px)}46%{transform:scale(1) rotate(-5deg) translate(-7px,-4px)}54%{transform:scale(1.02) rotate(-5deg) translate(6px,4px)}62%,100%{transform:scale(1) rotate(-5deg)}}
+/* 큰 역 예고: 별이 쏟아진다 */
+#stars{position:fixed;inset:0;z-index:45;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse at 50% 0%,rgba(40,30,90,.75),rgba(3,6,20,.88));animation:fadein .35s both}
+#stars.out{animation:fadeout .4s both}
+#stars i{position:absolute;top:-12vh;font-style:normal;line-height:1;color:#ffd75e;text-shadow:0 0 8px #fff3b0,0 0 22px #ffb400;animation:fall linear both;will-change:transform}
+#stars i::after{content:"";position:absolute;left:46%;bottom:60%;width:2px;height:9em;background:linear-gradient(to top,rgba(255,236,160,.75),transparent);transform:translateX(-50%) rotate(9deg);transform-origin:50% 100%}
+#stars b{position:absolute;left:0;right:0;top:42%;text-align:center;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,7vw,64px);color:#fff6c9;text-shadow:0 0 18px #ffb400,0 4px 0 #5c3a00;animation:omen 1.1s ease-in-out infinite alternate}
+@keyframes fall{from{transform:translate3d(0,0,0)}to{transform:translate3d(var(--dx),128vh,0)}}
+@keyframes fadein{from{opacity:0}}@keyframes fadeout{to{opacity:0}}
+@keyframes omen{from{opacity:.55;letter-spacing:.1em}to{opacity:1;letter-spacing:.3em}}
 
 /* ---------- 패 ---------- */
 .tile{display:inline-block;position:relative;width:var(--w);aspect-ratio:3/4;flex:none;padding:0;border:0;
-  background:linear-gradient(170deg,var(--tile),var(--tile-2));border-radius:13%/10%;
-  box-shadow:0 calc(var(--w) * .07) 0 var(--tile-back),0 calc(var(--w) * .12) calc(var(--w) * .1) rgba(0,0,0,.4)}
+  background:linear-gradient(175deg,var(--tile),var(--tile-2));border-radius:10%/7.5%;
+  box-shadow:0 calc(var(--w) * -.085) 0 var(--tile-back),0 calc(var(--w) * .1) calc(var(--w) * .1) rgba(0,0,0,.45),inset 0 0 0 1px rgba(40,40,30,.16)}
 .tile svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-.tile.back{background:linear-gradient(170deg,var(--tile-back),var(--tile-back-2));box-shadow:0 calc(var(--w) * .07) 0 var(--tile-2),0 calc(var(--w) * .12) calc(var(--w) * .1) rgba(0,0,0,.4)}
+.tile.back{background:linear-gradient(175deg,var(--tile-back),var(--tile-back-2));box-shadow:0 calc(var(--w) * -.085) 0 var(--tile-back-2),0 calc(var(--w) * .1) calc(var(--w) * .1) rgba(0,0,0,.45)}
 .tile.last{outline:2px solid var(--gold);outline-offset:1px;z-index:1}
 .tile.win{outline:3px solid var(--red);outline-offset:1px}
 .tile.tg{filter:brightness(.86)}
@@ -129,9 +147,12 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outl
 .trow{display:flex;gap:3px;flex-wrap:wrap;--w:30px}
 .tcell{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .ylist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
-.ylist li{display:grid;grid-template-columns:auto 1fr;gap:0 8px;padding:5px 0;border-bottom:1px solid var(--line)}
-.ylist li b{white-space:nowrap}.ylist li span{color:var(--muted);font-size:12.5px}
-.ylist li.h{border:0;padding:10px 0 0;color:var(--gold);font-weight:700;display:block}
+.ylist li{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--line);container-type:inline-size}
+.ylist li b{color:var(--gold)}.ylist li>span{color:var(--muted);font-size:12.5px}
+.ex{display:flex;gap:1.6cqw;align-items:flex-end;padding-top:5px;--w:calc((100cqw - 8cqw) / 14.3)}
+.ex .ts{display:flex;gap:0}
+.ex .tile{box-shadow:0 calc(var(--w) * -.085) 0 var(--tile-back),inset 0 0 0 1px rgba(40,40,30,.3)}
+.ylist li.h{border:0;padding:12px 0 2px;font-family:var(--f-display);font-size:17px;display:block}
 .steps{margin:0;padding-left:18px;color:var(--muted);font-size:13px}.steps li{margin:4px 0}.steps b{color:var(--ink)}
 
 /* ---------- 오버레이 ---------- */
@@ -208,7 +229,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outl
     </aside>
   </div>
 </div>
-<div id="banner"><span></span></div>
+<div id="banner"></div>
 <div id="overlay" hidden></div>
 
 <script>
@@ -232,18 +253,18 @@ function kdesc(k,red){
   if(k<31) return '풍패(바람패). 자기 바람(자풍)이나 판의 바람(장풍)을 3장 모으면 역이 됩니다';
   return '삼원패. 같은 패 3장을 모으면 무조건 역(역패)이 됩니다'+(k===31?' · 백은 아무 그림 없는 흰 패':'');
 }
-const COL={r:'#c4302b',g:'#17794a',b:'#1f4aa3',k:'#1b1d2a'};
-const pin=(x,y,r,c)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/><circle cx="${x}" cy="${y}" r="${r*.56}" fill="none" stroke="#fbf8ec" stroke-width="${r*.2}"/><circle cx="${x}" cy="${y}" r="${r*.2}" fill="#fbf8ec"/>`;
-const stick=(x,y,h,c,a)=>`<g${a?` transform="rotate(${a} ${x} ${y})"`:''}><rect x="${x-3.5}" y="${y-h/2}" width="7" height="${h}" rx="3" fill="${c}"/><rect x="${x-4.8}" y="${y-1.3}" width="9.6" height="2.6" rx="1.2" fill="${c}"/><line x1="${x}" y1="${y-h/2+3}" x2="${x}" y2="${y+h/2-3}" stroke="#fbf8ec" stroke-width="1.1" opacity=".75"/></g>`;
+const COL={r:'#c8281f',g:'#12703f',b:'#1c2c5e',k:'#15161c'};
+const pin=(x,y,r,c)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/><circle cx="${x}" cy="${y}" r="${r*.56}" fill="none" stroke="#fefefb" stroke-width="${r*.2}"/><circle cx="${x}" cy="${y}" r="${r*.2}" fill="#fefefb"/>`;
+const stick=(x,y,h,c,a)=>`<g${a?` transform="rotate(${a} ${x} ${y})"`:''}><rect x="${x-3.5}" y="${y-h/2}" width="7" height="${h}" rx="3" fill="${c}"/><rect x="${x-4.8}" y="${y-1.3}" width="9.6" height="2.6" rx="1.2" fill="${c}"/><line x1="${x}" y1="${y-h/2+3}" x2="${x}" y2="${y+h/2-3}" stroke="#fefefb" stroke-width="1.1" opacity=".75"/></g>`;
 const svgCache=new Map();
 function tileSVG(k,red){
   const key=k+(red?'r':''); if(svgCache.has(key)) return svgCache.get(key);
   const {r,g,b,k:bk}=COL; let s='';
-  const txt=(ch,y,size,c)=>`<text x="30" y="${y}" font-size="${size}" text-anchor="middle" fill="${c}" font-family="'Noto Serif KR','Nanum Myeongjo',Batang,serif" font-weight="900">${ch}</text>`;
+  const txt=(ch,y,size,c)=>`<text x="30" y="${y}" font-size="${size}" text-anchor="middle" fill="${c}" font-family="'Yuji Syuku','Noto Serif KR','Nanum Myeongjo',Batang,serif" font-weight="900">${ch}</text>`;
   if(k<9){ s=txt(NUM_HAN[k],33,29,red?r:bk)+txt('萬',70,31,r); }
   else if(k<18){ const n=k-9, c=x=>red?r:x;
-    const L=[[[30,40,21,r]],[[30,21,13,b],[30,59,13,g]],[[15,17,10.5,b],[30,40,10.5,r],[45,63,10.5,g]],
-      [[17,21,12,b],[43,21,12,g],[17,59,12,g],[43,59,12,b]],[[15,17,10,b],[45,17,10,g],[30,40,10,r],[15,63,10,g],[45,63,10,b]],
+    const L=[[[30,40,21,r]],[[30,21,13,b],[30,59,13,b]],[[15,17,10.5,b],[30,40,10.5,r],[45,63,10.5,g]],
+      [[17,21,12,b],[43,21,12,b],[17,59,12,b],[43,59,12,b]],[[15,17,10,b],[45,17,10,b],[30,40,10,r],[15,63,10,b],[45,63,10,b]],
       [[17,15,10,g],[43,15,10,g],[17,43,10,r],[43,43,10,r],[17,65,10,r],[43,65,10,r]],
       [[12,11,7.6,g],[30,19,7.6,g],[48,27,7.6,g],[18,47,8.8,r],[42,47,8.8,r],[18,67,8.8,r],[42,67,8.8,r]],
       [[18,11,8.3,b],[42,11,8.3,b],[18,30.3,8.3,b],[42,30.3,8.3,b],[18,49.6,8.3,b],[42,49.6,8.3,b],[18,69,8.3,b],[42,69,8.3,b]],
@@ -251,7 +272,7 @@ function tileSVG(k,red){
     s=L.map(d=>pin(d[0],d[1],d[2],c(d[3]))).join('');
     if(n===0) s+=`<circle cx="30" cy="40" r="15.5" fill="none" stroke="${b}" stroke-width="3"/><circle cx="30" cy="40" r="5" fill="${g}"/>`;
   } else if(k<27){ const n=k-18, c=x=>red?r:x;
-    if(n===0) s=`<path d="M30 58 L17 77 M30 58 L30 78 M30 58 L43 77" stroke="${r}" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="29" cy="45" rx="13" ry="17" fill="${g}"/><path d="M19 42 q10 12 20 0" stroke="#fbf8ec" stroke-width="2.2" fill="none"/><path d="M21 50 q8 9 16 0" stroke="#fbf8ec" stroke-width="2" fill="none"/><circle cx="31" cy="21" r="10" fill="${g}"/><circle cx="34" cy="19" r="2.6" fill="#fbf8ec"/><circle cx="34.6" cy="19" r="1.1" fill="${bk}"/><path d="M40 19 l11 4 l-11 4z" fill="${r}"/><path d="M26 12 l-3 -8 M31 11 l0 -8 M36 12 l3 -8" stroke="${r}" stroke-width="2.4" stroke-linecap="round"/>`;
+    if(n===0) s=`<path d="M30 58 L17 77 M30 58 L30 78 M30 58 L43 77" stroke="${r}" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="29" cy="45" rx="13" ry="17" fill="${g}"/><path d="M19 42 q10 12 20 0" stroke="#fefefb" stroke-width="2.2" fill="none"/><path d="M21 50 q8 9 16 0" stroke="#fefefb" stroke-width="2" fill="none"/><circle cx="31" cy="21" r="10" fill="${g}"/><circle cx="34" cy="19" r="2.6" fill="#fefefb"/><circle cx="34.6" cy="19" r="1.1" fill="${bk}"/><path d="M40 19 l11 4 l-11 4z" fill="${r}"/><path d="M26 12 l-3 -8 M31 11 l0 -8 M36 12 l3 -8" stroke="${r}" stroke-width="2.4" stroke-linecap="round"/>`;
     else { const L=[null,[[30,21,28,g],[30,59,28,g]],[[30,21,28,g],[18,59,28,g],[42,59,28,g]],[[18,21,28,g],[42,21,28,g],[18,59,28,g],[42,59,28,g]],
       [[14,21,28,g],[46,21,28,g],[30,40,28,r],[14,59,28,g],[46,59,28,g]],[[14,21,28,g],[30,21,28,g],[46,21,28,g],[14,59,28,g],[30,59,28,g],[46,59,28,g]],
       [[30,14,21,r],[14,40,21,g],[30,40,21,g],[46,40,21,g],[14,66,21,g],[30,66,21,g],[46,66,21,g]],
@@ -647,7 +668,7 @@ async function finishWin({w,from,id,flags}){
   const sticks=G.sticks; pay[w]+=sticks*1000; G.sticks=0;
   G.P.forEach((q,i)=>q.score+=pay[i]);
   G.reveal=true; G.turn=-1; UI.pending=null; render();
-  if(!FAST){ await banner(flags.tsumo?'쯔모':'론',w); await scoreScene({p,from,id,flags,ev,before,pay,ptsText,ptsSay,sticks}); }
+  if(!FAST){ await banner(flags.tsumo?'쯔모':'론',w,!!flags.tsumo); if(ev.basic>=2000) await starFall(ev); await scoreScene({p,from,id,flags,ev,before,pay,ptsText,ptsSay,sticks}); }
   STATS.wins.push({w,han:ev.han,fu:ev.fu,yaku:ev.yaku.map(y=>y[0]),basic:ev.basic,tsumo:!!flags.tsumo});
   return {dealerWon:oya};
 }
@@ -720,9 +741,27 @@ function shout(i,text){ if(FAST) return; const el=$('#say'+i); el.textContent=te
 function say(text,min=700){ return new Promise(res=>{ if(FAST||UI.skip) return res();
   let spoke=!canSpeak(); const t0=Date.now(); if(!spoke) speak(text,()=>{spoke=true;});
   const iv=setInterval(()=>{ const el=Date.now()-t0; if(UI.skip||(el>=min&&(spoke||el>2200))){ clearInterval(iv); res(); } },40); }); }
-async function banner(text,w){ const b=$('#banner'); b.firstElementChild.textContent=text+'!'; b.classList.add('on');
-  tone(196,.5,'sawtooth',.08); tone(392,.5,'sawtooth',.06,.05); if(canSpeak()){ try{speechSynthesis.cancel();}catch(e){} speak(text); }
-  try{ await sleep(1250); } finally { b.classList.remove('on'); } }
+function burstPoints(){ let seed=7; const rnd=()=>{seed=(seed*16807)%2147483647; return seed/2147483647;};
+  const pts=[],N=26; for(let i=0;i<N*2;i++){ const a=Math.PI*2*i/(N*2)-Math.PI/2, out=i%2===0, r=out?.86+rnd()*.3:.6+rnd()*.07;
+    pts.push((320+Math.cos(a)*300*r).toFixed(1)+','+(200+Math.sin(a)*170*r).toFixed(1)); } return pts.join(' '); }
+async function banner(text,w,tsumo){ const b=$('#banner'), col=tsumo?'#1d4fc4':'#d3201a', dark=tsumo?'#0b1f5c':'#6a0c08', P=burstPoints();
+  b.innerHTML=`<svg viewBox="-40 -40 720 480" role="img" aria-label="${text}"><polygon points="${P}" fill="${dark}" transform="translate(10 12)"/><polygon points="${P}" fill="#fff" stroke="${col}" stroke-width="12" stroke-linejoin="miter"/>
+    <text x="320" y="${text.length>1?262:268}" text-anchor="middle" font-family="'Black Han Sans','IBM Plex Sans KR',sans-serif" font-size="${text.length>1?170:210}" fill="${col}" stroke="${dark}" stroke-width="7" paint-order="stroke" transform="skewX(-8)" style="letter-spacing:-4px">${text}!</text></svg>`;
+  b.classList.add('on');
+  tone(110,.5,'sawtooth',.1); tone(220,.45,'square',.07,.02); tone(440,.35,'sawtooth',.06,.06); if(canSpeak()){ try{speechSynthesis.cancel();}catch(e){} speak(text); }
+  try{ await sleep(1500); } finally { b.classList.remove('on'); } }
+/* 만관 이상이면 결과 전에 별이 쏟아져 큰 역을 예고한다 */
+async function starFall(ev){
+  const tier=ev.basic>=8000?5:ev.basic>=6000?4:ev.basic>=4000?3:ev.basic>=3000?2:1, n=[0,16,30,46,64,110][tier], dur=1500+tier*380;
+  const el=document.createElement('div'); el.id='stars'; let h='';
+  for(let i=0;i<n;i++){ const size=12+Math.random()*(18+tier*7), d=.9+Math.random()*1.1, delay=Math.random()*(dur/1000-.6);
+    const hue=tier===5?`hsl(${Math.random()*360|0} 95% 72%)`:tier>=3&&Math.random()<.3?'#fff':'#ffd75e';
+    h+=`<i style="left:${(Math.random()*104-2).toFixed(1)}%;font-size:${size.toFixed(0)}px;color:${hue};--dx:${(-8-Math.random()*16).toFixed(0)}vw;animation-duration:${d.toFixed(2)}s;animation-delay:${delay.toFixed(2)}s">★</i>`; }
+  el.innerHTML=h+(tier>=3?`<b>${tier===5?'···!!!':'···!'}</b>`:''); document.body.appendChild(el);
+  for(let i=0;i<6+tier*4;i++) tone(1200+Math.random()*1800,.25,'sine',.035,Math.random()*dur/1000);
+  if(tier>=3) tone(65,dur/1000,'sawtooth',.05);
+  try{ await sleep(dur); el.classList.add('out'); await sleep(380); } finally { el.remove(); }
+}
 
 /* ================= 그리기 ================= */
 function meldHTML(m,owner){
@@ -769,12 +808,12 @@ function render(){
   // 버튼
   let a='';
   if(turnMode){
-    if(pd.tsumo) a+=`<button class="act red" data-a="tsumo">쯔모</button>`;
+    if(pd.tsumo) a+=`<button class="act red shine" data-a="tsumo">쯔모</button>`;
     if(pd.riichiIds) a+=`<button class="act ${UI.riichiMode?'ghost':''}" data-a="riichi">${UI.riichiMode?'리치 취소':'리치'}</button>`;
     pd.kans.forEach((k,i)=>a+=`<button class="act" data-a="kan" data-i="${i}">깡 ${TK(k.kind)}</button>`);
     if(p.riichi&&(pd.tsumo||pd.kans.length)) a+=`<button class="act ghost" data-a="tsumogiri">패스</button>`;
   } else if(pd&&pd.mode==='call'){
-    if(pd.ron) a+=`<button class="act red" data-a="ron">론</button>`;
+    if(pd.ron) a+=`<button class="act red shine" data-a="ron">론</button>`;
     if(pd.pon) a+=`<button class="act blue" data-a="pon">퐁</button>`;
     if(pd.kan) a+=`<button class="act" data-a="minkan">깡</button>`;
     (pd.chi||[]).forEach((ch,i)=>a+=`<button class="act green" data-a="chi" data-i="${i}">치 ${T(ch[0])}${T(ch[1])}</button>`);
@@ -796,14 +835,19 @@ function inspect(k,red){
   $('#inspect').innerHTML=k==null?`<p>탁자 위의 패에 마우스를 올리거나 패를 누르면 이름과 뜻이 여기에 나옵니다.</p>`
     :`${`<span class="tile" data-k="${k}">${tileSVG(k,red)}</span>`}<div><b>${kname(k)}${k<27?` (${kshort(k)})`:''}${red?' · 적도라':''}</b><p>${kdesc(k,red)}</p></div>`;
 }
-const YAKU_HELP=[['h','1판'],['리치','멘젠(울지 않은) 텐파이에서 1,000점을 걸고 선언'],['일발','리치 후 한 바퀴 안에 화료'],['멘젠쯔모','울지 않고 스스로 뽑아 화료'],
- ['핑후','슌쯔 4개 + 역패가 아닌 머리 + 양면 대기 (멘젠 한정)'],['탕야오','2~8 수패만으로 완성'],['이페코','같은 슌쯔 2벌 (멘젠 한정)'],['역패','백·발·중, 자풍, 장풍 중 하나를 3장'],
- ['해저로월·하저로어','마지막 패로 쯔모 / 마지막 버림패로 론'],['영상개화','깡으로 뽑은 패로 화료'],['창깡','남이 가깡한 패로 론'],
- ['h','2판'],['더블 리치','첫 순에 리치'],['치또이쯔','서로 다른 또이쯔(2장) 7쌍'],['또이또이','커쯔 4개'],['산안커','울지 않은 커쯔 3개'],['삼색동순 *','만·통·삭 같은 숫자 슌쯔'],
- ['삼색동각','만·통·삭 같은 숫자 커쯔'],['일기통관 *','한 종류로 123·456·789'],['찬타 *','모든 몸통과 머리에 1·9·자패 포함'],['혼노두','1·9·자패만으로 완성'],['소삼원','삼원패 커쯔 2개 + 삼원패 머리'],['산깡쯔','깡 3개'],
- ['h','3판 이상'],['혼일색 * (3판)','한 종류 수패 + 자패'],['준찬타 * (3판)','모든 몸통과 머리에 1·9 포함'],['량페코 (3판)','이페코 2벌'],['청일색 * (6판)','한 종류 수패만'],
- ['h','역만'],['국사무쌍','1·9·자패 13종 + 그중 하나 더'],['스안커','울지 않은 커쯔 4개'],['대삼원','백·발·중 모두 커쯔'],['소사희·대사희','바람패 4종을 커쯔 3+머리 / 커쯔 4'],
- ['자일색·청노두·녹일색','자패만 / 1·9만 / 초록 패만'],['구련보등','한 종류로 1112345678999 + 1장'],['스깡쯔','깡 4개'],['천화·지화','배패 직후 첫 쯔모로 화료']];
+const YAKU_HELP=[['h','1판'],['리치','멘젠(울지 않은) 텐파이에서 1,000점을 걸고 선언합니다.','234m 567p 345s 678s 99p'],['일발','리치 후 한 바퀴 안에 화료합니다.'],['멘젠쯔모','울지 않고 스스로 뽑아 화료합니다.'],
+ ['핑후','슌쯔 4개 + 역패가 아닌 머리 + 양면 대기. 멘젠 한정.','123m 456p 789s 34s 88p 5s'],['탕야오','2~8 수패만으로 완성합니다.','234m 456m 345p 678s 66p'],['이페코','같은 슌쯔 2벌. 멘젠 한정.','223344m 567p 789s 55p'],
+ ['역패: 삼원패 (백·발·중)','백, 발, 중 가운데 하나를 커쯔로 만듭니다.','333m 456p 789s 555z 11s'],['역패: 자풍패','자기 자리와 같은 바람패를 커쯔로 만듭니다. (서가라면 서)','333m 456p 789s 333z 11s'],['역패: 장풍패','판의 바람과 같은 패를 커쯔로 만듭니다. (동풍전이면 동)','333m 456p 789s 111z 11s'],
+ ['해저로월 · 하저로어','마지막 패로 쯔모 / 마지막 버림패로 론.'],['영상개화','깡을 하고 뽑은 패로 화료합니다.'],['창깡','남이 가깡한 패로 론합니다.'],
+ ['h','2판'],['더블 리치','첫 순에 리치를 겁니다.'],['치또이쯔','서로 다른 또이쯔(2장) 7쌍.','11m 33m 55p 77p 22s 99s 66z'],['또이또이','커쯔 4개.','222m 555p 777p 333s 11z'],['산안커','울지 않은 커쯔 3개.','333m 666p 888s 234p 99s'],
+ ['삼색동순 *','만·통·삭으로 같은 숫자의 슌쯔.','234m 234p 234s 789m 55z'],['삼색동각','만·통·삭으로 같은 숫자의 커쯔.','333m 333p 333s 456m 22z'],['일기통관 *','한 종류로 123·456·789.','123p 456p 789p 345s 77m'],
+ ['찬타 *','모든 몸통과 머리에 1·9·자패가 들어갑니다.','123m 789p 999s 111z 77z'],['혼노두','1·9·자패만으로 완성합니다.','111m 999p 999s 222z 44z'],['소삼원','삼원패 커쯔 2개 + 삼원패 머리.','555z 666z 77z 234m 678p'],['산깡쯔','깡 3개.','2222m 5555p 8888s 345m 11z'],
+ ['h','3판 이상'],['혼일색 * (3판)','한 종류 수패 + 자패.','123m 456m 789m 222z 55z'],['준찬타 * (3판)','모든 몸통과 머리에 1·9가 들어갑니다.','123m 789m 123p 999s 11s'],['량페코 (3판)','이페코 2벌. 멘젠 한정.','223344m 667788p 55s'],['청일색 * (6판)','한 종류 수패만으로 완성합니다.','123s 345s 567s 789s 22s'],
+ ['h','역만'],['국사무쌍','1·9·자패 13종 + 그중 하나 더.','19m 19p 19s 1234567z 1m'],['스안커','울지 않은 커쯔 4개.','222m 444p 666p 888s 55z'],['대삼원','백·발·중 모두 커쯔.','555z 666z 777z 234m 99p'],
+ ['소사희 · 대사희','바람패 4종을 커쯔 3 + 머리 / 커쯔 4.','111z 222z 333z 44z 567p'],['자일색','자패만으로 완성합니다.','111z 222z 444z 555z 77z'],['청노두','1·9만으로 완성합니다.','111m 999m 111p 999s 99p'],
+ ['녹일색','초록색 패(2·3·4·6·8삭, 발)만으로 완성합니다.','234s 234s 666s 888s 66z'],['구련보등','한 종류로 1112345678999 + 1장.','1112345678999m 5m'],['스깡쯔','깡 4개.'],['천화 · 지화','배패 직후 첫 쯔모로 화료합니다.']];
+function exHTML(str){ const off={m:0,p:9,s:18,z:27};
+  return `<div class="ex">${str.split(' ').map(g=>{ const su=off[g.slice(-1)]; return `<span class="ts">${[...g.slice(0,-1)].map(d=>TK(su+ +d-1)).join('')}</span>`; }).join('')}</div>`; }
 function renderHelp(){
   const cell=(k,l)=>`<span class="tcell">${TK(k)}<span>${l}</span></span>`;
   const row=(o,n,lab)=>`<div class="trow">${[...Array(n).keys()].map(i=>cell(o+i,lab(i))).join('')}</div>`;
@@ -817,7 +861,7 @@ function renderHelp(){
     <h3>적도라 <small>빨간 5</small></h3><p>종류마다 한 장씩 있는 빨간 5는 갖고 있기만 해도 1판이 붙습니다.</p>
     <div class="trow">${[16,52,88].map(t=>`<span class="tcell">${T(t)}<span>${kshort(K(t))}</span></span>`).join('')}</div>
     <h3>도라</h3><p>도라 표시패의 <b>다음 패</b>가 도라입니다. 3만이 표시패면 4만, 9 다음은 1, 북 다음은 동, 중 다음은 백.</p></div>`;
-  else if(UI.tab==='yaku') h=`<p style="margin:0;color:var(--muted);font-size:13px">역이 하나 이상 있어야 화료할 수 있습니다. * 표시는 울면 1판 줄어듭니다.</p><ul class="ylist">${YAKU_HELP.map(y=>y[0]==='h'?`<li class="h">${y[1]}</li>`:`<li><b>${y[0]}</b><span>${y[1]}</span></li>`).join('')}</ul>`;
+  else if(UI.tab==='yaku') h=`<p style="margin:0;color:var(--muted);font-size:13px">역이 하나 이상 있어야 화료할 수 있습니다. * 표시는 울면 1판 줄어듭니다.</p><ul class="ylist">${YAKU_HELP.map(y=>y[0]==='h'?`<li class="h">${y[1]}</li>`:`<li><b>${y[0]}</b><span>${y[1]}</span>${y[2]?exHTML(y[2]):''}</li>`).join('')}</ul>`;
   else h=`<div class="hsec"><h3>목표</h3><p>몸통 4개(3장씩) + 머리 1개(같은 패 2장)의 14장을 만들고, 역을 하나 이상 갖추면 화료입니다.</p>
     <h3>차례</h3><ol class="steps"><li>패를 한 장 뽑습니다(쯔모). 오른쪽에 떨어져 있는 패가 방금 뽑은 패입니다.</li><li>필요 없는 패를 눌러 한 장 버립니다.</li><li>남이 버린 패가 필요하면 버튼이 나타납니다.</li></ol>
     <h3>용어</h3><ol class="steps" style="list-style:none;padding:0">
@@ -916,7 +960,7 @@ $('#soundBtn').addEventListener('click',e=>{ UI.sound=!UI.sound; e.target.textCo
 $('#newBtn').addEventListener('click',()=>startScene(false));
 try{ const o=JSON.parse(localStorage.getItem('mj-opts')||'null'); if(o) Object.assign(G.opts,{level:[0,1,2].includes(o.level)?o.level:1,rounds:o.rounds===2?2:1,hints:!!o.hints}); }catch(e){}
 inspect(null); renderHelp(); startScene(true);
-window.MJ={G,UI,STATS,evalHand,shanten,waitsOf,runGame,newGame,render,scoreScene,initHand,K,
+window.MJ={G,UI,STATS,banner,starFall,evalHand,shanten,waitsOf,runGame,newGame,render,scoreScene,initHand,K,
   set fast(v){FAST=v;},set auto(v){AUTO=v;}};
 })();
 </script>
