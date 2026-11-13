@@ -125,6 +125,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outl
 .tile.tg{filter:brightness(.86)}
 .tside{display:inline-block;position:relative;width:calc(var(--w) * 4 / 3);height:var(--w);flex:none}
 .tside .tile{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-90deg)}
+.tside.dbl{height:calc(var(--w) * 2 + 2px)}.tside.dbl .tile:first-child{top:25%}.tside.dbl .tile:last-child{top:75%}
 
 /* ---------- 도움말 ---------- */
 #help{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -634,7 +635,7 @@ async function playHand(){
       if(act.type==='ankan'){ const ts=p.hand.filter(t=>K(t)===act.kind); ts.forEach(t=>removeTile(p,t)); p.melds.push({type:'ankan',kind:act.kind,tiles:ts,from:turn}); kid=ts[0]; }
       else { kid=p.hand.find(t=>K(t)===act.kind); removeTile(p,kid); const m=p.melds.find(m=>m.type==='pon'&&m.kind===act.kind); m.type='kakan'; m.tiles.push(kid); }
       sortHand(p); G.kans++; G.anyCall=true; G.P.forEach(q=>q.ippatsu=false);
-      shout(turn,'깡'); UI.drawn=null; render(); await sleep(500);
+      shout(turn,act.type==='kakan'?'가깡':'안깡'); UI.drawn=null; render(); await sleep(500);
       if(act.type==='kakan'){ const r=await checkRon(turn,kid,{chankan:true}); if(r) return finishWin(r); }
       G.doraN=Math.min(5,G.doraN+1); G.live.shift(); drawn=G.rinshan.shift(); p.hand.push(drawn); rinshan=true; continue;
     }
@@ -766,7 +767,9 @@ async function starFall(ev){
 /* ================= 그리기 ================= */
 function meldHTML(m,owner){
   if(m.type==='ankan') return `<span class="meld">${BACK}${T(m.tiles[1])}${T(m.tiles[2])}${BACK}</span>`;
-  const rel=(m.from-owner+4)%4, own=m.tiles.slice(1).sort((a,b)=>a-b).map(t=>T(t)), called=side(T(m.tiles[0]));
+  // 가깡은 퐁에 뽑은 패를 더한 것: 눕힌 패 위에 한 장을 더 눕혀 겹쳐 놓는다
+  const kk=m.type==='kakan', rel=(m.from-owner+4)%4, own=m.tiles.slice(1,kk?3:undefined).sort((a,b)=>a-b).map(t=>T(t));
+  const called=kk?`<span class="tside dbl">${T(m.tiles[3])}${T(m.tiles[0])}</span>`:side(T(m.tiles[0]));
   const pos=m.type==='chi'||rel===3?0:rel===2?1:own.length;
   own.splice(pos,0,called); return `<span class="meld">${own.join('')}</span>`;
 }
@@ -810,12 +813,12 @@ function render(){
   if(turnMode){
     if(pd.tsumo) a+=`<button class="act red shine" data-a="tsumo">쯔모</button>`;
     if(pd.riichiIds) a+=`<button class="act ${UI.riichiMode?'ghost':''}" data-a="riichi">${UI.riichiMode?'리치 취소':'리치'}</button>`;
-    pd.kans.forEach((k,i)=>a+=`<button class="act" data-a="kan" data-i="${i}">깡 ${TK(k.kind)}</button>`);
+    pd.kans.forEach((k,i)=>a+=`<button class="act" data-a="kan" data-i="${i}">${k.type==='kakan'?'가깡':'안깡'} ${TK(k.kind)}</button>`);
     if(p.riichi&&(pd.tsumo||pd.kans.length)) a+=`<button class="act ghost" data-a="tsumogiri">패스</button>`;
   } else if(pd&&pd.mode==='call'){
     if(pd.ron) a+=`<button class="act red shine" data-a="ron">론</button>`;
     if(pd.pon) a+=`<button class="act blue" data-a="pon">퐁</button>`;
-    if(pd.kan) a+=`<button class="act" data-a="minkan">깡</button>`;
+    if(pd.kan) a+=`<button class="act" data-a="minkan">대명깡</button>`;
     (pd.chi||[]).forEach((ch,i)=>a+=`<button class="act green" data-a="chi" data-i="${i}">치 ${T(ch[0])}${T(ch[1])}</button>`);
     a+=`<button class="act ghost" data-a="pass">패스</button>`;
   }
@@ -825,6 +828,8 @@ function render(){
   else if(turnMode&&TOUCH&&UI.sel!=null) sub=`<b>${kname(K(UI.sel))}</b> — 한 번 더 누르면 버립니다`;
   else if(pd&&pd.mode==='call') sub=`${G.P[pd.from].name}의 버림패 <span class="ts">${T(pd.id)}</span> ${pd.ron?'로 화료할 수 있습니다':'를 가져올 수 있습니다'}`;
   else if(p.waits.length&&p.hand.length%3!==2) sub=`대기패 <span class="ts">${p.waits.map(k=>TK(k)).join('')}</span>`;
+  else if(turnMode&&pd.kans.some(k=>k.type==='kakan')) sub='가깡: 방금 뽑은 패를 내 퐁에 더해 깡을 만듭니다';
+  else if(turnMode&&pd.kans.length) sub='안깡: 손에 든 같은 패 4장으로 깡을 만듭니다';
   else if(turnMode&&pd.hint!=null) sub='노란 점 = 추천 버림패';
   $('#subline').classList.toggle('call',!!(pd&&pd.mode==='call'));
   $('#subline').innerHTML=st+(sub?`<span class="txt">${sub}</span>`:'');
@@ -866,7 +871,7 @@ function renderHelp(){
     <h3>차례</h3><ol class="steps"><li>패를 한 장 뽑습니다(쯔모). 오른쪽에 떨어져 있는 패가 방금 뽑은 패입니다.</li><li>필요 없는 패를 눌러 한 장 버립니다.</li><li>남이 버린 패가 필요하면 버튼이 나타납니다.</li></ol>
     <h3>용어</h3><ol class="steps" style="list-style:none;padding:0">
     <li><b>슌쯔</b> 같은 종류 연속 3장 (3·4·5통)</li><li><b>커쯔</b> 같은 패 3장</li>
-    <li><b>치</b> 왼쪽 사람(상가)이 버린 패로 슌쯔를 만듭니다</li><li><b>퐁</b> 누가 버렸든 그 패로 커쯔를 만듭니다</li><li><b>깡</b> 같은 패 4장. 패를 한 장 더 뽑고 도라가 늘어납니다</li>
+    <li><b>치</b> 왼쪽 사람(상가)이 버린 패로 슌쯔를 만듭니다</li><li><b>퐁</b> 누가 버렸든 그 패로 커쯔를 만듭니다</li><li><b>깡</b> 같은 패 4장. 패를 한 장 더 뽑고 도라가 늘어납니다</li><li><b>안깡</b> 내 차례에 손에 든 같은 패 4장으로 하는 깡</li><li><b>대명깡</b> 손에 3장이 있을 때 남이 버린 4번째 패를 가져오는 깡</li><li><b>가깡</b> 이미 퐁한 패의 4번째 장을 <b>내가 뽑았을 때</b> 퐁에 더하는 깡. 남이 버린 패로는 할 수 없습니다</li>
     <li><b>멘젠</b> 치·퐁을 하지 않은 상태. 리치를 걸 수 있습니다</li><li><b>텐파이</b> 한 장만 더 오면 완성되는 상태</li><li><b>샹텐</b> 텐파이까지 남은 장수</li>
     <li><b>리치</b> 멘젠 텐파이에서 1,000점을 걸고 선언. 이후로는 뽑은 패만 버립니다</li><li><b>쯔모 / 론</b> 스스로 뽑아 완성 / 남의 버림패로 완성</li>
     <li><b>후리텐</b> 자기가 버린 패가 대기패에 있으면 론을 할 수 없습니다(쯔모는 가능)</li><li><b>친 / 자</b> 빨간 원이 친(선). 친은 점수를 1.5배로 주고받습니다</li>
