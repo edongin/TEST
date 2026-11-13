@@ -35,6 +35,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outl
 .strip{display:flex;align-items:center;justify-content:center;gap:6px 14px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px 10px}
 .strip label{display:inline-flex;gap:5px;align-items:center;cursor:pointer;color:var(--muted);font-size:13px}
 .chip{font-size:12px;border-radius:99px;padding:1px 8px;background:var(--panel);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.tog{cursor:pointer;color:var(--ink);padding:3px 10px;font-size:12.5px}.chip.tog:hover{border-color:var(--gold)}.chip.tog b{color:var(--gold)}
 .chip.warn{color:#fff;background:var(--red);border-color:var(--red)}
 .chip.good{color:#10231d;background:var(--gold);border-color:var(--gold);font-weight:700}
 .dora{display:flex;align-items:center;gap:6px;--w:27px}
@@ -85,6 +86,10 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outl
 #hand .tile{cursor:pointer;transition:transform .12s}
 #hand .tile.drawn{margin-left:calc(var(--w) * .3)}
 #hand .tile:hover,#hand .tile.sel{transform:translateY(-18%)}
+#hand.manual .tile{touch-action:none;cursor:grab}
+#hand .tile.dragging{transition:none;z-index:5;opacity:.92;pointer-events:none;cursor:grabbing;filter:drop-shadow(0 10px 8px rgba(0,0,0,.5))}
+#hand .tile.ins-l::before,#hand .tile.ins-r::before{content:"";position:absolute;top:-10%;bottom:-6%;width:4px;background:var(--gold);border-radius:2px;box-shadow:0 0 8px var(--gold);z-index:3}
+#hand .tile.ins-l::before{left:-3px}#hand .tile.ins-r::before{right:-3px}
 #hand .tile.dim{filter:brightness(.55);cursor:default;transform:none}
 #hand .tile.hint::after{content:"";position:absolute;left:50%;top:-22%;width:26%;aspect-ratio:1;border-radius:50%;background:var(--gold);transform:translateX(-50%);box-shadow:0 0 6px var(--gold)}
 .say{position:absolute;transform:translate(-50%,-50%) scale(.6);font-family:var(--f-display);font-size:clamp(26px,7cqw,54px);line-height:1.1;color:#fff;
@@ -432,14 +437,15 @@ const CANCEL={cancel:true};
 let GEN=0, FAST=false, AUTO=false, tick=0;
 const TOUCH=window.matchMedia&&matchMedia('(hover: none)').matches;
 const POS=['','하가','대면','상가'];
-const G={opts:{level:1,rounds:1,hints:true},P:[],live:[],dora:[],ura:[],rinshan:[],doraN:1,kans:0,round:0,kyoku:0,honba:0,sticks:0,startDealer:0,dealer:0,turn:-1,anyCall:false,last:null,reveal:false};
+const G={opts:{level:1,rounds:1,hints:true,manual:false},P:[],live:[],dora:[],ura:[],rinshan:[],doraN:1,kans:0,round:0,kyoku:0,honba:0,sticks:0,startDealer:0,dealer:0,turn:-1,anyCall:false,last:null,reveal:false};
 const UI={pending:null,riichiMode:false,sel:null,sound:true,skip:false,callsOff:false,tab:'tiles'};
 const me=()=>G.P[0];
 const fmt=n=>n.toLocaleString('ko-KR');
 const seatWind=i=>27+((i-G.dealer+4)%4);
 const counts=p=>{const c=new Array(34).fill(0); for(const t of p.hand) c[K(t)]++; return c;};
 const isMenzen=p=>p.melds.every(m=>m.type==='ankan');
-const sortHand=p=>p.hand.sort((a,b)=>a-b);
+/* 수동 배치에서는 내 손패 순서를 건드리지 않는다 */
+const sortHand=p=>{ if(!(p.human&&G.opts.manual&&!AUTO)) p.hand.sort((a,b)=>a-b); };
 const doraOf=k=>k<27?(k-k%9)+(k%9+1)%9:k<31?27+(k-27+1)%4:31+(k-31+1)%3;
 const doraKinds=()=>G.dora.slice(0,G.doraN).map(t=>doraOf(K(t)));
 function sleep(ms){ const g=GEN; return new Promise((res,rej)=>{ const f=()=>g===GEN?res():rej(CANCEL);
@@ -454,8 +460,8 @@ function initHand(){
   for(let i=t.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[t[i],t[j]]=[t[j],t[i]];}
   G.rinshan=t.splice(0,4);G.dora=t.splice(0,5);G.ura=t.splice(0,5);G.live=t;G.doraN=1;G.kans=0;G.anyCall=false;G.last=null;G.reveal=false;G.turn=-1;
   G.dealer=(G.startDealer+G.kyoku)%4;
-  for(const p of G.P){ p.hand=G.live.splice(-13);sortHand(p);p.melds=[];p.river=[];p.riverKinds=new Set();p.safe=new Set();p.riichi=0;p.ippatsu=false;p.furiTemp=p.furiPerm=false;p.turns=0;p.plan=null;p.waits=waitsOf(counts(p),0); }
-  UI.pending=null;UI.sel=null;UI.riichiMode=false;UI.drawn=null;
+  for(const p of G.P){ p.hand=G.live.splice(-13);p.hand.sort((a,b)=>a-b);p.melds=[];p.river=[];p.riverKinds=new Set();p.safe=new Set();p.riichi=0;p.ippatsu=false;p.furiTemp=p.furiPerm=false;p.turns=0;p.plan=null;p.waits=waitsOf(counts(p),0); }
+  UI.pending=null;UI.sel=null;UI.riichiMode=false;UI.drawn=null;UI.drag=null;
 }
 const furiten=p=>p.furiTemp||p.furiPerm||p.waits.some(k=>p.riverKinds.has(k));
 function evalFor(p,winId,f){
@@ -788,6 +794,7 @@ function render(){
   const dora=G.dora.map((t,i)=>i<G.doraN?T(t):BACK).join('');
   $('#center').innerHTML=`<span class="dora"><span class="lbl">도라 표시패</span><span class="ts">${dora}</span></span>
     <span class="chip">${G.honba}본장</span><span class="chip">공탁 리치봉 ${G.sticks}</span>
+    <button type="button" class="chip tog" data-act="sort" title="누르면 자동 정렬과 수동 배치를 바꿉니다">패 배치: <b>${G.opts.manual?'수동':'자동'}</b></button>${G.opts.manual?'<button type="button" class="chip tog" data-act="sortnow">지금 정렬</button>':''}
     <label><input type="checkbox" id="callsOff" ${UI.callsOff?'checked':''}>치·퐁 묻지 않기</label>`;
   $('#cbox').innerHTML=tagHTML(G.P[2],'t')+tagHTML(G.P[3],'l',1)+`<div class="core"><span class="round">${HONOR_KO[G.round]}${G.kyoku+1}국</span><small>남은 패 <b>${G.live.length}</b></small></div>`+tagHTML(G.P[1],'r',1)+tagHTML(G.P[0],'b');
   for(let i=0;i<4;i++){ const q=G.P[i]; let h=`<div class="river">${riverHTML(q)}</div>`;
@@ -808,6 +815,7 @@ function render(){
     if(t===UI.drawn) cls+=' drawn'; if(UI.sel===t) cls+=' sel';
     if(turnMode){ if(UI.riichiMode){ if(!pd.riichiIds.includes(t)) cls+=' dim'; } else if(p.riichi&&t!==pd.drawn) cls+=' dim'; else if(pd.hint===t) cls+=' hint'; }
     return T(t,cls,'button'); }).join('');
+  $('#hand').classList.toggle('manual',!!G.opts.manual); applyDrag();
   // 버튼
   let a='';
   if(turnMode){
@@ -831,6 +839,7 @@ function render(){
   else if(turnMode&&pd.kans.some(k=>k.type==='kakan')) sub='가깡: 방금 뽑은 패를 내 퐁에 더해 깡을 만듭니다';
   else if(turnMode&&pd.kans.length) sub='안깡: 손에 든 같은 패 4장으로 깡을 만듭니다';
   else if(turnMode&&pd.hint!=null) sub='노란 점 = 추천 버림패';
+  else if(G.opts.manual&&!pd) sub='패를 끌어서 원하는 자리에 놓을 수 있습니다';
   $('#subline').classList.toggle('call',!!(pd&&pd.mode==='call'));
   $('#subline').innerHTML=st+(sub?`<span class="txt">${sub}</span>`:'');
 }
@@ -945,15 +954,47 @@ function startScene(first){
     <div class="field"><span>난이도</span>${seg('level',LEVELS,G.opts.level)}</div>
     <div class="field"><span>길이</span>${seg('rounds',[['동풍전','동 1국~4국. 15분 안팎',1],['반장전','동·남 8국. 30분 안팎',2]],G.opts.rounds)}</div>
     <div class="field"><span>도우미</span>${seg('hints',[['힌트 켬','추천 버림패와 샹텐 수를 보여 줍니다',1],['힌트 끔','스스로 판단합니다',0]],G.opts.hints?1:0)}</div>
+    <div class="field"><span>패 배치</span>${seg('manual',[['자동 배치','손패를 항상 종류·숫자 순으로 정렬합니다',0],['수동 배치','패를 끌어서 원하는 자리에 놓습니다',1]],G.opts.manual?1:0)}</div>
     <div class="srow"><button class="go" id="startBtn" type="button">대국 시작</button></div></div>`);
   overlay().querySelectorAll('.seg').forEach(s=>s.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
-    const v=+b.dataset.v, n=s.dataset.seg; G.opts[n]=n==='hints'?!!v:v; s.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); }));
+    const v=+b.dataset.v, n=s.dataset.seg; G.opts[n]=(n==='hints'||n==='manual')?!!v:v; s.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); }));
   $('#startBtn').addEventListener('click',()=>{ try{localStorage.setItem('mj-opts',JSON.stringify(G.opts));}catch(e){}
     overlay().hidden=true; tone(523,.2); newGame(); runGame(); });
 }
 
+/* ================= 수동 배치: 끌어서 패 옮기기 ================= */
+function applyDrag(){ const d=UI.drag, hand=$('#hand');
+  hand.querySelectorAll('.ins-l,.ins-r').forEach(e=>e.classList.remove('ins-l','ins-r'));
+  if(!d||!d.on) return;
+  const el=hand.querySelector(`[data-id="${d.id}"]`); if(!el){ UI.drag=null; return; }
+  el.classList.add('dragging'); el.style.transform=`translate(${d.dx}px,-24%)`;
+  const others=[...hand.querySelectorAll('.tile')].filter(e=>e!==el); let idx=0;
+  others.forEach(e=>{ const r=e.getBoundingClientRect(); if(r.left+r.width/2<d.x) idx++; });
+  d.idx=idx; if(others.length){ if(idx<others.length) others[idx].classList.add('ins-l'); else others[others.length-1].classList.add('ins-r'); }
+}
+function dropDrag(d){ const p=me(); if(!p.hand.includes(d.id)) return;
+  const order=p.hand.filter(t=>t!==UI.drawn); if(UI.drawn!=null&&p.hand.includes(UI.drawn)) order.push(UI.drawn);
+  const rest=order.filter(t=>t!==d.id); let idx=Math.min(d.idx??0,rest.length);
+  if(d.id===UI.drawn) UI.drawn=null; else if(UI.drawn!=null&&rest.includes(UI.drawn)) idx=Math.min(idx,rest.length-1);
+  rest.splice(idx,0,d.id); p.hand.length=0; p.hand.push(...rest); UI.sel=null;
+}
+(()=>{ const hand=$('#hand');
+  hand.addEventListener('pointerdown',e=>{ if(!G.opts.manual||e.button>0) return; const t=e.target.closest('.tile'); if(!t) return;
+    UI.drag={id:+t.dataset.id,x0:e.clientX,x:e.clientX,dx:0,on:false,pid:e.pointerId}; });
+  hand.addEventListener('pointermove',e=>{ const d=UI.drag; if(!d||e.pointerId!==d.pid) return; d.x=e.clientX; d.dx=e.clientX-d.x0;
+    if(!d.on&&Math.abs(d.dx)>8){ d.on=true; try{hand.setPointerCapture(d.pid);}catch(x){} }
+    if(d.on){ e.preventDefault(); applyDrag(); } });
+  const end=drop=>e=>{ const d=UI.drag; if(!d||e.pointerId!==d.pid) return; UI.drag=null; if(!d.on) return;
+    UI.noClick=true; setTimeout(()=>UI.noClick=false,80); if(drop) dropDrag(d); render(); };
+  hand.addEventListener('pointerup',end(true)); hand.addEventListener('pointercancel',end(false));
+})();
+$('#center').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b) return;
+  if(b.dataset.act==='sort'){ G.opts.manual=!G.opts.manual; try{localStorage.setItem('mj-opts',JSON.stringify(G.opts));}catch(x){} }
+  if(!G.opts.manual||b.dataset.act==='sortnow'){ const p=me(), dr=UI.drawn; p.hand.sort((a,b)=>a-b); if(dr!=null&&p.hand.includes(dr)){ p.hand.splice(p.hand.indexOf(dr),1); p.hand.push(dr); } }
+  render(); });
+
 /* ================= 이벤트 ================= */
-$('#hand').addEventListener('click',e=>{ const t=e.target.closest('.tile'); if(t) onHandClick(+t.dataset.id); });
+$('#hand').addEventListener('click',e=>{ if(UI.noClick) return; const t=e.target.closest('.tile'); if(t) onHandClick(+t.dataset.id); });
 $('#actions').addEventListener('click',e=>{ const b=e.target.closest('.act'); if(b) onAction(b.dataset.a,+b.dataset.i||0); });
 $('#center').addEventListener('change',e=>{ if(e.target.id==='callsOff') UI.callsOff=e.target.checked; });
 const onTile=e=>{ const t=e.target.closest&&e.target.closest('.tile[data-k]'); if(t) inspect(+t.dataset.k,!!t.dataset.red); };
@@ -963,7 +1004,7 @@ $('#helpToggle').addEventListener('click',()=>$('#help').classList.toggle('open'
 $('#helpClose').addEventListener('click',()=>$('#help').classList.remove('open'));
 $('#soundBtn').addEventListener('click',e=>{ UI.sound=!UI.sound; e.target.textContent=UI.sound?'소리 켬':'소리 끔'; if(!UI.sound){ try{speechSynthesis.cancel();}catch(x){} } });
 $('#newBtn').addEventListener('click',()=>startScene(false));
-try{ const o=JSON.parse(localStorage.getItem('mj-opts')||'null'); if(o) Object.assign(G.opts,{level:[0,1,2].includes(o.level)?o.level:1,rounds:o.rounds===2?2:1,hints:!!o.hints}); }catch(e){}
+try{ const o=JSON.parse(localStorage.getItem('mj-opts')||'null'); if(o) Object.assign(G.opts,{level:[0,1,2].includes(o.level)?o.level:1,rounds:o.rounds===2?2:1,hints:!!o.hints,manual:!!o.manual}); }catch(e){}
 inspect(null); renderHelp(); startScene(true);
 window.MJ={G,UI,STATS,banner,starFall,evalHand,shanten,waitsOf,runGame,newGame,render,scoreScene,initHand,K,
   set fast(v){FAST=v;},set auto(v){AUTO=v;}};
