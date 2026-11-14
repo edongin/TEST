@@ -114,6 +114,7 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .seg{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .seg button{font-size:18px;padding:10px 16px;border-radius:999px;background:#eef0f7;box-shadow:0 3px 0 rgba(0,0,0,.12)}
 .seg button.on{background:var(--green);color:#fff}
+.devchip{display:inline-block;font-size:13px;padding:2px 8px;border-radius:999px;background:#2b2b40;color:#ffe14d;vertical-align:middle;letter-spacing:1px}
 .note{font-size:15px;color:var(--ink2);margin:6px 0 0;line-height:1.45}
 .stars{font-size:52px;letter-spacing:4px;color:#d9dbe6;line-height:1.1}
 .stars b{color:var(--gold);font-weight:normal;display:inline-block;animation:starpop .5s ease-out both}
@@ -171,7 +172,7 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 </section>
 
 <section id="map" class="screen" hidden>
-  <div class="topbar"><button class="backbtn" data-back>◀ 처음으로</button><h2>스테이지</h2><span class="pill"><i class="ci"></i><b class="coinOut">0</b></span></div>
+  <div class="topbar"><button class="backbtn" data-back>◀ 처음으로</button><h2>스테이지 <span class="devchip" id="devChip" hidden>DEV</span></h2><span class="pill"><i class="ci"></i><b class="coinOut">0</b></span></div>
   <div id="mapZones" style="display:flex;flex-direction:column;gap:14px;width:100%;align-items:center"></div>
 </section>
 
@@ -196,6 +197,16 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
     <p class="note" style="margin:16px 0 6px">기록</p>
     <div class="seg"><button id="btnReset">처음부터 다시 하기</button></div>
     <p class="note" id="resetNote"></p>
+    <div id="devPanel" hidden>
+      <p class="note" style="margin:16px 0 6px">개발자 모드 <span class="devchip">DEV</span></p>
+      <p class="note" style="margin:0 0 8px">모든 스테이지를 열 수 있어요. 아이의 진행 기록(열린 스테이지)은 바뀌지 않아요.</p>
+      <div class="seg">
+        <button id="devInv">무적</button>
+        <button id="devCoins">코인 +1000</button>
+        <button id="devCards">설명 카드 다시 보기</button>
+        <button id="devOff">개발자 모드 끄기</button>
+      </div>
+    </div>
     <div style="margin-top:16px"><button class="btn go" data-back>확인</button></div>
   </div>
 </section>
@@ -263,7 +274,7 @@ const stickerPrice = n => n <= 10 ? 300 : n <= 20 ? 400 : n < 50 ? 500 : n < 100
 
 // ============================================================ save
 const SAVE_KEY = 'nb-skate14-v1';
-const DEFAULT_SAVE = () => ({ unlocked: 1, stars: {}, coins: 0, owned: ['skin:classic', 'board:rainbow'], skin: 'classic', board: 'rainbow', sticker: 0, diff: 'easy', sound: true, seen: {} });
+const DEFAULT_SAVE = () => ({ unlocked: 1, stars: {}, coins: 0, owned: ['skin:classic', 'board:rainbow'], skin: 'classic', board: 'rainbow', sticker: 0, diff: 'easy', sound: true, seen: {}, dev: false, devInv: false });
 let save = DEFAULT_SAVE();
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s && typeof s === 'object') save = Object.assign(DEFAULT_SAVE(), s); } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
@@ -944,6 +955,7 @@ function updateTwin(dt) {
 // ============================================================ damage / finish
 function hurt() {
   if (P.inv > 0) return;
+  if (save.dev && save.devInv) { P.inv = 0.6; popText('무적!', '#ffe14d', 0.4, 0.6, 28); return; }
   P.inv = 1.5; G.shake = 0.4; P.wob = 0.7; SFX.hit();
   const p = playerScreen(); burst(p[0], p[1], 12, ['#ff5c5c', '#fff'], 220, 6);
   if (G.lv.tutorial) { popText('괜찮아요! 다시 해봐요', '#fff', 0.4, 1.2, 28); return; }
@@ -1947,13 +1959,30 @@ function setPlaying(on) {
   if (!on) { $('hint').hidden = true; G.hint = null; }
 }
 const SCREENS = ['menu', 'map', 'shop', 'settings', 'pause', 'result'];
+// Developer mode: in the shop's sticker tab tap the picture of the 100 sticker 3 times,
+// leave the shop, come back, and tap the 100 picture once more — all within 20 seconds.
+let curScreen = null, devLog = [];
+const DEV_SEQ = ['t100', 't100', 't100', 'leave', 'enter', 't100'];
+function devEvent(e) {
+  const now = performance.now();
+  devLog.push([e, now]); devLog = devLog.slice(-DEV_SEQ.length);
+  if (devLog.length === DEV_SEQ.length && devLog.every((x, i) => x[0] === DEV_SEQ[i]) && now - devLog[0][1] < 20000) {
+    devLog = [];
+    save.dev = !save.dev; if (!save.dev) save.devInv = false; persist();
+    SFX.buy(); toast(save.dev ? '개발자 모드 켜짐: 모든 스테이지 열림' : '개발자 모드 꺼짐');
+  }
+}
 function showScreen(id) {
+  if (curScreen === 'shop' && id !== 'shop') devEvent('leave');
+  if (id === 'shop' && curScreen !== 'shop') devEvent('enter');
+  curScreen = id;
   for (const s of SCREENS) $(s).hidden = s !== id;
   document.querySelectorAll('.coinOut').forEach(e => e.textContent = save.coins);
   if (id === 'menu') { $('mCoins').textContent = save.coins; $('btnPlay').textContent = `▶ 이어하기 (스테이지 ${Math.min(save.unlocked, 100)})`; }
   if (id === 'map') renderMap();
   if (id === 'shop') renderShop();
   if (id === 'settings') renderSettings();
+  $('devChip').hidden = !save.dev;
 }
 function goMenu() {
   G.scene = 'menu'; G.lv = null; G.result = null; G.paused = false; resetPlayer(); camZ = -CAM_BACK;
@@ -2000,8 +2029,9 @@ function renderMap() {
       if (n <= 5) btn.classList.add('tut');
       if (st) btn.classList.add('done');
       if (n === save.unlocked) btn.classList.add('cur');
-      btn.disabled = n > save.unlocked;
-      btn.innerHTML = `${n > save.unlocked ? '🔒' : n}<span class="s">${n > save.unlocked ? '' : '★'.repeat(st)}</span>`;
+      const locked = n > save.unlocked && !save.dev;
+      btn.disabled = locked;
+      btn.innerHTML = `${locked ? '🔒' : n}<span class="s">${locked ? '' : '★'.repeat(st)}</span>`;
       btn.setAttribute('aria-label', `스테이지 ${n}`);
       btn.onclick = () => { SFX.ui(); startStage(n); };
       g.appendChild(btn);
@@ -2024,7 +2054,7 @@ function renderShop() {
     const d = document.createElement('div'); d.className = 'item';
     const owned = save.owned.includes(it.key);
     let prev;
-    if (it.n) { prev = document.createElement('img'); prev.src = IMG_SRC[it.n]; prev.alt = it.name; }
+    if (it.n) { prev = document.createElement('img'); prev.src = IMG_SRC[it.n]; prev.alt = it.name; prev.addEventListener('click', () => devEvent('t' + it.n)); }
     else { prev = document.createElement('canvas'); prev.width = 240; prev.height = 220; drawPreview(prev, it); }
     d.appendChild(prev);
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name; d.appendChild(nm);
@@ -2073,6 +2103,8 @@ function drawPreview(c, it) {
 function withCtx(g, fn) { const saved = ctx; ctx = g; try { fn(); } finally { ctx = saved; } }
 
 function renderSettings() {
+  $('devPanel').hidden = !save.dev;
+  $('devInv').classList.toggle('on', !!save.devInv); $('devInv').textContent = save.devInv ? '무적 켜짐' : '무적';
   const seg = $('segDiff'); seg.innerHTML = '';
   for (const k of ['easy', 'normal', 'hard']) {
     const b = document.createElement('button'); b.textContent = DIFF[k].name; b.classList.toggle('on', save.diff === k);
@@ -2085,6 +2117,10 @@ function renderSettings() {
   $('resetNote').textContent = resetArm ? '스테이지 기록, 코인, 산 물건이 모두 지워져요.' : '';
 }
 let resetArm = false;
+$('devInv').onclick = () => { save.devInv = !save.devInv; persist(); SFX.ui(); renderSettings(); };
+$('devCoins').onclick = () => { save.coins += 1000; persist(); SFX.buy(); toast('코인 +1000'); };
+$('devCards').onclick = () => { save.seen = {}; persist(); SFX.ui(); toast('설명 카드가 다시 나와요'); };
+$('devOff').onclick = () => { save.dev = false; save.devInv = false; persist(); SFX.ui(); toast('개발자 모드 꺼짐'); renderSettings(); };
 $('btnReset').onclick = () => {
   if (!resetArm) { resetArm = true; renderSettings(); setTimeout(() => { resetArm = false; if (!$('settings').hidden) renderSettings(); }, 4000); return; }
   resetArm = false; const keepDiff = save.diff, keepSound = save.sound; save = DEFAULT_SAVE(); save.diff = keepDiff; save.sound = keepSound; persist(); toast('처음부터 시작해요!'); renderSettings();
@@ -2100,7 +2136,7 @@ function showResult(win) {
     if (lv.tutorial) stars = 3;
     clearBonus = 10 + stars * 5;
     save.stars[n] = Math.max(save.stars[n] || 0, stars);
-    if (n >= save.unlocked) save.unlocked = Math.min(100, n + 1);
+    if (n >= save.unlocked && !(save.dev && n > save.unlocked)) save.unlocked = Math.min(100, n + 1);
     if (n === 100) save.allClear = true;
   }
   const earned = r.coins + r.bonus + clearBonus;
