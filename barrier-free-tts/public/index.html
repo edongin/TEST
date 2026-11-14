@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>글자로 말하기 · 음성 안내</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #ffffff; --ink: #14202b; --sub: #4a5a68; --line: #cfd8e0;
+    --customer: #0b5cad; --customer-bg: #e6f0fb;
+    --staff: #1b6b3a; --staff-bg: #e5f4ea;
+    --danger: #b3261e; --focus: #ffb300;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 18px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+    line-height: 1.5;
+  }
+  button, textarea, select, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 4px solid var(--focus); outline-offset: 2px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 1.5rem; margin: 0; }
+  h2 { font-size: 1.1rem; margin: 0 0 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .cols { display: grid; gap: 16px; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
+
+  .seg { display: flex; border: 2px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .seg button {
+    flex: 1; padding: 12px 14px; min-height: 52px; border: 0; background: #fff; cursor: pointer;
+    font-weight: 700; font-size: 1.05rem; white-space: nowrap;
+  }
+  .seg button + button { border-left: 2px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  #role button[data-v="customer"][aria-pressed="true"] { background: var(--customer); }
+  #role button[data-v="staff"][aria-pressed="true"] { background: var(--staff); }
+
+  textarea {
+    width: 100%; min-height: 150px; padding: 14px; font-size: 1.6rem; line-height: 1.4;
+    border: 2px solid var(--line); border-radius: 12px; resize: vertical; background: #fff;
+  }
+  .hint { color: var(--sub); font-size: .85rem; margin: 6px 0 0; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .btn {
+    min-height: 56px; padding: 12px 20px; border-radius: 12px; border: 2px solid var(--line);
+    background: #fff; cursor: pointer; font-weight: 700;
+  }
+  .btn.primary { flex: 1; min-width: 200px; background: var(--customer); border-color: var(--customer); color: #fff; font-size: 1.35rem; }
+  body[data-role="staff"] .btn.primary { background: var(--staff); border-color: var(--staff); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.small { min-height: 44px; padding: 6px 12px; font-size: .9rem; }
+
+  .options { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-top: 16px; }
+  .options .label { font-weight: 700; font-size: .9rem; margin-bottom: 6px; display: block; }
+  .check { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border: 2px solid var(--line); border-radius: 12px; cursor: pointer; font-weight: 700; }
+  .check input { width: 24px; height: 24px; }
+
+  #status { min-height: 1.6em; margin-top: 10px; font-weight: 700; }
+  #status.error { color: var(--danger); }
+
+  .phrases { display: flex; flex-wrap: wrap; gap: 8px; }
+  .phrase { display: inline-flex; align-items: stretch; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
+  .phrase button { border: 0; background: none; cursor: pointer; padding: 10px 12px; min-height: 48px; text-align: left; }
+  .phrase .del { display: none; border-left: 2px solid var(--line); color: var(--danger); font-weight: 700; }
+  .editing .phrase .del { display: block; }
+  .phrase-add { display: none; gap: 8px; margin-top: 10px; }
+  .editing .phrase-add { display: flex; }
+  .phrase-add input { flex: 1; min-width: 0; padding: 8px 12px; border: 2px solid var(--line); border-radius: 10px; min-height: 48px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .row h2 { margin: 0; }
+
+  #log { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; max-height: 70vh; overflow: auto; }
+  #log li { border-radius: 12px; padding: 12px; border-left: 8px solid var(--customer); background: var(--customer-bg); }
+  #log li.staff { border-left-color: var(--staff); background: var(--staff-bg); }
+  #log .who { font-size: .8rem; font-weight: 700; color: var(--sub); display: flex; justify-content: space-between; gap: 8px; }
+  #log .text { font-size: 1.3rem; margin: 4px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  #log .tr { font-size: 1.1rem; color: var(--sub); margin: 4px 0; padding-top: 6px; border-top: 1px dashed var(--line); white-space: pre-wrap; overflow-wrap: anywhere; }
+  #log .empty { background: none; border: 2px dashed var(--line); color: var(--sub); text-align: center; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body data-role="customer">
+<div class="wrap">
+  <header>
+    <h1>글자로 말하기</h1>
+    <div class="seg" id="role" role="group" aria-label="지금 말하는 사람">
+      <button type="button" data-v="customer" aria-pressed="true">고객이 말하기</button>
+      <button type="button" data-v="staff" aria-pressed="false">직원이 말하기</button>
+    </div>
+  </header>
+
+  <div class="cols">
+    <div style="display:grid; gap:16px;">
+      <section class="card" aria-labelledby="h-input">
+        <h2 id="h-input">하고 싶은 말을 글자로 입력하세요</h2>
+        <label class="sr-only" for="text">읽어줄 문장</label>
+        <textarea id="text" maxlength="1000" placeholder="여기에 입력한 뒤 [읽어주기]를 누르세요" autofocus></textarea>
+        <p class="hint"><span>Enter: 읽어주기 · Shift+Enter: 줄바꿈</span><span id="count">0 / 1000</span></p>
+        <div class="actions">
+          <button type="button" class="btn primary" id="speak">🔊 읽어주기</button>
+          <button type="button" class="btn" id="stop" disabled>■ 멈춤</button>
+          <button type="button" class="btn" id="clear">지우기</button>
+        </div>
+        <div id="status" role="status" aria-live="polite"></div>
+
+        <div class="options">
+          <div>
+            <span class="label" id="l-voice">목소리</span>
+            <div class="seg" id="gender" role="group" aria-labelledby="l-voice">
+              <button type="button" data-v="female" aria-pressed="true">여성</button>
+              <button type="button" data-v="male" aria-pressed="false">남성</button>
+            </div>
+          </div>
+          <div>
+            <span class="label" id="l-rate">읽기 속도</span>
+            <div class="seg" id="rate" role="group" aria-labelledby="l-rate">
+              <button type="button" data-v="0.8" aria-pressed="false">느리게</button>
+              <button type="button" data-v="1" aria-pressed="true">보통</button>
+              <button type="button" data-v="1.2" aria-pressed="false">빠르게</button>
+            </div>
+          </div>
+          <div>
+            <span class="label">번역</span>
+            <label class="check"><input type="checkbox" id="translate"> 번역 글자 표시 (한↔영)</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="phraseCard" aria-labelledby="h-phrases">
+        <div class="row">
+          <h2 id="h-phrases">자주 쓰는 문구 <span class="hint" style="display:inline">(누르면 바로 읽어줍니다)</span></h2>
+          <button type="button" class="btn small" id="editPhrases" aria-pressed="false">편집</button>
+        </div>
+        <div class="phrases" id="phrases"></div>
+        <form class="phrase-add" id="phraseAdd">
+          <label class="sr-only" for="newPhrase">추가할 문구</label>
+          <input id="newPhrase" maxlength="200" placeholder="추가할 문구 입력">
+          <button class="btn small" type="submit">추가</button>
+          <button class="btn small" type="button" id="resetPhrases">기본값</button>
+        </form>
+      </section>
+    </div>
+
+    <section class="card" aria-labelledby="h-log">
+      <div class="row">
+        <h2 id="h-log">대화 기록</h2>
+        <button type="button" class="btn small" id="clearLog">상담 종료 (기록 지우기)</button>
+      </div>
+      <ul id="log" aria-live="polite"></ul>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  const DEFAULT_PHRASES = {
+    customer: [
+      '안녕하세요. 저는 말하기가 어려워 글자로 대화하고 싶습니다.',
+      '천천히 말씀해 주세요.',
+      '다시 한 번 말씀해 주세요.',
+      '글로 적어서 보여주세요.',
+      '화장실이 어디에 있나요?',
+      '네, 맞습니다.',
+      '아니요.',
+      '감사합니다.',
+    ],
+    staff: [
+      '안녕하세요. 무엇을 도와드릴까요?',
+      '잠시만 기다려 주세요.',
+      '신분증을 보여주시겠어요?',
+      '여기에 성함과 연락처를 적어주세요.',
+      '번호표를 뽑고 기다려 주세요.',
+      '처리가 완료되었습니다.',
+      '더 필요하신 것이 있으신가요?',
+      '감사합니다. 안녕히 가세요.',
+    ],
+  };
+
+  const state = {
+    role: 'customer',
+    gender: store.get('bf.gender', 'female'),
+    rate: store.get('bf.rate', 1),
+    translate: store.get('bf.translate', false),
+    phrases: store.get('bf.phrases', DEFAULT_PHRASES),
+    log: [],          // 기록은 화면에만 두고 저장하지 않습니다(개인정보 보호).
+    busy: false,
+  };
+  const ROLE_NAME = { customer: '고객', staff: '직원' };
+  const audio = new Audio();
+  audio.preservesPitch = true;
+
+  // ---------- 공통 ----------
+  function setStatus(msg, isError) {
+    $('status').textContent = msg || '';
+    $('status').classList.toggle('error', Boolean(isError));
+  }
+  function bindSeg(id, key, onChange) {
+    const el = $(id);
+    const sync = () => el.querySelectorAll('button').forEach((b) =>
+      b.setAttribute('aria-pressed', String(b.dataset.v === String(state[key]))));
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      state[key] = key === 'rate' ? Number(b.dataset.v) : b.dataset.v;
+      sync();
+      onChange && onChange();
+    });
+    sync();
+  }
+  const hasHangul = (s) => /[ㄱ-ㆎ가-힣]/.test(s);
+
+  async function api(path, body) {
+    let r;
+    try {
+      r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    } catch {
+      throw new Error('서버에 연결하지 못했습니다. 네트워크를 확인해 주세요.');
+    }
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || '요청을 처리하지 못했습니다.');
+    return data;
+  }
+
+  // ---------- 재생 ----------
+  function setBusy(b) {
+    state.busy = b;
+    $('speak').disabled = b;
+    $('stop').disabled = !b;
+  }
+  function stop() {
+    audio.pause();
+    audio.removeAttribute('src');
+    setBusy(false);
+    setStatus('');
+  }
+  async function play(entry) {
+    if (!entry.audioUrl) {
+      const d = await api('/api/speak', { text: entry.text, lang: entry.lang, gender: entry.gender });
+      const bytes = Uint8Array.from(atob(d.audio), (c) => c.charCodeAt(0));
+      entry.audioUrl = URL.createObjectURL(new Blob([bytes], { type: d.mime }));
+    }
+    audio.src = entry.audioUrl;
+    audio.playbackRate = state.rate;
+    await audio.play();
+  }
+  audio.addEventListener('ended', () => { setBusy(false); setStatus(''); });
+  audio.addEventListener('error', () => { if (audio.src) { setBusy(false); setStatus('소리를 재생하지 못했습니다.', true); } });
+
+  async function speak(text, opts = {}) {
+    text = (text || '').trim();
+    if (!text) { setStatus('읽을 문장을 입력해 주세요.', true); $('text').focus(); return; }
+    if (state.busy) stop();
+
+    const entry = opts.entry || {
+      id: Date.now() + Math.random(),
+      role: state.role, text, gender: state.gender,
+      lang: hasHangul(text) ? 'ko' : 'en',
+      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+      translation: null,
+    };
+    if (!opts.entry) {
+      state.log.push(entry);
+      renderLog();
+      if (state.translate) translate(entry);
+    }
+
+    setBusy(true);
+    setStatus('음성을 준비하고 있습니다…');
+    try {
+      await play(entry);
+      setStatus('읽어주는 중입니다…');
+      if (!opts.entry && opts.clearInput) { $('text').value = ''; updateCount(); }
+    } catch (e) {
+      setBusy(false);
+      setStatus(e.message, true);
+    }
+  }
+
+  async function translate(entry) {
+    entry.translation = '번역 중…';
+    renderLog();
+    try {
+      const d = await api('/api/translate', { text: entry.text, target: entry.lang === 'ko' ? 'en' : 'ko' });
+      entry.translation = d.text;
+    } catch (e) {
+      entry.translation = '(번역 실패) ' + e.message;
+    }
+    renderLog();
+  }
+
+  // ---------- 대화 기록 ----------
+  function renderLog() {
+    const ul = $('log');
+    ul.textContent = '';
+    if (!state.log.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = '읽어준 문장이 여기에 표시됩니다.';
+      ul.append(li);
+      return;
+    }
+    for (const e of state.log) {
+      const li = document.createElement('li');
+      li.className = e.role;
+      const who = document.createElement('div');
+      who.className = 'who';
+      const name = document.createElement('span');
+      name.textContent = ROLE_NAME[e.role];
+      const time = document.createElement('span');
+      time.textContent = e.time;
+      who.append(name, time);
+      const text = document.createElement('div');
+      text.className = 'text';
+      text.lang = e.lang;
+      text.textContent = e.text;
+      li.append(who, text);
+      if (e.translation) {
+        const tr = document.createElement('div');
+        tr.className = 'tr';
+        tr.lang = e.lang === 'ko' ? 'en' : 'ko';
+        tr.textContent = e.translation;
+        li.append(tr);
+      }
+      const again = document.createElement('button');
+      again.type = 'button';
+      again.className = 'btn small';
+      again.textContent = '🔊 다시 듣기';
+      again.addEventListener('click', () => speak(e.text, { entry: e }));
+      li.append(again);
+      ul.append(li);
+    }
+    ul.scrollTop = ul.scrollHeight;
+  }
+  function clearLog() {
+    stop();
+    state.log.forEach((e) => e.audioUrl && URL.revokeObjectURL(e.audioUrl));
+    state.log = [];
+    renderLog();
+    $('text').value = '';
+    updateCount();
+    $('text').focus();
+  }
+
+  // ---------- 자주 쓰는 문구 ----------
+  function renderPhrases() {
+    const box = $('phrases');
+    box.textContent = '';
+    (state.phrases[state.role] || []).forEach((p, i) => {
+      const wrap = document.createElement('span');
+      wrap.className = 'phrase';
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = p;
+      b.addEventListener('click', () => speak(p));
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'del';
+      del.textContent = '삭제';
+      del.setAttribute('aria-label', `"${p}" 삭제`);
+      del.addEventListener('click', () => {
+        state.phrases[state.role].splice(i, 1);
+        store.set('bf.phrases', state.phrases);
+        renderPhrases();
+      });
+      wrap.append(b, del);
+      box.append(wrap);
+    });
+  }
+
+  // ---------- 이벤트 ----------
+  function updateCount() { $('count').textContent = `${$('text').value.length} / 1000`; }
+
+  bindSeg('role', 'role', () => {
+    document.body.dataset.role = state.role;
+    renderPhrases();
+    $('text').focus();
+  });
+  bindSeg('gender', 'gender', () => store.set('bf.gender', state.gender));
+  bindSeg('rate', 'rate', () => { store.set('bf.rate', state.rate); audio.playbackRate = state.rate; });
+
+  $('translate').checked = state.translate;
+  $('translate').addEventListener('change', (e) => {
+    state.translate = e.target.checked;
+    store.set('bf.translate', state.translate);
+  });
+
+  $('speak').addEventListener('click', () => speak($('text').value, { clearInput: true }));
+  $('stop').addEventListener('click', stop);
+  $('clear').addEventListener('click', () => { $('text').value = ''; updateCount(); setStatus(''); $('text').focus(); });
+  $('clearLog').addEventListener('click', clearLog);
+  $('text').addEventListener('input', updateCount);
+  $('text').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      speak($('text').value, { clearInput: true });
+    }
+  });
+
+  $('editPhrases').addEventListener('click', (e) => {
+    const on = $('phraseCard').classList.toggle('editing');
+    e.currentTarget.setAttribute('aria-pressed', String(on));
+    e.currentTarget.textContent = on ? '완료' : '편집';
+  });
+  $('phraseAdd').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = $('newPhrase').value.trim();
+    if (!v) return;
+    (state.phrases[state.role] ||= []).push(v);
+    store.set('bf.phrases', state.phrases);
+    $('newPhrase').value = '';
+    renderPhrases();
+  });
+  $('resetPhrases').addEventListener('click', () => {
+    state.phrases[state.role] = [...DEFAULT_PHRASES[state.role]];
+    store.set('bf.phrases', state.phrases);
+    renderPhrases();
+  });
+
+  renderPhrases();
+  renderLog();
+  fetch('/api/status').then((r) => r.json()).then((s) => {
+    if (!s.ready) setStatus('음성 서비스 키가 설정되지 않았습니다. 관리자에게 문의해 주세요.', true);
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>
