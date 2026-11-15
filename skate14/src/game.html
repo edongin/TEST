@@ -246,15 +246,16 @@ const SMALL_NUMS = NUMS.filter(n => n <= 20);
 // ============================================================ data
 const RAINBOW = ['#e8262b', '#ff8a00', '#ffd200', '#3dbb3d', '#1fc6e8', '#3a5bd9', '#8b3fc6'];
 const DIFF = {
-  easy:   { name: '쉬움',   speed: 0.8,  hearts: 5, win: 1.45, rate: 3.0, density: 0.8,  approach: 1.35, note: '느리게 달리고, 하트 5개, 타이밍 판정이 넉넉해요.' },
-  normal: { name: '보통',   speed: 1.0,  hearts: 4, win: 1.0,  rate: 4.0, density: 1.0,  approach: 1.1,  note: '하트 4개. 스테이지가 갈수록 빨라져요.' },
-  hard:   { name: '어려움', speed: 1.2,  hearts: 3, win: 0.75, rate: 5.0, density: 1.2,  approach: 0.9,  note: '빠르고 하트 3개, 판정이 엄격해요.' },
+  easy:   { name: '쉬움',   speed: 0.8,  hearts: 5, win: 1.45, rate: 2.2, density: 0.8,  approach: 1.35, tApp: 0.8,  tGap: 0.75, note: '느리게 달리고, 하트 5개, 타이밍 판정이 넉넉해요.' },
+  normal: { name: '보통',   speed: 1.0,  hearts: 4, win: 1.0,  rate: 3.0, density: 1.0,  approach: 1.1,  tApp: 0.7,  tGap: 0.65, note: '하트 4개. 스테이지가 갈수록 빨라져요.' },
+  hard:   { name: '어려움', speed: 1.2,  hearts: 3, win: 0.75, rate: 4.0, density: 1.2,  approach: 0.9,  tApp: 0.6,  tGap: 0.55, note: '빠르고 하트 3개, 판정이 엄격해요.' },
 };
 const THEMES = {
   playground: { name: '놀이터', sky: ['#62bdf7', '#d4f0ff'], ground: '#93d96a', ground2: '#86cd5e', road: '#e2c493', road2: '#d7b783', line: '#fff8e6', side: '#f3dfb6', side2: '#e9d3a5', curb: '#c99a5b', hill: '#b6e68f' },
   park:       { name: '공원',   sky: ['#4fb0f2', '#e2f6ff'], ground: '#62c050', ground2: '#58b447', road: '#bdb7aa', road2: '#b2ab9e', line: '#ffffff', side: '#dcd4c2', side2: '#d1c9b6', curb: '#8f8a7f', hill: '#4c9f45' },
   city:       { name: '도심',   sky: ['#4d9fe8', '#f6e3c4'], ground: '#a7acb6', ground2: '#9da2ad', road: '#5c606b', road2: '#555963', line: '#ffd84a', side: '#cfc9be', side2: '#c4beb2', curb: '#8a8478', hill: '#8b96b4' },
 };
+const isMission = n => n >= 8 && n % 3 === 2;
 const themeOf = n => n <= 33 ? 'playground' : n <= 66 ? 'park' : 'city';
 const TUT_TITLES = ['', '연습 1: 옆으로 피하기', '연습 2: 점프', '연습 3: 숙이기', '연습 4: 점프대 기술', '연습 5: 레인과 갈림길'];
 
@@ -376,7 +377,7 @@ const stageD = n => clamp((n - 6) / 94, 0, 1);
 function stageSpeed(n) { const df = DIFF[save.diff]; return (n <= 5 ? 4.4 : 5.0 + 2.6 * stageD(n)) * df.speed; }
 
 function newLevel(n) {
-  return { n, theme: themeOf(n), tutorial: n <= 5, speed: stageSpeed(n), L: 0, obs: [], coins: [], ramps: [], rails: [], forks: [], hints: [], arrows: [], walkers: [], crowd: [], manuals: [] };
+  return { n, theme: themeOf(n), tutorial: n <= 5, speed: stageSpeed(n), L: 0, obs: [], coins: [], ramps: [], rails: [], forks: [], hints: [], arrows: [], walkers: [], crowd: [], manuals: [], missions: [] };
 }
 const addObs = (lv, z, lane, type) => { const o = { z, lane, type, done: false, v: Math.floor(hash(Math.round(z * 10) + lv.n * 31) * 3) }; lv.obs.push(o); return o; };
 function coinLine(lv, z, count, lane, gap = 1.3, y = 0.35) { for (let i = 0; i < count; i++) lv.coins.push({ z: z + i * gap, x: lane, y, taken: false }); }
@@ -392,6 +393,7 @@ const INTROS = {
   drop: ['📦', '하늘에서 상자가 떨어져요! 바닥에 빨간 그림자가 보이면 그 줄을 피해서 옆으로 가요.'],
   twinduck: ['7 7', '갈림길에 높은 막대도 있어요! 그쪽 7의 ▼ 버튼을 누르면 숙여요. 화면을 아래로 쓸어도 돼요.'],
   twinrail: ['7 7', '7 두 명이 나란히 레일을 타요! 화면을 빠르게 연타!'],
+  mission: ['🌉', '미션! 강에 다리가 올라가 있어요. 14가 2 일곱 명으로 나뉘어요 (2 × 7 = 14). 반짝이는 동그라미를 왼쪽부터 차례로 눌러 2, 4, 6 … 14까지 세면 다리가 내려와요!'],
   twinair: ['7 7', '더블 점프대! 공중에서 14가 7 + 7로 나뉘어요. 왼쪽 동그라미는 왼쪽 7, 오른쪽 동그라미는 오른쪽 7이 기술을 해요!'],
 };
 const introHint = (lv, z, key) => lv.hints.push({ z, need: 'tap', intro: key, text: INTROS[key][1], icon: INTROS[key][0], done: false });
@@ -400,14 +402,15 @@ const hint = (lv, z, need, text, icon, extra = {}) => lv.hints.push(Object.assig
 function buildLevel(n) {
   const lv = newLevel(n);
   if (n <= 5) buildTutorial(lv); else generate(lv);
-  for (const k of ['obs', 'coins', 'ramps', 'rails', 'forks', 'hints', 'manuals']) lv[k].sort((a, b) => a.z - b.z);
+  for (const k of ['obs', 'coins', 'ramps', 'rails', 'forks', 'hints', 'manuals', 'missions']) lv[k].sort((a, b) => a.z - b.z);
   for (const r of lv.ramps) { r.kind = r.kind || 'ramp'; r.top = r.top || 0.7; }
   // background characters strolling on the sidewalks
   const R = mulberry32(n * 4517 + 3);
   const cnt = Math.round(lv.L / 5);
   for (let i = 0; i < cnt; i++) {
     const side = R() < 0.5 ? -1 : 1, num = R() < 0.75 ? pick(SMALL_NUMS, R()) : pick(NUMS, R());
-    lv.walkers.push({ n: num, x: side * (1.9 + R() * 0.55), z: 6 + R() * (lv.L + 10), dir: R() < 0.5 ? -1 : 1, spd: 0.45 + R() * 0.45, mode: R() < 0.7 ? 'walk' : 'idle', t: 1 + R() * 4, ph: R() * 6, bubble: null, bt: 0, looked: false });
+    const wx = side * (1.9 + R() * 0.9), wz = 6 + R() * (lv.L + 10);
+    lv.walkers.push({ n: num, side, x: wx, z: wz, tx: wx, tz: wz, v: 0, spd: 0.5 + R() * 0.5, face: 1, mode: 'idle', t: R() * 3, ph: R() * 6, bubble: null, bt: 0, looked: false });
   }
   for (let i = 0; i < 16; i++) {
     const side = i % 2 ? 1 : -1, row = Math.floor(i / 2);
@@ -484,7 +487,7 @@ function buildTutorial(lv) {
 function setEv(lv, o, ev, R) {
   const v = lv.speed; o.ev = ev; o.side = R() < 0.5 ? -1 : 1;
   if (ev === 'tree') { o.trig = v * 2.6; o.dur = v * 0.9; }
-  else if (ev === 'movers') { o.trig = v * 3.4; o.dur = v * 1.7; const ns = NUMS.filter(n => n >= 11 && n <= 20); o.c1 = pick(ns, R()); o.c2 = pick(ns, R()); }
+  else if (ev === 'movers') { o.trig = v * 2.4; o.dur = v * 4.8; const ns = NUMS.filter(n => n >= 11 && n <= 20); o.c1 = pick(ns, R()); o.c2 = pick(ns, R()); }
   else { o.trig = v * 2.3; o.dur = v * 0.5; }
 }
 function generate(lv) {
@@ -551,7 +554,7 @@ function generate(lv) {
     const len = pipe ? 4 : 3;
     lv.ramps.push({ z, len, count, kind: pipe ? 'pipe' : 'ramp', twin, top: pipe ? 1.5 : 0.7 });
     coinLine(lv, z - 6, 4, lane, 1.2);
-    const T = 0.35 + df.approach + (count - 1) * Math.max(0.55, 0.85 * df.approach) + 0.45;
+    const T = 0.35 + df.tApp + (count - 1) * df.tGap + 0.5;
     z += len + v * 0.28 * T + 9;
   }
   function rail() {
@@ -561,7 +564,7 @@ function generate(lv) {
     for (let k = 0; k < 4; k++) lv.arrows.push({ z: z + 2 + k * 2.5, lane: rl });
     coinLine(lv, z + 1, 3, rl, 1.6);
     z += 12;
-    const len = Math.round(10 + d * 8 + R() * 4);
+    const len = Math.round(12 + d * 8 + R() * 4);
     lv.rails.push({ z, len, lane: rl, slide });
     coinLine(lv, z + 0.6, Math.floor(len / 1.25), rl, 1.25, 1.0);
     z += len + 7; lane = rl;
@@ -579,32 +582,42 @@ function generate(lv) {
       coinLine(lv, r0 + 0.6, Math.floor(rl / 1.25), -1, 1.25, 1.0); coinLine(lv, r0 + 0.6, Math.floor(rl / 1.25), 1, 1.25, 1.0);
       intro('twinrail', z - 4);
     }
-    for (const side of [-1, 1]) {
-      let zz = z + 7 + (side > 0 ? gap * 0.5 : 0);
-      while (zz < z + len - 3) {
-        if (zz > r0 - 5 && zz < r1 + v * 1.2 + 3) { zz = r1 + v * 1.2 + 3; continue; }
-        const high = n >= 9 && R() < 0.35;
-        addObs(lv, zz, side, high ? 'high' : 'low');
-        if (high) { intro('twinduck', z - 2.5); coinLine(lv, zz - 2.2, 2, side, 1.1); } else coinArc(lv, zz, side, 3);
-        zz += gap + R() * 2;
-      }
+    // one obstacle at a time, mostly alternating sides, with plenty of room
+    const step = Math.max(v * 0.8 * lerp(1.25, 0.95, d) / df.density, 5);
+    let zz = z + 8, side = R() < 0.5 ? -1 : 1;
+    while (zz < z + len - 3) {
+      if (zz > r0 - 5 && zz < r1 + v * 1.2 + 3) { zz = r1 + v * 1.2 + 3; continue; }
+      const high = n >= 12 && R() < 0.25;
+      addObs(lv, zz, side, high ? 'high' : 'low');
+      if (high) { intro('twinduck', z - 2.5); coinLine(lv, zz - 2.2, 2, side, 1.1); } else coinArc(lv, zz, side, 3);
+      zz += step + R() * 1.5;
+      if (R() < 0.8) side = -side;
     }
     coinLine(lv, z + 2, 3, -1); coinLine(lv, z + 2, 3, 1);
     z += len + 7; lane = 0;
   }
   function manual() {
     z += 4;
-    const beat = Math.max(0.5, 0.75 * df.approach / 1.1), count = 4 + Math.floor(d * 3), app = Math.max(beat * 1.5, 0.8);
+    const beat = Math.max(0.5, 0.75 * df.approach / 1.1), count = 4 + Math.floor(d * 3), app = Math.max(beat * 1.15, 0.7);
     const len = Math.round(v * (0.25 + app + (count - 1) * beat + 0.5) + 1);
     intro('manual', z - 4);
     lv.manuals.push({ z, len, count, beat, app });
     coinLine(lv, z + 1, Math.floor(len / 1.4), lane, 1.4, 0.5);
     z += len + 8;
   }
+  function mission() {
+    z += 6;
+    const m = { z: z + 6, len: 3, open: 0 };
+    intro('mission', z);
+    lv.missions.push(m);
+    coinLine(lv, m.z + 0.3, 3, 0, 1.0);
+    z = m.z + m.len + 9; lane = 0;
+  }
+  if (isMission(n)) specials.splice(Math.floor(specials.length / 2), 0, 'mission');
   const baseRows = 2 + Math.floor(d * 2);
   pattern(baseRows + 1);
   for (const sp2 of specials) {
-    if (sp2 === 'ramp') ramp(); else if (sp2 === 'rail') rail(); else if (sp2 === 'fork') fork(); else manual();
+    if (sp2 === 'ramp') ramp(); else if (sp2 === 'rail') rail(); else if (sp2 === 'fork') fork(); else if (sp2 === 'mission') mission(); else manual();
     if (R() < 0.25) coinRun();
     pattern(baseRows - 1 + (R() < 0.4 ? 1 : 0));
   }
@@ -671,7 +684,8 @@ function startStage(n) {
   setPlaying(true);
   const title = lv.tutorial ? TUT_TITLES[n] : THEMES[lv.theme].name;
   document.getElementById('hStage').textContent = `스테이지 ${n} · ${title}`;
-  popText(lv.tutorial ? '연습 스테이지' : `스테이지 ${n}`, '#fff', 0.3, 1.1, 34);
+  popText(lv.tutorial ? '연습 스테이지' : `스테이지 ${n}`, '#fff', 0.3, 1.1, 34, lv.missions.length ? '🌉 미션 스테이지!' : '');
+  G.mission = null;
   setTimeout(() => SFX.go(), 900);
   updateHud(true);
 }
@@ -725,6 +739,7 @@ cv.addEventListener('pointerdown', e => {
   }
   if (G.qte && G.qte.kind === 'timing') { qteTap(x, y); return; }
   if (G.qte && G.qte.kind === 'mash') { mashTap(); return; }
+  if (P.mode === 'mission') { missionTap(x, y); return; }
   if (P.mode === 'twin') { swipe = { x, y, done: false, twin: x < W / 2 ? 0 : 1 }; return; }
   swipe = { x, y, done: false };
 });
@@ -742,6 +757,7 @@ document.querySelectorAll('#ctl .cb').forEach(b => b.addEventListener('pointerdo
   e.preventDefault(); audioInit();
   if (G.qte && G.qte.kind === 'mash') { mashTap(); return; }
   if (G.qte && G.qte.manual) { const it = G.qte.items.find(i => !i.j); if (it) qteTap(it.x * W, it.y * H); return; }
+  if (P.mode === 'mission') { popText('반짝이는 동그라미를 눌러요!', '#fff', 0.62, 0.8, 24); return; }
   act(b.dataset.act);
 }));
 document.querySelectorAll('#twinCtl .cb').forEach(b => b.addEventListener('pointerdown', e => {
@@ -758,6 +774,7 @@ window.addEventListener('keydown', e => {
   if (G.hint && (G.hint.need === 'tap' || G.hint.need === 'msg') && (k === ' ' || k === 'Enter')) { resolveHint(); e.preventDefault(); return; }
   if (G.qte && G.qte.kind === 'timing' && (k === ' ' || k === 'Enter')) { const it = G.qte.items.find(i => !i.j); if (it) qteTap(it.x * W, it.y * H); e.preventDefault(); return; }
   if (G.qte && G.qte.kind === 'mash' && map[k]) { mashTap(); e.preventDefault(); return; }
+  if (G.mission && G.mission.phase === 'tap' && (k === ' ' || k === 'Enter')) { const t = missionTarget(G.mission.idx); missionTap(t[0], t[1]); e.preventDefault(); return; }
   if (map[k]) { act(map[k]); e.preventDefault(); }
 });
 
@@ -790,7 +807,7 @@ document.getElementById('hintOk').addEventListener('click', () => resolveHint())
 const SYMS = [['★', '#ff5c8a'], ['●', '#2f8cff'], ['▲', '#22b866'], ['◆', '#ff8a00'], ['♥', '#e8262b'], ['✚', '#8b3fc6']];
 function startTrick(r) {
   const df = DIFF[save.diff];
-  const app = df.approach, gap = Math.max(0.55, 0.85 * df.approach);
+  const app = df.tApp, gap = df.tGap;
   const items = [];
   const t0 = G.rt + 0.35;
   let px = 0.5;
@@ -897,7 +914,7 @@ function mashTap() {
 function endGrind() {
   const q = G.qte; G.qte = null;
   const ratio = q.taps / q.target;
-  const k = ratio >= 1 ? 'P' : ratio >= 0.75 ? 'G' : ratio >= 0.45 ? 'N' : 'B';
+  const k = ratio >= 0.9 ? 'P' : ratio >= 0.65 ? 'G' : ratio >= 0.35 ? 'N' : 'B';
   G.run[k]++;
   const bonus = { P: 6, G: 4, N: 2, B: 0 }[k]; G.run.bonus += bonus;
   SFX.judge(k);
@@ -928,7 +945,7 @@ function twinDuck(i) {
   const t = T.tw[i]; t.duck = DUCK_T; if (t.air) t.vy = Math.min(t.vy, -12); SFX.duck();
 }
 function startTwinGrind(r) {
-  const df = DIFF[save.diff], dur = r.len / G.lv.speed;
+  const df = DIFF[save.diff], dur = r.len / (G.lv.speed * 0.8);
   G.qte = { kind: 'mash', t0: G.rt, dur, taps: 0, target: Math.max(4, Math.round(dur * df.rate)), rail: r, last: 0, twin: true };
   G.twin.grind = true;
   for (const t of G.twin.tw) { t.air = false; t.vy = 0; t.y = 0.5; t.duck = 0; }
@@ -975,6 +992,154 @@ function hurt() {
     setControls(null);
     SFX.fail();
   } else popText('아야!', '#ff5c5c', 0.4, 0.7, 36);
+}
+const PAD_X = i => -1.5 + i * 0.5;
+function startMission(m) {
+  P.mode = 'mission'; P.fv = G.lv.speed; P.air = false; P.duck = 0; P.push = 0;
+  const stopZ = m.z - 2.2, dist = Math.max(1, stopZ - P.z);
+  G.mission = { m, phase: 'brake', t0: G.rt, dec: P.fv * P.fv / (2 * dist), idx: 0, twos: [] };
+  setControls(null);
+  popText('강이다!', '#fff', 0.3, 1, 34, '다리가 올라가 있어요');
+}
+function setMPhase(ph) { G.mission.phase = ph; G.mission.t0 = G.rt; }
+function updateMission(rdt) {
+  const M = G.mission; if (!M) return 0;
+  const t = G.rt - M.t0;
+  if (M.phase === 'brake') {
+    P.fv = Math.max(0, P.fv - M.dec * rdt);
+    P.x = lerp(P.x, 0, Math.min(1, rdt * 3));
+    if (P.fv <= 0.05 || P.z >= M.m.z - 2.2) {
+      P.fv = 0;
+      M.twos = Array.from({ length: 7 }, (_, i) => ({ x: P.x, z: P.z, y: 0, hop: -9 }));
+      setMPhase('split'); SFX.split();
+      popText('14 = 2 × 7', '#fff', 0.24, 1.6, 42, '2가 일곱 명!');
+      const p = playerScreen(); burst(p[0], p[1], 30, RAINBOW, 300, 7);
+    }
+    return P.fv;
+  }
+  if (M.phase === 'split' || M.phase === 'merge') {
+    const u = clamp(t / 0.8, 0, 1), e = easeIO(u);
+    M.twos.forEach((w, i) => {
+      const fx = M.phase === 'split' ? P.x : PAD_X(i), tx = M.phase === 'split' ? PAD_X(i) : 0;
+      const fz = M.phase === 'split' ? P.z : M.m.z - 1.2, tz = M.phase === 'split' ? M.m.z - 1.2 : P.z;
+      w.x = lerp(fx, tx, e); w.z = lerp(fz, tz, e); w.y = Math.sin(u * Math.PI) * 0.7;
+    });
+    if (u >= 1) {
+      if (M.phase === 'split') setMPhase('tap');
+      else {
+        G.mission = null; P.mode = 'ride'; P.lane = 0; P.x = 0; setControls('ride');
+        popText('2 × 7 = 14!', '#fff', 0.3, 1.4, 44, '다시 합체! 출발!');
+        const p = playerScreen(); burst(p[0], p[1], 30, RAINBOW, 300, 7); cheerNearby();
+      }
+    }
+    return 0;
+  }
+  if (M.phase === 'bridge') {
+    M.m.open = easeIO(clamp(t / 1.4, 0, 1));
+    if (t >= 1.7) { setMPhase('merge'); SFX.merge(); }
+  }
+  return 0;
+}
+function missionTarget(i) {
+  const M = G.mission, w = M.twos[i]; const p = P3(w.x, 1.15, w.z);
+  return [p[0], p[1] - (i % 2) * Math.min(W, H) * 0.09 - 14];
+}
+function missionTap(x, y) {
+  const M = G.mission; if (!M || M.phase !== 'tap') return;
+  const [tx, ty] = missionTarget(M.idx), R = Math.min(W, H) * 0.15;
+  if (Math.hypot(x - tx, y - ty) > R) {
+    let other = false; for (let i = M.idx + 1; i < 7; i++) { const [ox, oy] = missionTarget(i); if (Math.hypot(x - ox, y - oy) < R * 0.6) other = true; }
+    if (other) popText('왼쪽부터 차례로!', '#fff', 0.62, 0.8, 26);
+    return;
+  }
+  const i = M.idx++, w = M.twos[i];
+  w.hop = G.rt;
+  tone(523 * Math.pow(2, i * 2 / 12), 0.18, 'triangle', 0.2); tone(1046 * Math.pow(2, i * 2 / 12), 0.1, 'sine', 0.08, 0, 0.05);
+  popText(`${(i + 1) * 2}!`, RAINBOW[i], 0.5, 0.8, 52);
+  burst(tx, ty, 14, [RAINBOW[i], '#fff'], 220, 6);
+  if (M.idx === 7) {
+    G.run.bonus += 14; G.run.P++;
+    SFX.win(); SFX.creak();
+    popText('다리가 내려와요!', '#ffe14d', 0.3, 1.8, 40, '미션 성공 · 보너스 +14');
+    setMPhase('bridge'); cheerNearby();
+  }
+}
+function draw2(happy) {
+  const b = 0.17, y0 = -0.09, c = '#ff8a00';
+  ctx.fillStyle = '#d06e00'; rrect(-0.06, y0 - 0.01, 0.045, 0.1, 0.02); ctx.fill(); rrect(0.015, y0 - 0.01, 0.045, 0.1, 0.02); ctx.fill();
+  const sh = y0 - b * 1.6, a = happy ? -2.5 : -0.9 + Math.sin(G.rt * 5) * 0.2;
+  ctx.strokeStyle = '#d06e00'; ctx.lineWidth = 0.055; ctx.lineCap = 'round';
+  for (const i of [-1, 1]) { const hx = i * (b / 2 + Math.abs(Math.sin(a)) * 0.11), hy = sh + Math.cos(a) * 0.11; ctx.beginPath(); ctx.moveTo(i * b / 2, sh); ctx.lineTo(hx, hy); ctx.stroke(); circ(hx, hy, 0.035, '#d06e00'); }
+  for (let r = 0; r < 2; r++) { ctx.fillStyle = r ? '#ff9a1f' : c; ctx.fillRect(-b / 2, y0 - (r + 1) * b, b, b + 0.002); }
+  ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 0.01; ctx.strokeRect(-b / 2, y0 - 2 * b, b, 2 * b);
+  ctx.fillStyle = '#d06e00'; rrect(-b / 2 - 0.01, y0 - 2 * b - 0.04, b + 0.02, 0.06, 0.03); ctx.fill();
+}
+function drawTwos() {
+  const M = G.mission;
+  for (let i = 6; i >= 0; i--) {
+    const w = M.twos[i];
+    let y = w.y; const ht = G.rt - w.hop; if (ht < 0.45) y += Math.sin(ht / 0.45 * Math.PI) * 0.4;
+    const pressed = i < M.idx;
+    shadow(w.x, w.z, 0.18, 0.18);
+    local(w.x, y + (pressed && M.phase !== 'merge' ? 0.02 : 0.05), w.z, () => { ctx.rotate(Math.sin(G.rt * 6 + i) * 0.05); draw2(pressed || M.phase === 'bridge'); });
+  }
+  if (M.phase === 'split' || M.phase === 'merge') {
+    const u = clamp((G.rt - M.t0) / 0.8, 0, 1), a = M.phase === 'split' ? 1 - u * 3 : (u - 0.65) / 0.35;
+    if (a > 0) { const p = P3(P.x, 0.1, P.z); ctx.save(); ctx.globalAlpha = clamp(a, 0, 1); ctx.translate(p[0], p[1]); ctx.scale(p[2], p[2]); draw14(skinOf(save.skin), false, armPose(), 0); ctx.restore(); }
+  }
+}
+function drawPads(m) {
+  const M = G.mission && G.mission.m === m ? G.mission : null;
+  for (let i = 0; i < 7; i++) {
+    const on = m.open > 0 || (M && i < M.idx);
+    const p = P3(PAD_X(i), 0.02, m.z - 1.2); if (p[2] < 4) continue;
+    ctx.fillStyle = on ? RAINBOW[i] : '#9ea3b5';
+    ctx.beginPath(); ctx.ellipse(p[0], p[1], 0.2 * p[2], 0.07 * p[2], 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = on ? '#ffffff' : '#6d7286'; ctx.lineWidth = Math.max(1, p[2] * 0.025); ctx.stroke();
+    if (on) { ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(p[0], p[1] - p[2] * 0.01, 0.12 * p[2], 0.04 * p[2], 0, 0, Math.PI * 2); ctx.fill(); }
+  }
+}
+function drawRiver(m) {
+  const z0 = Math.max(m.z, camZ + 0.45), z1 = m.z + m.len; if (z1 <= z0) return;
+  poly([P3(-40, 0.004, z0), P3(40, 0.004, z0), P3(40, 0.004, z1), P3(-40, 0.004, z1)], '#3fa9f5');
+  for (let k = 0; k < 5; k++) {
+    const zz = m.z + ((k * 0.6 + G.rt * 0.5) % m.len); if (zz < z0 || zz + 0.1 > z1) continue;
+    poly([P3(-40, 0.006, zz), P3(40, 0.006, zz), P3(40, 0.006, zz + 0.08), P3(-40, 0.006, zz + 0.08)], 'rgba(255,255,255,.45)');
+  }
+  for (const zz of [m.z, z1 - 0.12]) if (zz >= z0) poly([P3(-40, 0.006, zz), P3(40, 0.006, zz), P3(40, 0.006, zz + 0.12), P3(-40, 0.006, zz + 0.12)], '#c9a46a');
+  // drawbridge hinged on the far bank
+  const a = (1 - m.open) * Math.PI / 2, L = m.len;
+  const zn = z1 - L * Math.cos(a), yn = L * Math.sin(a);
+  for (const x of [-ROAD - 0.3, ROAD + 0.1]) box3d(x, x + 0.2, 0, 2.4, z1, z1 + 0.2, '#8d6e63', '#a1887f', '#6d4c41');
+  const M = G.mission && G.mission.m === m ? G.mission : null;
+  const lit = m.open > 0 ? 7 : M ? M.idx : 0;
+  // chains
+  ctx.strokeStyle = '#5d4037'; ctx.lineWidth = 2;
+  for (const s of [-1, 1]) { const a1 = P3(s * (ROAD + 0.1), 2.3, z1 + 0.1), a2 = P3(s * ROAD * 0.95, yn, zn); ctx.beginPath(); ctx.moveTo(a1[0], a1[1]); ctx.lineTo(a2[0], a2[1]); ctx.stroke(); }
+  poly([P3(-ROAD, 0.02, z1), P3(ROAD, 0.02, z1), P3(ROAD, yn + 0.02, zn), P3(-ROAD, yn + 0.02, zn)], m.open > 0.5 ? '#c48a52' : '#a0703f');
+  for (let k = 1; k < 6; k++) { const zz = lerp(z1, zn, k / 6), yy = lerp(0, yn, k / 6); const q1 = P3(-ROAD, yy + 0.025, zz), q2 = P3(ROAD, yy + 0.025, zz); ctx.strokeStyle = 'rgba(80,50,20,.35)'; ctx.lineWidth = Math.max(1, q1[2] * 0.02); ctx.beginPath(); ctx.moveTo(q1[0], q1[1]); ctx.lineTo(q2[0], q2[1]); ctx.stroke(); }
+  // seven lamps across the bridge show progress
+  if (m.open < 0.6) for (let i = 0; i < 7; i++) { const p = P3(PAD_X(i), yn - 0.35, zn - 0.03); circ(p[0], p[1], 0.12 * p[2], i < lit ? RAINBOW[i] : '#5d4a3a'); if (i < lit) circ(p[0] - p[2] * 0.03, p[1] - p[2] * 0.03, 0.04 * p[2], 'rgba(255,255,255,.7)'); }
+}
+function drawMissionUI() {
+  const M = G.mission; if (M.phase !== 'tap') return;
+  const R = Math.min(W, H) * 0.06;
+  ctx.font = `${Math.min(W, H) * 0.05}px Jua, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(40,30,60,.5)'; ctx.fillStyle = '#fff';
+  const tip = '반짝이는 동그라미를 차례로 눌러요!';
+  ctx.strokeText(tip, W / 2, H * 0.17); ctx.fillText(tip, W / 2, H * 0.17);
+  for (let i = 0; i < 7; i++) {
+    const [x, y] = missionTarget(i), w = M.twos[i];
+    const p = P3(w.x, 1.0, w.z);
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(p[0], p[1]); ctx.stroke();
+    const done = i < M.idx, active = i === M.idx;
+    const r = active ? R * (1.25 + Math.sin(G.rt * 8) * 0.08) : R * 0.8;
+    circ(x, y + 4, r, 'rgba(0,0,0,.18)');
+    circ(x, y, r, done ? RAINBOW[i] : active ? '#ffffff' : 'rgba(255,255,255,.55)');
+    if (active) { ctx.strokeStyle = RAINBOW[i]; ctx.lineWidth = r * 0.18; ctx.beginPath(); ctx.arc(x, y, r * 0.88, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.fillStyle = done ? '#fff' : active ? RAINBOW[i] : '#8d90a6';
+    ctx.font = `${r * 0.95}px Jua, sans-serif`; ctx.fillText(String((i + 1) * 2), x, y + r * 0.05);
+  }
 }
 function startFinish() {
   P.mode = 'finish'; P.fv = G.lv.speed; P.fdec = P.fv * P.fv / (2 * 5.5); G.endT = G.rt; G.qte = null;
@@ -1037,10 +1202,11 @@ function update(rdt) {
   if (G.rt - G.startT < 1.2) ts = 0;
   const dt = rdt * ts;
 
-  let v = lv.speed;
+  let v = lv.speed * (P.mode === 'twin' ? 0.8 : 1);
+  if (P.mode === 'mission') v = updateMission(rdt);
   if (P.mode === 'finish' || P.mode === 'crash') { P.fv = Math.max(0, P.fv - (P.mode === 'crash' ? 7 : P.fdec) * rdt); v = P.fv; }
   const prevZ = P.z;
-  P.z += v * (P.mode === 'finish' || P.mode === 'crash' ? rdt : dt);
+  P.z += v * (P.mode === 'finish' || P.mode === 'crash' || P.mode === 'mission' ? rdt : dt);
 
   // lateral
   if (P.mode === 'ride' || P.mode === 'trick') {
@@ -1082,6 +1248,7 @@ function update(rdt) {
   // ramps & manual pads
   if (P.mode === 'ride') for (const r of lv.ramps) if (crossed(r.z + r.len)) startTrick(r);
   if (P.mode === 'ride') for (const m of lv.manuals) if (crossed(m.z)) startManual(m);
+  if (P.mode === 'ride') for (const m of lv.missions) if (crossed(m.z - 4.6)) startMission(m);
   // rails
   for (const r of lv.rails) {
     if (r.twin) {
@@ -1175,28 +1342,43 @@ function update(rdt) {
 }
 
 function stepWalker(w, dt) {
+  if (!dt) return;
   w.t -= dt;
-  const dz = w.z - P.z;
-  if (!w.looked && dz > 1 && dz < 7 && Math.random() < 0.5 * dt * 10) { w.looked = true; w.mode = 'idle'; w.t = 1.5 + Math.random(); }
-  if (w.t <= 0) {
-    if (w.mode === 'walk') { w.mode = 'idle'; w.t = 1 + Math.random() * 2.5; }
-    else { w.mode = 'walk'; w.t = 2.5 + Math.random() * 4; if (Math.random() < 0.4) w.dir = -w.dir; }
+  const dzP = w.z - P.z;
+  // stop and watch 14 ride past
+  if (!w.looked && dzP > 1 && dzP < 7) { w.looked = true; if (Math.random() < 0.6) { w.mode = 'watch'; w.t = 1.2 + Math.random() * 1.5; } }
+  if (w.mode === 'walk') {
+    const dx = w.tx - w.x, dz = w.tz - w.z, dist = Math.hypot(dx, dz);
+    w.v = Math.min(w.spd, w.v + dt * 1.5);
+    if (dist < 0.08 || w.t <= 0) { w.mode = 'idle'; w.t = 0.8 + Math.random() * 2.5; }
+    else {
+      const st = Math.min(dist, w.v * dt); w.x += dx / dist * st; w.z += dz / dist * st;
+      if (Math.abs(dx) > 0.05) w.face = dx < 0 ? -1 : 1;
+      w.lean = dx / dist;
+    }
+  } else {
+    w.v = Math.max(0, w.v - dt * 2.5);
+    if (w.t <= 0) {
+      w.mode = 'walk'; w.t = 4 + Math.random() * 4;
+      w.tx = w.side * (1.85 + Math.random() * 1.1);
+      w.tz = w.z + (Math.random() - 0.5) * 7;
+    }
   }
-  if (w.mode === 'walk') { w.z += w.dir * w.spd * dt; w.ph += dt * (6 + w.spd * 5); }
-  else w.ph += dt * 1.5;
-  if (w.bt > 0) { w.bt -= dt || 0.016; if (w.bt <= 0) w.bubble = null; }
+  w.ph += dt * (w.v > 0.05 ? 5 + w.v * 6 : 1.4);
+  if (w.bt > 0) { w.bt -= dt; if (w.bt <= 0) w.bubble = null; }
 }
+
 function updateWalkers(dt) {
   if (!G.lv) return;
   for (const w of G.lv.walkers) stepWalker(w, dt);
 }
 
 function attract(rdt) {
-  if (!G.menuLv) { G.menuLv = buildLevel(40); G.menuLv.obs = []; G.menuLv.coins = []; G.menuLv.ramps = []; G.menuLv.rails = []; G.menuLv.forks = []; G.menuLv.hints = []; G.menuLv.L = 1e9; G.menuLv.theme = 'playground'; G.menuLv.walkers.forEach(w => w.z = Math.random() * 120); }
+  if (!G.menuLv) { G.menuLv = buildLevel(40); G.menuLv.obs = []; G.menuLv.coins = []; G.menuLv.ramps = []; G.menuLv.rails = []; G.menuLv.forks = []; G.menuLv.hints = []; G.menuLv.L = 1e9; G.menuLv.theme = 'playground'; G.menuLv.walkers.forEach(w => { w.z = w.tz = Math.random() * 120; }); }
   G.lv = G.menuLv;
   const v = 4;
   P.z += v * rdt;
-  for (const w of G.lv.walkers) { if (w.z < P.z - 6) { w.z += 120; w.looked = false; } stepWalker(w, rdt); }
+  for (const w of G.lv.walkers) { if (w.z < P.z - 6) { w.z += 120; w.tz += 120; w.looked = false; } stepWalker(w, rdt); }
   const cyc = (G.rt % 6);
   P.lane = cyc < 2 ? 0 : cyc < 4 ? 1 : cyc < 5 ? 0 : -1;
   P.x += clamp(P.lane - P.x, -4 * rdt, 4 * rdt);
@@ -1223,7 +1405,7 @@ function render() {
   // scenery
   const SLOT = 2.6, k0 = Math.floor(zMin / SLOT), k1 = Math.ceil(zMax / SLOT);
   for (let k = k0; k <= k1; k++) for (const side of [-1, 1]) {
-    const s = scenery(k, side, lv); if (s && s.z > zMin && s.z < zMax) spr.push(s);
+    const s = scenery(k, side, lv); if (s && s.z > zMin && s.z < zMax && !lv.missions.some(m => s.z > m.z - 0.6 && s.z < m.z + m.len + 0.6)) spr.push(s);
   }
   for (const w of lv.walkers) if (w.z > zMin && w.z < zMax) spr.push({ z: w.z, draw: () => drawWalker(w) });
   if (lv.L < 1e8 && lv.L - 10 < zMax) {
@@ -1236,6 +1418,7 @@ function render() {
   for (const r of lv.rails) if (r.z + r.len > zMin && r.z < zMax) spr.push({ z: r.z > P.z ? r.z : P.z + 0.02, draw: () => drawRail(r), noFade: true });
   for (const f of lv.forks) if (f.z + f.len > zMin && f.z < zMax) spr.push({ z: f.z + f.len, draw: () => drawIsland(f, th) });
   for (const m of lv.manuals) if (m.z + m.len > zMin && m.z < zMax) spr.push({ z: m.z + m.len, draw: () => drawManual(m), noFade: true });
+  for (const m of lv.missions) if (m.z + m.len > zMin && m.z - 2 < zMax) { spr.push({ z: m.z + m.len, draw: () => drawRiver(m), noFade: true }); spr.push({ z: m.z - 1.2, draw: () => drawPads(m) }); }
   spr.push({ z: P.z, draw: drawPlayerAll, player: true });
   spr.sort((a, b) => b.z - a.z || (a.player ? 1 : -1));
   for (const s of spr) {
@@ -1456,18 +1639,23 @@ function charSize(n) {
 }
 function drawWalker(w) {
   const cs = charSize(w.n); if (!cs) return;
+  if (G.lv.missions && G.lv.missions.some(m => w.z > m.z - 0.5 && w.z < m.z + m.len + 0.5)) return;
   const near = w.z - P.z;
-  const watching = near > -3 && near < 7;
-  const walking = w.mode === 'walk';
+  const watching = w.mode === 'watch' || (near > -3 && near < 7 && w.mode === 'idle');
+  const k = clamp(w.v / w.spd, 0, 1);              // 0 standing … 1 full walk
   const st = Math.sin(w.ph);
   const cheer = watching && G.rt - G.lastTrick < 1.5 ? Math.abs(Math.sin(G.rt * 10)) * 0.12 : 0;
-  const hop = (walking ? Math.abs(st) * 0.05 : 0) + cheer;
-  shadow(w.x, w.z, cs.w * 0.45, 0.16);
-  local(w.x + (walking ? st * 0.03 : 0), hop, w.z, () => {
-    const tilt = walking ? st * 0.085 : watching ? clamp((P.x - w.x) * 0.07, -0.16, 0.16) : Math.sin(w.ph * 0.6) * 0.03;
+  const hop = Math.abs(st) * 0.045 * k + cheer;
+  shadow(w.x, w.z, cs.w * (0.45 - hop * 0.6), 0.16);
+  local(w.x, hop, w.z, () => {
+    let tilt = st * 0.075 * k + (w.lean || 0) * 0.05 * k;
+    if (watching) tilt += clamp((P.x - w.x) * 0.07, -0.16, 0.16);
+    else if (k < 0.2) tilt += Math.sin(w.ph * 0.7) * 0.025;
     ctx.rotate(tilt);
-    const sq = walking ? 1 - 0.045 * (1 - Math.abs(st)) : 1 + Math.sin(w.ph * 1.3) * 0.012;
+    const sq = 1 - 0.05 * k * Math.pow(1 - Math.abs(st), 3) + (k < 0.2 ? Math.sin(w.ph * 1.3) * 0.012 : 0);
+    ctx.scale(w.face, 1);
     ctx.drawImage(cs.im, -cs.w * (2 - sq) / 2, -cs.h * sq, cs.w * (2 - sq), cs.h * sq);
+    ctx.scale(w.face, 1);
     if (w.bubble) bubble(w.bubble, -cs.h - 0.12);
   });
 }
@@ -1584,8 +1772,9 @@ function drawFallingTree(o, u) {
   if (u > 0.55) badge(clamp(P.x, -1, 1), 1.9, z, 'duck');
 }
 function drawMovers(o, u) {
-  const s = o.side, e = easeIO(u), off = (1 - e) * 5.2 * s;
+  const s = o.side, off = (1 - 2 * u) * 5.6 * s;
   const xa = -2.15 + off, xb = 2.15 + off, z = o.z;
+  if (u >= 1 && o.z < P.z - 3) return;
   const walking = u > 0 && u < 1;
   for (const [x, n] of [[xa, o.c1], [xb, o.c2]]) {
     const cs = charSize(n); if (!cs) continue;
@@ -1599,7 +1788,7 @@ function drawMovers(o, u) {
     ctx.fillStyle = '#6d4520'; ctx.font = `${Math.max(8, f.h * 0.55)}px Jua, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const k of [0.25, 0.75]) ctx.fillText('이삿짐', f.x + f.w * k, f.y + f.h * 0.52);
   }
-  if (u > 0.5) badge(clamp(P.x, -1, 1), 1.9, z, 'duck');
+  if (u > 0.2 && u < 0.55) badge(clamp(P.x, -1, 1), 1.95, z, 'duck');
 }
 function drawDrop(o, u) {
   const x = o.lane, y = 3.8 * (1 - u * u);
@@ -1693,6 +1882,7 @@ function drawFinish(lv) {
 // ============================================================ render: player
 function drawPlayerAll() {
   if (P.mode === 'trick' && G.qte && G.qte.twin) { drawTwinAir(); return; }
+  if (P.mode === 'mission' && G.mission && G.mission.phase !== 'brake') { drawTwos(); return; }
   if (P.mode === 'twin' && G.twin) {
     const T = G.twin, u = clamp((G.rt - T.t0) / 0.55, 0, 1);
     const mix = T.phase === 'split' ? u : T.phase === 'merge' ? 1 - u : 1;
@@ -1912,6 +2102,7 @@ function drawOverlay() {
     ctx.strokeStyle = fill >= 1 ? '#ffe14d' : '#22b866'; ctx.beginPath(); ctx.arc(x, y, R * 1.18, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * fill); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fillRect(W * 0.2, y + R * 1.5, W * 0.6, 6); ctx.fillStyle = '#ff5c8a'; ctx.fillRect(W * 0.2, y + R * 1.5, W * 0.6 * (1 - u), 6);
   }
+  if (G.mission) drawMissionUI();
   if (G.twin && G.twin.phase === 'run') {
     ctx.font = `${Math.min(W, H) * 0.045}px Jua, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 4;
     ctx.strokeText('왼쪽 7        오른쪽 7', W / 2, H * 0.17); ctx.fillText('왼쪽 7        오른쪽 7', W / 2, H * 0.17);
@@ -2040,7 +2231,7 @@ function renderMap() {
       if (n === save.unlocked) btn.classList.add('cur');
       const locked = n > save.unlocked && !save.dev;
       btn.disabled = locked;
-      btn.innerHTML = `${locked ? '🔒' : n}<span class="s">${locked ? '' : '★'.repeat(st)}</span>`;
+      btn.innerHTML = `${locked ? '🔒' : n}<span class="s">${locked ? (isMission(n) ? '🌉' : '') : (isMission(n) ? '🌉' : '') + '★'.repeat(st)}</span>`;
       btn.setAttribute('aria-label', `스테이지 ${n}`);
       btn.onclick = () => { SFX.ui(); startStage(n); };
       g.appendChild(btn);
