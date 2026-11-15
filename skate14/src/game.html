@@ -115,6 +115,7 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .seg button{font-size:18px;padding:10px 16px;border-radius:999px;background:#eef0f7;box-shadow:0 3px 0 rgba(0,0,0,.12)}
 .seg button.on{background:var(--green);color:#fff}
 .devchip{display:inline-block;font-size:13px;padding:2px 8px;border-radius:999px;background:#2b2b40;color:#ffe14d;vertical-align:middle;letter-spacing:1px}
+#xferText{width:100%;box-sizing:border-box;font:13px/1.4 ui-monospace,Menlo,monospace;border:2px solid #d5d7e3;border-radius:12px;padding:8px;color:var(--ink);background:#f7f8fc;resize:vertical;-webkit-user-select:text;user-select:text;touch-action:auto}
 .note{font-size:15px;color:var(--ink2);margin:6px 0 0;line-height:1.45}
 .stars{font-size:52px;letter-spacing:4px;color:#d9dbe6;line-height:1.1}
 .stars b{color:var(--gold);font-weight:normal;display:inline-block;animation:starpop .5s ease-out both}
@@ -197,6 +198,14 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
     <p class="note" style="margin:16px 0 6px">기록</p>
     <div class="seg"><button id="btnReset">처음부터 다시 하기</button></div>
     <p class="note" id="resetNote"></p>
+    <p class="note" style="margin:16px 0 6px">기록 옮기기</p>
+    <p class="note" style="margin:0 0 8px">다른 휴대폰이나 브라우저로 옮길 때: 여기서 저장 코드를 복사해서, 새 곳의 같은 칸에 붙여 넣어요.</p>
+    <div class="seg"><button id="btnExport">저장 코드 복사</button><button id="btnImportOpen">저장 코드 넣기</button></div>
+    <div id="xferBox" hidden style="margin-top:8px">
+      <label class="note" for="xferText" id="xferLabel"></label>
+      <textarea id="xferText" rows="3" spellcheck="false"></textarea>
+      <div class="seg" style="margin-top:6px"><button id="btnImport" hidden>이 코드로 불러오기</button></div>
+    </div>
     <div id="devPanel" hidden>
       <p class="note" style="margin:16px 0 6px">개발자 모드 <span class="devchip">DEV</span></p>
       <p class="note" style="margin:0 0 8px">모든 스테이지를 열 수 있어요. 아이의 진행 기록(열린 스테이지)은 바뀌지 않아요.</p>
@@ -2117,6 +2126,50 @@ function renderSettings() {
   $('resetNote').textContent = resetArm ? '스테이지 기록, 코인, 산 물건이 모두 지워져요.' : '';
 }
 let resetArm = false;
+// Save codes: move progress between phones/browsers
+function makeCode() {
+  const data = Object.assign({}, save); delete data.dev; delete data.devInv;
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
+  return 'NB14-' + btoa(bin);
+}
+function readCode(code) {
+  const c = String(code || '').trim().replace(/\s+/g, '');
+  if (!c.startsWith('NB14-')) return null;
+  try {
+    const bin = atob(c.slice(5)), bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
+    const d = JSON.parse(new TextDecoder().decode(bytes));
+    if (!d || typeof d !== 'object' || typeof d.unlocked !== 'number' || typeof d.coins !== 'number' || !Array.isArray(d.owned)) return null;
+    return d;
+  } catch (e) { return null; }
+}
+$('btnExport').onclick = () => {
+  const code = makeCode(), ta = $('xferText');
+  $('xferBox').hidden = false; $('btnImport').hidden = true; ta.readOnly = true; ta.value = code;
+  $('xferLabel').textContent = '저장 코드 (스테이지 ' + Math.min(save.unlocked, 100) + '까지, 코인 ' + save.coins + ')';
+  const fallback = () => { ta.focus(); ta.select(); toast('코드를 길게 눌러 복사해 주세요'); };
+  try { navigator.clipboard.writeText(code).then(() => toast('저장 코드를 복사했어요'), fallback); } catch (e) { fallback(); }
+};
+let importArm = null;
+$('btnImportOpen').onclick = () => {
+  const ta = $('xferText');
+  $('xferBox').hidden = false; $('btnImport').hidden = false; ta.readOnly = false; ta.value = ''; importArm = null;
+  $('btnImport').textContent = '이 코드로 불러오기';
+  $('xferLabel').textContent = '복사한 저장 코드를 붙여 넣으세요';
+  ta.focus();
+};
+$('btnImport').onclick = () => {
+  const d = readCode($('xferText').value);
+  if (!d) { toast('코드가 맞지 않아요. 처음부터 끝까지 복사했는지 확인해 주세요'); return; }
+  if (importArm !== $('xferText').value) {
+    importArm = $('xferText').value;
+    $('btnImport').textContent = `스테이지 ${Math.min(d.unlocked, 100)} · 코인 ${d.coins} 기록으로 바꿀까요? 한 번 더 누르세요`;
+    return;
+  }
+  const keepDev = save.dev, keepInv = save.devInv;
+  save = Object.assign(DEFAULT_SAVE(), d, { dev: keepDev, devInv: keepInv }); persist();
+  importArm = null; $('xferBox').hidden = true; SFX.buy(); toast('기록을 불러왔어요!'); renderSettings();
+};
 $('devInv').onclick = () => { save.devInv = !save.devInv; persist(); SFX.ui(); renderSettings(); };
 $('devCoins').onclick = () => { save.coins += 1000; persist(); SFX.buy(); toast('코인 +1000'); };
 $('devCards').onclick = () => { save.seen = {}; persist(); SFX.ui(); toast('설명 카드가 다시 나와요'); };
