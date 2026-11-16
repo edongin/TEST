@@ -566,9 +566,163 @@ const RECIPES = [
   tips:['부라타를 같이 구우면 크림이 분리되어 버립니다. 반드시 굽고 나서.','방울토마토 단면을 아래로 두면 즙이 도우에 스며 눅눅해집니다.','부라타 1개(약 120g)로 2판을 만들 수 있습니다.'],
   subs:['부라타 → 생 모짜렐라 한 덩이, 리코타','방울토마토 → 대추토마토']
 }
+,{
+  id:'bacon-potato', name:'베이컨 포테이토', orig:'Bacon Potato Pizza · 한국식',
+  desc:'버터에 버무린 포슬포슬한 감자와 베이컨을 듬뿍 올리고 마요네즈를 뿌린 한국 피자집의 대표 메뉴. 감자와 베이컨을 미리 익혀 두는 것이 요령입니다.',
+  tags:['korean','red','meat'], level:'보통', dough:'ny', doughs:['ny','napoli','sameday'], cook:15,
+  oven:{pre:'25분', temp:'360°C', tempNote:'최고보다 낮게', time:'4~5분', turn:'2분 후 180°'},
+  why:'토핑이 두껍고 치즈가 많아 높은 온도에서는 속이 데워지기 전에 테두리가 탑니다. 360°C 안팎으로 낮춰 천천히 굽습니다.',
+  draw:{base:'red', cheese:'shred', top:[['onion',8],['potatocube',13],['bacon',11],['mayo'],['parsley']]},
+  groups:[
+    {g:'소스', items:[
+      {n:'홀토마토 통조림', q:70, u:'g', note:'으깨서 체에 5분 밭치기. 또는 토마토 페이스트 30g + 물 40g'},
+      {n:'건조 오레가노', q:0.25, u:'작은술'}
+    ]},
+    {g:'감자 · 베이컨', items:[
+      {n:'감자', q:100, u:'g', note:'중간 크기 1/2개. 1.5cm 깍둑썰기'},
+      {n:'버터', q:5, u:'g'},
+      {n:'베이컨', q:2, u:'줄', note:'약 40g. 2cm 폭으로'},
+      {n:'후추', q:null, txt:'조금'}
+    ]},
+    {g:'토핑', items:[
+      {n:'슈레드 모짜렐라', q:100, u:'g'},
+      {n:'양파', q:20, u:'g', note:'얇게 채썰기'},
+      {n:'옥수수 통조림 (선택)', q:1, u:'큰술', note:'물기 빼기'}
+    ]},
+    {g:'굽고 나서', items:[
+      {n:'마요네즈', q:1, u:'큰술', note:'비닐봉지 끝을 잘라 가늘게 짜기'},
+      {n:'파슬리 가루', q:null, txt:'조금'}
+    ]}
+  ],
+  prep:[
+    {h:'감자 익히기', d:6, p:'깍둑썬 감자를 그릇에 담아 물 1큰술을 넣고 랩을 씌워 전자레인지에 3분 돌립니다. 젓가락이 들어가면 물을 따라내고 뜨거울 때 버터와 후추에 버무립니다. 생감자는 4~5분 안에 익지 않습니다.'},
+    {h:'베이컨 기름 빼기', d:3, p:'베이컨을 팬에 1~2분, 반쯤만 익혀 키친타월에 올려 기름을 뺍니다. 그대로 올리면 피자 위에 기름이 고입니다.'},
+    {h:'소스 준비', d:5, p:'으깬 홀토마토를 체에 밭쳐 물기를 빼고 오레가노를 섞습니다. 베이컨과 치즈가 짭짤하니 소스에는 소금을 넣지 않습니다.'}
+  ],
+  top:[
+    {h:'소스 · 토핑', d:3, p:'소스를 얇게 펴고 모짜렐라 2/3, 양파, 감자, 베이컨 순서로 올린 뒤 남은 모짜렐라를 흩어 토핑을 잡아 줍니다. 토핑이 무거우니 필 위에서 빠르게 올리고 바로 넣으세요.'}
+  ],
+  launchSec:120, turnSec:150,
+  finish:'꺼내서 마요네즈를 지그재그로 뿌리고 파슬리 가루를 올립니다.',
+  tips:['감자는 한입 크기를 넘기지 마세요. 크면 겉만 뜨겁고 속이 차갑습니다.','마요네즈는 굽고 나서 뿌려야 분리되지 않습니다.','덜 짜게 먹으려면 베이컨을 끓는 물에 10초 데쳐서 쓰세요.'],
+  subs:['베이컨 → 햄, 소시지 슬라이스','감자 → 냉동 웨지감자 (전자레인지에 해동 후 사용)','마요네즈 → 사워크림, 갈릭 디핑소스']
+},
+{
+  id:'goguma', name:'고구마 피자', orig:'Sweet Potato Pizza · 한국식',
+  desc:'달콤한 고구마 무스를 테두리에 두르고 고구마 큐브와 옥수수를 올린 피자. 짭짤한 치즈와 단맛이 어울려 아이들도 좋아합니다.',
+  tags:['korean','red','veg'], level:'보통', dough:'ny', doughs:['ny','napoli','sameday'], cook:15,
+  oven:{pre:'25분', temp:'350°C', tempNote:'낮은 온도로', time:'4~5분', turn:'2분 후 180°'},
+  why:'고구마는 당분이 많아 금방 탑니다. 350°C 정도로 낮춰 굽고, 무스가 갈색으로 변하기 시작하면 꺼냅니다.',
+  draw:{base:'red', cheese:'shred', top:[['mousse'],['sweetcube',12],['corn',26],['parsley']]},
+  groups:[
+    {g:'고구마 무스 · 큐브', items:[
+      {n:'고구마', q:150, u:'g', note:'중간 크기 1개. 100g은 무스, 50g은 큐브'},
+      {n:'우유', q:1.5, u:'큰술', note:'무스 농도 조절'},
+      {n:'꿀 또는 설탕', q:1, u:'작은술'},
+      {n:'버터', q:5, u:'g'}
+    ]},
+    {g:'소스 · 토핑', items:[
+      {n:'홀토마토 통조림', q:50, u:'g', note:'으깨서 물기 빼기. 아주 얇게 바를 양'},
+      {n:'슈레드 모짜렐라', q:100, u:'g'},
+      {n:'옥수수 통조림', q:1.5, u:'큰술', note:'물기 빼기'},
+      {n:'양파 (선택)', q:15, u:'g', note:'얇게 채썰기'}
+    ]},
+    {g:'굽고 나서', items:[
+      {n:'파슬리 가루', q:null, txt:'조금'},
+      {n:'꿀 (선택)', q:1, u:'작은술'}
+    ]}
+  ],
+  prep:[
+    {h:'고구마 익히기', d:8, p:'고구마를 씻어 젖은 키친타월로 감싸 전자레인지에 5~6분 돌립니다. 젓가락이 쑥 들어가면 껍질을 벗깁니다.'},
+    {h:'무스 · 큐브 만들기', d:5, p:'고구마 2/3는 뜨거울 때 버터, 꿀, 우유를 넣고 포크로 곱게 으깹니다. 짤 수 있을 만큼 부드러워야 하니 우유로 농도를 맞추고 비닐봉지에 담습니다. 나머지 1/3은 1.5cm로 깍둑썹니다.'}
+  ],
+  top:[
+    {h:'소스 · 토핑', d:4, p:'소스를 아주 얇게 펴고 모짜렐라, 양파, 고구마 큐브, 옥수수를 올립니다. 비닐봉지 끝을 잘라 테두리 안쪽을 따라 무스를 한 바퀴 두르고, 남으면 가운데에 격자로 짭니다.'}
+  ],
+  launchSec:120, turnSec:150,
+  finish:'꺼내서 파슬리 가루를 뿌리고, 기호에 따라 꿀을 조금 두릅니다.',
+  tips:['밤고구마는 퍽퍽하니 우유를 조금 더 넣고, 호박고구마는 우유를 줄이세요.','무스를 테두리 끝까지 올리면 스톤에 떨어져 탑니다. 테두리 안쪽에 두르세요.','무스는 전날 만들어 냉장해 두어도 됩니다.'],
+  subs:['고구마 → 단호박','우유 → 생크림 (더 부드러움)','옥수수 → 건포도, 아몬드 슬라이스']
+},
+{
+  id:'bulgogi', name:'불고기 피자', orig:'Bulgogi Pizza · 한국식',
+  desc:'달짝지근하게 볶은 소불고기와 양파, 버섯, 피망을 올린 피자. 불고기 국물을 바짝 졸여서 올려야 도우가 젖지 않습니다.',
+  tags:['korean','red','meat'], level:'보통', dough:'ny', doughs:['ny','napoli','sameday'], cook:15,
+  oven:{pre:'25분', temp:'370°C', tempNote:'최고보다 낮게', time:'4~5분', turn:'2분 후 180°'},
+  why:'불고기 양념의 설탕과 간장은 고온에서 쉽게 탑니다. 고기는 미리 익혔으니 치즈가 녹고 도우가 익을 정도로만 굽습니다.',
+  draw:{base:'red', cheese:'shred', top:[['onion',8],['mushroom',6],['bulgogi',14],['bellpepper',9],['parsley']]},
+  groups:[
+    {g:'불고기', items:[
+      {n:'소고기 불고기용', q:80, u:'g', note:'한입 크기로 썰기'},
+      {n:'간장', q:2, u:'작은술'},
+      {n:'설탕', q:1, u:'작은술'},
+      {n:'다진 마늘', q:0.5, u:'작은술'},
+      {n:'참기름', q:0.5, u:'작은술'},
+      {n:'후추', q:null, txt:'조금'}
+    ]},
+    {g:'소스 · 토핑', items:[
+      {n:'홀토마토 통조림', q:60, u:'g', note:'으깨서 물기 빼기. 또는 토마토 페이스트 25g + 물 35g'},
+      {n:'슈레드 모짜렐라', q:100, u:'g'},
+      {n:'양파', q:20, u:'g', note:'얇게 채썰기'},
+      {n:'양송이버섯', q:2, u:'개', note:'3mm 두께로'},
+      {n:'피망', q:20, u:'g', note:'얇게 썰기'}
+    ]},
+    {g:'굽고 나서', items:[
+      {n:'쪽파', q:1, u:'큰술', note:'송송 썰기'},
+      {n:'마요네즈 (선택)', q:0.5, u:'큰술'}
+    ]}
+  ],
+  prep:[
+    {h:'불고기 재우기', d:15, p:'소고기에 간장, 설탕, 마늘, 참기름, 후추를 넣고 15분 재웁니다. 시판 양념 불고기를 써도 됩니다.'},
+    {h:'불고기 볶기', d:4, p:'센 불에 고기를 볶아 국물이 거의 없어질 때까지 졸입니다. 키친타월에 올려 남은 국물과 기름을 빼고 식힙니다.'},
+    {h:'소스 · 채소 준비', d:5, p:'으깬 홀토마토의 물기를 빼 둡니다. 불고기가 간이 되어 있으니 소스에 소금은 넣지 않습니다. 채소는 얇게 썰어 키친타월로 물기를 닦습니다.'}
+  ],
+  top:[
+    {h:'소스 · 토핑', d:3, p:'소스를 얇게 펴고 모짜렐라 2/3, 양파, 버섯, 불고기, 피망 순서로 올린 뒤 남은 모짜렐라를 흩습니다.'}
+  ],
+  launchSec:120, turnSec:150,
+  finish:'꺼내서 쪽파를 뿌리고, 기호에 따라 마요네즈를 가늘게 짭니다.',
+  tips:['불고기 국물이 남아 있으면 가운데가 질척해집니다. 바짝 볶는 것이 가장 중요합니다.','고기는 굽기 전에 식혀서 올리세요. 뜨거우면 도우가 늘어져 필에 붙습니다.','채소는 얇을수록 4분 안에 잘 익습니다.'],
+  subs:['소고기 → 돼지 불고기, 닭가슴살 데리야키','피망 → 파프리카, 대파','토마토소스 → 불고기 양념 1큰술을 도우에 얇게 바르기']
+},
+{
+  id:'combination', name:'콤비네이션', orig:'Combination (Supreme) Pizza · 미국식',
+  desc:'페퍼로니, 햄, 양파, 피망, 버섯, 올리브를 골고루 올린 동네 피자집의 기본 메뉴. 재료마다 물기를 닦아 올리는 것이 깔끔한 맛의 비결입니다.',
+  tags:['korean','red','meat'], level:'보통', dough:'ny', doughs:['ny','napoli','sameday'], cook:15,
+  oven:{pre:'25분', temp:'370°C', tempNote:'최고보다 낮게', time:'4~5분', turn:'2분 후 180°'},
+  why:'토핑 종류가 많아 수분과 기름이 많이 나옵니다. 370°C에서 조금 길게 구워 수분을 날립니다.',
+  draw:{base:'red', cheese:'shred', top:[['onion',7],['mushroom',5],['pepperoni',8],['bellpepper',10],['olive',10],['corn',12]]},
+  groups:[
+    {g:'소스', items:[
+      {n:'홀토마토 통조림', q:70, u:'g', note:'으깨서 체에 5분 밭치기. 또는 토마토 페이스트 30g + 물 40g'},
+      {n:'건조 오레가노', q:0.25, u:'작은술'}
+    ]},
+    {g:'토핑', items:[
+      {n:'슈레드 모짜렐라', q:100, u:'g'},
+      {n:'페퍼로니 슬라이스', q:8, u:'장'},
+      {n:'햄 또는 소시지', q:30, u:'g', note:'얇게 썰기'},
+      {n:'양파', q:20, u:'g', note:'얇게 채썰기'},
+      {n:'피망', q:20, u:'g', note:'얇게 썰기'},
+      {n:'양송이버섯', q:2, u:'개', note:'3mm 두께로'},
+      {n:'블랙올리브 슬라이스', q:6, u:'개', note:'절임물을 빼고 키친타월로 닦기'},
+      {n:'옥수수 통조림 (선택)', q:1, u:'큰술', note:'물기 빼기'}
+    ]}
+  ],
+  prep:[
+    {h:'소스 준비', d:5, p:'으깬 홀토마토를 체에 밭쳐 물기를 빼고 오레가노를 섞습니다. 토핑이 짭짤하니 소금은 넣지 않습니다.'},
+    {h:'토핑 물기 · 기름 빼기', d:5, p:'올리브와 옥수수는 체에 밭친 뒤 키친타월로 눌러 닦습니다. 페퍼로니는 키친타월에 올려 전자레인지에 20초 돌려 기름을 뺍니다. 채소는 얇게 썰어 물기를 닦습니다.'}
+  ],
+  top:[
+    {h:'소스 · 토핑', d:3, p:'소스를 얇게 펴고 모짜렐라, 양파, 버섯, 햄, 페퍼로니, 피망 순서로 올립니다. 올리브와 옥수수는 맨 위에 올려야 물이 고이지 않습니다. 재료는 조금씩, 한 겹으로만 올리세요.'}
+  ],
+  launchSec:120, turnSec:150,
+  finish:'꺼내서 1분 두었다가 자릅니다. 위에 기름이 보이면 키친타월로 살짝 찍어 냅니다.',
+  tips:['토핑을 전부 합쳐 150g을 넘기지 마세요. 많으면 물이 생기고 가운데가 덜 익습니다.','올리브와 페퍼로니가 짠맛을 내니, 싱겁게 먹으려면 이 둘을 절반으로 줄이세요.','채소가 덜 익는 게 싫으면 양파와 피망을 팬에 30초만 볶아 올립니다.'],
+  subs:['햄 → 베이컨, 불고기','피망 → 파프리카','블랙올리브 → 생략하거나 할라피뇨']
+}
 ];
 
-const TAGS = {beginner:'초보 추천', red:'토마토 베이스', white:'화이트', meat:'고기', veg:'채식'};
+const TAGS = {beginner:'초보 추천', korean:'한국식 토핑', red:'토마토 베이스', white:'화이트', meat:'고기', veg:'채식'};
 
 /* ---------- 유틸 ---------- */
 const $ = (s,el=document)=>el.querySelector(s);
@@ -627,6 +781,7 @@ function pizzaSVG(r){
   if(d.cheese==='lightshred'){for(let i=0;i<40;i++){const[x,y]=pt(33);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(1.5+R()*3)}" fill="${R()<.4?'#EFC876':'#FAEFCB'}"/>`}}
   if(d.cheese==='four'){s+=`<circle r="35" fill="#F6E2A8"/>`;melt(9,30,3,6,'#FCF8EE',true);for(let i=0;i<14;i++){const[x,y]=pt(31);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(1.6+R()*2.4)}" fill="#E9E4D4"/><circle cx="${f(x)}" cy="${f(y)}" r="${f(.6+R()*.9)}" fill="#7D9297"/>`}for(let i=0;i<30;i++){const[x,y]=pt(33);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(.5+R()*1.2)}" fill="#D9A24B" opacity=".7"/>`}}
   if(d.cheese==='burrata'){melt(4,26,4,6,'#FBF7EE',true)}
+  const cube=(n,fill,stroke,hl)=>{for(let i=0;i<n;i++){const[x,y]=pt(27),a=R()*90;s+=`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(a)})"><rect x="-2.7" y="-2.7" width="5.4" height="5.4" rx="1.2" fill="${fill}" stroke="${stroke}" stroke-width=".6"/><rect x="-1.6" y="-1.8" width="2" height="1.2" rx=".5" fill="${hl}"/></g>`}};
   const tops={
     basil(n){for(let i=0;i<n;i++){const[x,y]=pt(28),a=R()*180;s+=`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(a)})"><ellipse rx="4.6" ry="2.5" fill="#2F7A3B"/><path d="M-4 0H4" stroke="#56A35F" stroke-width=".45"/></g>`}},
     oil(){for(let i=0;i<6;i++){const[x,y]=pt(30);s+=`<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(2+R()*2)}" ry="${f(.8+R())}" fill="#F7E07A" opacity=".45"/>`}},
@@ -643,6 +798,16 @@ function pizzaSVG(r){
     prosciutto(n){for(let i=0;i<n;i++){const[x,y]=pt(24),a=R()*180;s+=`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(a)})"><ellipse rx="8" ry="3.4" fill="#D47F7A"/><ellipse cy="1.6" rx="6.5" ry=".8" fill="#F3CFC6"/><ellipse cx="-2" cy="-1" rx="3" ry="1.1" fill="#C26A66"/></g>`}},
     arugula(n){for(let i=0;i<n;i++){const[x,y]=pt(18);s+=`<ellipse cx="${f(x)}" cy="${f(y)}" rx="3.8" ry="1.5" transform="rotate(${f(R()*180)} ${f(x)} ${f(y)})" fill="${R()<.5?'#3B7A30':'#5A9640'}"/>`}},
     parmesan(n){for(let i=0;i<n;i++){const[x,y]=pt(20);s+=`<rect x="${f(x-1.8)}" y="${f(y-.7)}" width="3.6" height="1.4" rx=".3" transform="rotate(${f(R()*180)} ${f(x)} ${f(y)})" fill="#F6E8BE"/>`}},
+    bacon(n){for(let i=0;i<n;i++){const[x,y]=pt(29),a=R()*180;s+=`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(a)})"><rect x="-4.6" y="-1.8" width="9.2" height="3.6" rx=".8" fill="#A63E32"/><rect x="-4.6" y="-.55" width="9.2" height="1.1" fill="#EBC1AC"/></g>`}},
+    potatocube(n){cube(n,'#F2DA94','#C08A3A','#FBEDBE')},
+    sweetcube(n){cube(n,'#EDA53A','#B56E1E','#F8CB6E')},
+    mayo(){s+=`<g transform="rotate(-28)">`;for(let k=-3;k<=3;k++){const y=k*8.5,w=Math.sqrt(33*33-y*y);let x=-w,p=`M${f(x)} ${f(y)}`,up=1;while(x<w-4){x+=5;p+=` Q${f(x-2.5)} ${f(y+up*2.4)} ${f(x)} ${f(y)}`;up=-up}s+=`<path d="${p}" fill="none" stroke="#FFF7DC" stroke-width="1.15" stroke-linecap="round"/>`}s+=`</g>`},
+    corn(n){for(let i=0;i<n;i++){const[x,y]=pt(31);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="1.15" fill="#F6C83A" stroke="#D09A20" stroke-width=".3"/>`}},
+    onion(n){for(let i=0;i<n;i++){const[x,y]=pt(28);s+=`<path d="M-3.8 0A3.8 3.8 0 0 1 3.8 0" transform="translate(${f(x)} ${f(y)}) rotate(${f(R()*360)})" fill="none" stroke="#F8F0DF" stroke-width="1.1" stroke-linecap="round"/>`}},
+    bellpepper(n){for(let i=0;i<n;i++){const[x,y]=pt(29);s+=`<path d="M-3.4 0A3.4 3 0 0 1 3.4 0" transform="translate(${f(x)} ${f(y)}) rotate(${f(R()*360)})" fill="none" stroke="#4C9A3C" stroke-width="1.5" stroke-linecap="round"/>`}},
+    bulgogi(n){for(let i=0;i<n;i++){const[x,y]=pt(28),a=R()*180;s+=`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(a)})"><ellipse rx="${f(3.2+R()*1.4)}" ry="${f(1.8+R()*.8)}" fill="#6A3D22"/><ellipse cx="-.8" cy="-.5" rx="1.6" ry=".7" fill="#92603A"/></g>`}},
+    mousse(){s+=`<circle r="34.5" fill="none" stroke="#F0B03C" stroke-width="4.2" stroke-dasharray="4.6 1.2"/><circle r="34.5" fill="none" stroke="#F8D27A" stroke-width="1.2" stroke-dasharray="4.6 1.2"/>`},
+    olive(n){for(let i=0;i<n;i++){const[x,y]=pt(30);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="2.1" fill="#221C1C"/><circle cx="${f(x)}" cy="${f(y)}" r=".85" fill="#E9C77A"/>`}},
     cherry(n){const placed=[];let t=0;while(placed.length<n&&t<400){t++;const[x,y]=pt(31);if(Math.hypot(x,y)<14||placed.some(p=>Math.hypot(p[0]-x,p[1]-y)<8))continue;placed.push([x,y]);s+=`<circle cx="${f(x)}" cy="${f(y)}" r="3.8" fill="#CF331C"/><circle cx="${f(x)}" cy="${f(y)}" r="2.8" fill="#E86A4B"/><circle cx="${f(x-1)}" cy="${f(y)}" r=".45" fill="#F6CF86"/><circle cx="${f(x+1)}" cy="${f(y+.4)}" r=".45" fill="#F6CF86"/><circle cx="${f(x)}" cy="${f(y-1.1)}" r=".45" fill="#F6CF86"/>`}}
   };
   for(const [k,n] of d.top){ if(k!=='basil'||d.cheese!=='burrata') tops[k](n) }
@@ -663,8 +828,8 @@ function viewHome(){
   <section class="intro">
     <div>
       <p class="eyebrow">가정용 450°C 전기 피자오븐</p>
-      <h1>집에서 굽는 <em>2분</em> 피자,<br>여덟 가지 레시피</h1>
-      <p>나폴리, 로마, 뉴욕의 피자 레시피를 루이지 오븐에 맞게 정리했습니다. 동네 마트와 온라인몰에서 구할 수 있는 재료만 골랐습니다. 피자를 누르면 재료와 만드는 법이 나옵니다.</p>
+      <h1>집에서 굽는 <em>2분</em> 피자,<br>열두 가지 레시피</h1>
+      <p>나폴리, 로마, 뉴욕의 피자와 한국 피자집 인기 메뉴를 루이지 오븐에 맞게 정리했습니다. 동네 마트와 온라인몰에서 구할 수 있는 재료만 골랐습니다. 피자를 누르면 재료와 만드는 법이 나옵니다.</p>
     </div>
     <dl class="spec">
       <div><dt>최고 온도</dt><dd>450°C</dd></div>
@@ -831,7 +996,7 @@ function viewGuide(){
     return `<tr><td><b>${d.name}</b><br><span class="note">${d.sub}</span></td>
       <td>${esc(flour.n)}</td><td class="num">${Math.round(water.q/flour.q*100)}%</td>
       <td class="num">${d.ball}g</td><td class="num">${fmtDur(total)}</td>
-      <td>${k==='ny'?'페퍼로니 기본. 쫄깃하고 색이 잘 남':k==='napoli'?'모든 나폴리·로마식 피자 기본':'숙성할 시간이 없을 때'}</td></tr>`}).join('');
+      <td>${k==='ny'?'페퍼로니와 한국식 토핑 피자 기본. 쫄깃하고 색이 잘 남':k==='napoli'?'모든 나폴리·로마식 피자 기본':'숙성할 시간이 없을 때'}</td></tr>`}).join('');
   const four=k=>DOUGHS[k].ing.map(i=>`${i.n.split(' (')[0]} ${fmtQty(i.q,i.u,4)}`).join(' · ');
   return `
   <a class="back" href="#">← 전체 레시피</a>
