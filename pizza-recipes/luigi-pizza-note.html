@@ -568,19 +568,18 @@ const RECIPES = [
 }
 ,{
   id:'bacon-potato', name:'베이컨 포테이토', orig:'Bacon Potato Pizza · 한국식',
-  desc:'버터에 버무린 포슬포슬한 감자와 베이컨을 듬뿍 올리고 마요네즈를 뿌린 한국 피자집의 대표 메뉴. 감자와 베이컨을 미리 익혀 두는 것이 요령입니다.',
+  desc:'겉은 바삭하고 속은 포슬한 웨지감자와 베이컨을 듬뿍 올리고 마요네즈를 뿌린 한국 피자집의 대표 메뉴. 냉동 웨지감자를 미리 한 번 익혀서 올리는 것이 요령입니다.',
   tags:['korean','red','meat'], level:'보통', dough:'ny', doughs:['ny','napoli','sameday'], cook:15,
   oven:{pre:'25분', temp:'360°C', tempNote:'최고보다 낮게', time:'4~5분', turn:'2분 후 180°'},
   why:'토핑이 두껍고 치즈가 많아 높은 온도에서는 속이 데워지기 전에 테두리가 탑니다. 360°C 안팎으로 낮춰 천천히 굽습니다.',
-  draw:{base:'red', cheese:'shred', top:[['onion',8],['potatocube',13],['bacon',11],['mayo'],['parsley']]},
+  draw:{base:'red', cheese:'shred', top:[['onion',8],['wedge',9],['bacon',11],['mayo'],['parsley']]},
   groups:[
     {g:'소스', items:[
       {n:'홀토마토 통조림', q:70, u:'g', note:'으깨서 체에 5분 밭치기. 또는 토마토 페이스트 30g + 물 40g'},
       {n:'건조 오레가노', q:0.25, u:'작은술'}
     ]},
     {g:'감자 · 베이컨', items:[
-      {n:'감자', q:100, u:'g', note:'중간 크기 1/2개. 1.5cm 깍둑썰기'},
-      {n:'버터', q:5, u:'g'},
+      {n:'냉동 웨지감자', q:100, u:'g', note:'5~6조각. 미리 익혀서 사용'},
       {n:'베이컨', q:2, u:'줄', note:'약 40g. 2cm 폭으로'},
       {n:'후추', q:null, txt:'조금'}
     ]},
@@ -595,17 +594,18 @@ const RECIPES = [
     ]}
   ],
   prep:[
-    {h:'감자 익히기', d:6, p:'깍둑썬 감자를 그릇에 담아 물 1큰술을 넣고 랩을 씌워 전자레인지에 3분 돌립니다. 젓가락이 들어가면 물을 따라내고 뜨거울 때 버터와 후추에 버무립니다. 생감자는 4~5분 안에 익지 않습니다.'},
+    {h:'웨지감자 미리 익히기', d:12, p:'냉동 웨지감자는 얼린 채로 에어프라이어 180°C에 10~12분, 겉이 노릇해질 때까지 익힙니다. 피자 오븐에서 4~5분 더 구워지니 평소보다 2~3분 덜 익히면 됩니다. 에어프라이어가 없으면 팬에 기름을 조금 두르고 중불에서 7~8분 굴려 가며 굽습니다.'},
+    {h:'웨지감자 자르기', d:2, p:'익힌 웨지감자를 길이로 반 갈라 두께를 1.5cm 이하로 맞춥니다. 두꺼우면 루이지 뚜껑 쪽 열선에 가까워져 윗면만 탑니다. 후추를 뿌려 둡니다.'},
     {h:'베이컨 기름 빼기', d:3, p:'베이컨을 팬에 1~2분, 반쯤만 익혀 키친타월에 올려 기름을 뺍니다. 그대로 올리면 피자 위에 기름이 고입니다.'},
     {h:'소스 준비', d:5, p:'으깬 홀토마토를 체에 밭쳐 물기를 빼고 오레가노를 섞습니다. 베이컨과 치즈가 짭짤하니 소스에는 소금을 넣지 않습니다.'}
   ],
   top:[
-    {h:'소스 · 토핑', d:3, p:'소스를 얇게 펴고 모짜렐라 2/3, 양파, 감자, 베이컨 순서로 올린 뒤 남은 모짜렐라를 흩어 토핑을 잡아 줍니다. 토핑이 무거우니 필 위에서 빠르게 올리고 바로 넣으세요.'}
+    {h:'소스 · 토핑', d:3, p:'소스를 얇게 펴고 모짜렐라 2/3, 양파, 감자, 베이컨 순서로 올린 뒤 남은 모짜렐라를 흩어 토핑을 잡아 줍니다. 웨지감자는 자른 면이 아래로 가게 놓으면 구르지 않습니다. 토핑이 무거우니 필 위에서 빠르게 올리고 바로 넣으세요.'}
   ],
   launchSec:120, turnSec:150,
   finish:'꺼내서 마요네즈를 지그재그로 뿌리고 파슬리 가루를 올립니다.',
-  tips:['감자는 한입 크기를 넘기지 마세요. 크면 겉만 뜨겁고 속이 차갑습니다.','마요네즈는 굽고 나서 뿌려야 분리되지 않습니다.','덜 짜게 먹으려면 베이컨을 끓는 물에 10초 데쳐서 쓰세요.'],
-  subs:['베이컨 → 햄, 소시지 슬라이스','감자 → 냉동 웨지감자 (전자레인지에 해동 후 사용)','마요네즈 → 사워크림, 갈릭 디핑소스']
+  tips:['웨지감자를 얼린 채로 올리면 4~5분 안에 속이 데워지지 않고, 녹으면서 물이 나와 피자가 젖습니다. 반드시 먼저 익히세요.','전자레인지로만 익히면 눅눅해집니다. 급할 때는 전자레인지 2분 뒤 팬에 2~3분 구워 겉을 말리세요.','시판 웨지감자는 양념이 되어 있어 소금과 버터를 더하지 않아도 됩니다.','마요네즈는 굽고 나서 뿌려야 분리되지 않습니다.','덜 짜게 먹으려면 베이컨을 끓는 물에 10초 데쳐서 쓰세요.'],
+  subs:['베이컨 → 햄, 소시지 슬라이스','냉동 웨지감자 → 생감자 100g (1.5cm로 깍둑썰어 전자레인지 3분, 버터 5g에 버무리기)','마요네즈 → 사워크림, 갈릭 디핑소스']
 },
 {
   id:'goguma', name:'고구마 피자', orig:'Sweet Potato Pizza · 한국식',
@@ -799,6 +799,7 @@ function pizzaSVG(r){
     arugula(n){for(let i=0;i<n;i++){const[x,y]=pt(18);s+=`<ellipse cx="${f(x)}" cy="${f(y)}" rx="3.8" ry="1.5" transform="rotate(${f(R()*180)} ${f(x)} ${f(y)})" fill="${R()<.5?'#3B7A30':'#5A9640'}"/>`}},
     parmesan(n){for(let i=0;i<n;i++){const[x,y]=pt(20);s+=`<rect x="${f(x-1.8)}" y="${f(y-.7)}" width="3.6" height="1.4" rx=".3" transform="rotate(${f(R()*180)} ${f(x)} ${f(y)})" fill="#F6E8BE"/>`}},
     bacon(n){for(let i=0;i<n;i++){const[x,y]=pt(29),a=R()*180;s+=`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(a)})"><rect x="-4.6" y="-1.8" width="9.2" height="3.6" rx=".8" fill="#A63E32"/><rect x="-4.6" y="-.55" width="9.2" height="1.1" fill="#EBC1AC"/></g>`}},
+    wedge(n){const placed=[];let t=0;while(placed.length<n&&t<400){t++;const[x,y]=pt(27);if(placed.some(p=>Math.hypot(p[0]-x,p[1]-y)<9))continue;placed.push([x,y]);s+=`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(R()*360)})"><path d="M-6 -1.2Q0 -5.2 6 -1.2Q0 3.6 -6 -1.2Z" fill="#F3D98E" stroke="#A9682A" stroke-width="1" stroke-linejoin="round"/><path d="M-3.6 -1.3Q0 -3.2 3.6 -1.3" fill="none" stroke="#FBEEC2" stroke-width=".8" stroke-linecap="round"/><circle cx="1.5" cy=".4" r=".35" fill="#B5562B"/><circle cx="-1.8" cy=".2" r=".3" fill="#B5562B"/></g>`}},
     potatocube(n){cube(n,'#F2DA94','#C08A3A','#FBEDBE')},
     sweetcube(n){cube(n,'#EDA53A','#B56E1E','#F8CB6E')},
     mayo(){s+=`<g transform="rotate(-28)">`;for(let k=-3;k<=3;k++){const y=k*8.5,w=Math.sqrt(33*33-y*y);let x=-w,p=`M${f(x)} ${f(y)}`,up=1;while(x<w-4){x+=5;p+=` Q${f(x-2.5)} ${f(y+up*2.4)} ${f(x)} ${f(y)}`;up=-up}s+=`<path d="${p}" fill="none" stroke="#FFF7DC" stroke-width="1.15" stroke-linecap="round"/>`}s+=`</g>`},
