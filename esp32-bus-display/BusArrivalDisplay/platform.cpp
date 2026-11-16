@@ -14,12 +14,13 @@ static bool clockStarted = false;
 
 // ===========================================================================
 #if defined(ARDUINO_ARCH_RP2040)
-// Raspberry Pi Pico W (SB Components "UHF Reader for Pico W" 보드 포함)
+// Raspberry Pi Pico W / Pico WH (SB Components "UHF Reader for Pico W" 보드 포함)
 // ===========================================================================
 
 const char* platformBoardName() { return "Raspberry Pi Pico W"; }
 
 void platformBoardInit() {
+  if (REFRESH_BUTTON_PIN >= 0) pinMode(REFRESH_BUTTON_PIN, INPUT_PULLUP);
 #if UHF_READER_BOARD
   // 이 프로젝트에서는 RFID 기능을 쓰지 않으므로 꺼서 전기와 열을 줄입니다.
   pinMode(UHF_EN_PIN, OUTPUT);
@@ -30,6 +31,15 @@ void platformBoardInit() {
   digitalWrite(UHF_LCD_BL_PIN, LOW);  // 보드에 붙은 1.14인치 작은 화면 백라이트 끔
   pinMode(UHF_SD_CS_PIN, OUTPUT);
   digitalWrite(UHF_SD_CS_PIN, HIGH);  // SD 카드 선택 해제
+#endif
+}
+
+bool platformRefreshPressed() {
+  if (REFRESH_BUTTON_PIN >= 0) return digitalRead(REFRESH_BUTTON_PIN) == LOW;
+#if defined(REFRESH_USE_BOOTSEL) && REFRESH_USE_BOOTSEL
+  return BOOTSEL;  // Pico 위의 흰색 BOOTSEL 버튼
+#else
+  return false;
 #endif
 }
 
@@ -65,7 +75,13 @@ bool platformLocalTime(struct tm* out) {
 
 const char* platformBoardName() { return "ESP32"; }
 
-void platformBoardInit() {}
+void platformBoardInit() {
+  if (REFRESH_BUTTON_PIN >= 0) pinMode(REFRESH_BUTTON_PIN, INPUT_PULLUP);
+}
+
+bool platformRefreshPressed() {
+  return REFRESH_BUTTON_PIN >= 0 && digitalRead(REFRESH_BUTTON_PIN) == LOW;
+}
 
 void platformWifiBegin(const char* ssid, const char* password) {
   WiFi.mode(WIFI_STA);

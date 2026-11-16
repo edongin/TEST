@@ -111,8 +111,6 @@ void setup() {
 
   platformBoardInit();
 
-  if (REFRESH_BUTTON_PIN >= 0) pinMode(REFRESH_BUTTON_PIN, INPUT_PULLUP);
-
   displayBegin();
   connectWifi();
   nextFetchAtMs = millis();
@@ -154,8 +152,7 @@ void loop() {
   wifiLost = !online;
 
   // 3) 버튼을 누르면 바로 새로고침
-  if (REFRESH_BUTTON_PIN >= 0 && digitalRead(REFRESH_BUTTON_PIN) == LOW &&
-      now - lastButtonMs > 1000) {
+  if (now - lastButtonMs > 1000 && platformRefreshPressed()) {
     lastButtonMs = now;
     nextFetchAtMs = now;
     Serial.println("[버튼] 새로고침");

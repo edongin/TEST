@@ -51,15 +51,13 @@
 #define PAGE_INTERVAL_SEC 6
 
 // ----- 보드와 화면 연결 -----
-// Arduino IDE 에서 고른 보드에 따라 아래 셋 중 하나가 자동으로 쓰입니다.
-//   - "Raspberry Pi Pico W" 를 고르면  -> [A] UHF Reader for Pico W 보드 + ILI9341 모듈
+// Arduino IDE 에서 고른 보드에 따라 아래 중 하나가 자동으로 쓰입니다.
+//   - "Raspberry Pi Pico W" 를 고르면  -> [A] Pico WH(브레드보드) + ILI9341 모듈
 //   - "ESP32 Dev Module" 을 고르면     -> [B] ESP32 개발보드 + ILI9341 모듈, 또는 [C] CYD
 
 #if defined(ARDUINO_ARCH_RP2040)
-// [A] SB Components "UHF Reader for Pico W" + ILI9341 3.2인치 SPI 모듈
-//     README 의 "Pico W 배선표" 대로 연결하세요.
-#define UHF_READER_BOARD 1  // 일반 Pico W 에 직접 연결했다면 0
-
+// [A] Raspberry Pi Pico WH (또는 Pico W) + ILI9341 3.2인치 SPI 모듈
+//     README 의 "Pico WH 배선표" 대로 연결하세요.
 #define TFT_SCLK 2    // 화면 SCK   (터치 T_CLK 도 같은 핀에)
 #define TFT_MOSI 3    // 화면 SDI   (터치 T_DIN 도 같은 핀에)
 #define TFT_MISO 0    // 터치 T_DO  (화면의 SDO 는 연결하지 않음)
@@ -68,16 +66,22 @@
 #define TFT_RST  20   // 화면 RESET
 #define TFT_BL   -1   // 화면 LED 는 3.3V 에 연결 (항상 켜짐). GPIO 에 연결했다면 그 번호
 
-// 이 버튼을 누르면 바로 새로고침 (보드의 BT2 버튼). 안 쓰면 -1
-#define REFRESH_BUTTON_PIN 10
-
-// UHF 리더 보드에 이미 붙어 있는 부품 (바꿀 필요 없음)
-#define UHF_EN_PIN     26  // RFID 모듈 켜기/끄기
-#define UHF_BUZZER_PIN 22  // 부저
-#define UHF_LCD_BL_PIN 12  // 보드의 1.14인치 작은 화면 백라이트
-#define UHF_SD_CS_PIN  17  // SD 카드
-
 // 나중에 터치를 쓸 때: T_CS -> GP15, T_IRQ -> GP28 (T_CLK, T_DIN, T_DO 는 위와 같은 핀)
+
+// 새로고침 버튼: Pico 위의 흰색 BOOTSEL 버튼을 씁니다. 버튼을 따로 달았다면 그 핀 번호.
+#define REFRESH_BUTTON_PIN -1
+#define REFRESH_USE_BOOTSEL 1
+
+// SB Components "UHF Reader for Pico W" 보드를 쓸 때만 1 (RFID 모듈, 부저 등을 꺼 둠)
+#define UHF_READER_BOARD 0
+#if UHF_READER_BOARD
+#undef  REFRESH_BUTTON_PIN
+#define REFRESH_BUTTON_PIN 10  // 보드의 BT2 버튼
+#define UHF_EN_PIN     26      // RFID 모듈 켜기/끄기
+#define UHF_BUZZER_PIN 22      // 부저
+#define UHF_LCD_BL_PIN 12      // 보드의 1.14인치 작은 화면 백라이트
+#define UHF_SD_CS_PIN  17      // SD 카드
+#endif
 
 #else
 // ESP32 에서는 0 = [B] 개발보드 + ILI9341 모듈, 1 = [C] CYD
