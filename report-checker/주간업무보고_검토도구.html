@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주간업무보고 검토도구</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --panel2:#f0f2f5; --text:#1d2330; --muted:#5d6675; --line:#dfe3e9;
+  --accent:#2457c5; --accent-weak:#e7eefc;
+  --err:#c62828; --err-bg:#fdecec; --warn:#a15c00; --warn-bg:#fff4e0; --info:#2b5fa8; --info-bg:#e9f1fc; --ok:#2e7d32; --ok-bg:#e8f5e9;
+  --mono: ui-monospace, "D2Coding", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14171c; --panel:#1c2027; --panel2:#232831; --text:#e6e9ee; --muted:#9aa3b2; --line:#323946;
+    --accent:#7aa2ff; --accent-weak:#25304a;
+    --err:#ff8a80; --err-bg:#3a2224; --warn:#ffc266; --warn-bg:#3a2f1c; --info:#8ab4f8; --info-bg:#1f2b40; --ok:#81c995; --ok-bg:#1e3326;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14171c; --panel:#1c2027; --panel2:#232831; --text:#e6e9ee; --muted:#9aa3b2; --line:#323946;
+  --accent:#7aa2ff; --accent-weak:#25304a;
+  --err:#ff8a80; --err-bg:#3a2224; --warn:#ffc266; --warn-bg:#3a2f1c; --info:#8ab4f8; --info-bg:#1f2b40; --ok:#81c995; --ok-bg:#1e3326;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-size:14px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+header h1{font-size:22px;margin:0 0 4px}
+header p{margin:0;color:var(--muted)}
+.note{font-size:12.5px;color:var(--muted)}
+.uploads{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0 12px}
+@media (max-width:720px){.uploads{grid-template-columns:1fr}}
+.drop{background:var(--panel);border:2px dashed var(--line);border-radius:12px;padding:18px;cursor:pointer;transition:border-color .15s,background .15s;min-height:118px}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-weak)}
+.drop h3{margin:0 0 4px;font-size:15px}
+.drop .tag{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:99px;background:var(--panel2);color:var(--muted);margin-left:6px;vertical-align:1px}
+.drop .fname{margin-top:8px;font-weight:600;word-break:break-all}
+.drop .meta{font-size:12.5px;color:var(--muted)}
+.drop.loaded{border-style:solid;border-color:var(--ok)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+:root[data-theme="dark"] button.primary{color:#0d1424}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button.primary{color:#0d1424}}
+button:disabled{opacity:.45;cursor:not-allowed}
+.msg{margin:10px 0;padding:10px 12px;border-radius:8px;background:var(--warn-bg);color:var(--warn);display:none}
+.msg.show{display:block}
+#result{display:none;margin-top:22px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.card .k{font-size:12px;color:var(--muted)}
+.card .v{font-size:15px;font-weight:600}
+.sev-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.sev-card{border-radius:12px;padding:12px 14px;cursor:pointer;border:2px solid transparent}
+.sev-card .n{font-size:26px;font-weight:700;line-height:1.1}
+.sev-card .l{font-size:13px}
+.sev-card.off{opacity:.4}
+.sev-card.err{background:var(--err-bg);color:var(--err)}
+.sev-card.warn{background:var(--warn-bg);color:var(--warn)}
+.sev-card.info{background:var(--info-bg);color:var(--info)}
+.sev-card .d{font-size:11.5px;opacity:.85}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:8px 0 12px;flex-wrap:wrap}
+.tab{border:none;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 12px;color:var(--muted)}
+.tab.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+select,input[type=search]{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text)}
+input[type=search]{min-width:200px;flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;border-radius:0;padding:7px 12px}
+.seg button.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
+.group{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.group>summary{list-style:none;cursor:pointer;padding:10px 14px;font-weight:700;display:flex;gap:8px;align-items:center;background:var(--panel2)}
+.group>summary::-webkit-details-marker{display:none}
+.group>summary .cnt{font-weight:500;color:var(--muted);font-size:12.5px}
+.group>summary .mini{margin-left:auto;display:flex;gap:4px}
+.f{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 0;border-radius:6px;text-align:center;height:fit-content}
+.badge.err{background:var(--err-bg);color:var(--err)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.info{background:var(--info-bg);color:var(--info)}
+.pill{font-size:11px;padding:1px 7px;border-radius:99px;font-weight:600}
+.pill.err{background:var(--err-bg);color:var(--err)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.info{background:var(--info-bg);color:var(--info)}
+.f .where{font-weight:600}
+.f .where .sub{font-weight:400;color:var(--muted);font-size:12.5px;margin-left:6px}
+.f .msg2{margin-top:2px}
+.f .detail{margin-top:4px;font-family:var(--mono);font-size:12px;color:var(--muted);white-space:pre-wrap;word-break:break-all}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+table.cmp{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--panel)}
+table.cmp th,table.cmp td{border:1px solid var(--line);padding:5px 7px;text-align:right;white-space:nowrap}
+table.cmp th{background:var(--panel2);text-align:center;position:sticky;top:0}
+table.cmp td.l{text-align:left}
+table.cmp tr.sub td{font-weight:700;background:var(--panel2)}
+table.cmp td.bad{background:var(--err-bg);color:var(--err);font-weight:700}
+table.cmp td.wn{background:var(--warn-bg);color:var(--warn);font-weight:700}
+table.cmp td.ok{color:var(--ok)}
+.tblwrap{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:10px}
+.howto{margin-top:28px}
+.howto details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px}
+.howto summary{cursor:pointer;font-weight:600}
+.howto li{margin:3px 0}
+.theme{position:absolute;right:16px;top:20px}
+header{position:relative}
+@media print{
+  .uploads,.actions,.filters,.tabs,.howto,.theme,#msg{display:none!important}
+  body{background:#fff;color:#000;font-size:11px}
+  .group{break-inside:auto;border-color:#999}
+  .f{break-inside:avoid}
+  details.group:not([open])>*:not(summary){display:block}
+  .tabpane{display:block!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>주간업무보고 검토도구</h1>
+  <p>이번 주와 지난주 보고서(.hwpx)를 넣으면 수입금·합계·날짜·서식을 자동으로 점검합니다.</p>
+  <p class="note">파일은 이 PC의 브라우저 안에서만 처리되며 외부로 전송되지 않습니다. 인터넷 연결 없이도 동작합니다. (Chrome·Edge·웨일 최신 버전 권장)</p>
+  <button class="theme" id="themeBtn" title="화면 밝기 전환">◐</button>
+</header>
+
+<div class="uploads">
+  <label class="drop" id="dropCur">
+    <h3>이번 주 보고서 <span class="tag">필수</span></h3>
+    <div class="meta">클릭하거나 .hwpx 파일을 끌어다 놓으세요</div>
+    <div class="fname" id="nameCur"></div><div class="meta" id="metaCur"></div>
+    <input type="file" id="fileCur" accept=".hwpx" hidden>
+  </label>
+  <label class="drop" id="dropPrev">
+    <h3>지난주 보고서 <span class="tag">선택 · 전주 대비 점검용</span></h3>
+    <div class="meta">넣으면 누계 증가·전주 계획 반영 여부까지 확인합니다</div>
+    <div class="fname" id="namePrev"></div><div class="meta" id="metaPrev"></div>
+    <input type="file" id="filePrev" accept=".hwpx" hidden>
+  </label>
+</div>
+<div class="actions">
+  <button class="primary" id="runBtn" disabled>검토 시작</button>
+  <button id="xlsxBtn" disabled>엑셀로 저장 (.xlsx)</button>
+  <button id="printBtn" disabled>인쇄 / PDF</button>
+  <button id="resetBtn">초기화</button>
+</div>
+<div class="msg" id="msg"></div>
+
+<section id="result">
+  <div class="info-grid" id="infoGrid"></div>
+  <div class="sev-cards">
+    <div class="sev-card err" data-sev="오류"><div class="n" id="cntErr">0</div><div class="l">오류</div><div class="d">숫자·날짜가 틀린 것이 확실함</div></div>
+    <div class="sev-card warn" data-sev="주의"><div class="n" id="cntWarn">0</div><div class="l">주의</div><div class="d">틀렸을 가능성 높음 · 확인 필요</div></div>
+    <div class="sev-card info" data-sev="참고"><div class="n" id="cntInfo">0</div><div class="l">참고</div><div class="d">서식 통일·경미한 표기</div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab on" data-tab="findings">검토 결과</button>
+    <button class="tab" data-tab="rev">수입금 전주 대비</button>
+  </div>
+  <div class="tabpane" id="pane-findings">
+    <div class="filters">
+      <div class="seg" id="viewSeg"><button class="on" data-view="cat">분류별</button><button data-view="dept">부서별</button></div>
+      <select id="fCat"><option value="">전체 분류</option></select>
+      <select id="fDept"><option value="">전체 부서</option></select>
+      <input type="search" id="fText" placeholder="내용 검색 (예: 요일, 누계, 경영지원부)">
+    </div>
+    <div id="findings"></div>
+  </div>
+  <div class="tabpane" id="pane-rev" style="display:none">
+    <p class="note" id="revNote"></p>
+    <div class="tblwrap"><table class="cmp" id="revTable"></table></div>
+  </div>
+</section>
+
+<div class="howto">
+  <details><summary>자동으로 점검하는 항목</summary>
+    <ol>
+      <li><b>수입금 현황</b> — 증감액(누계−전년), 달성률·증감률 계산, 소계·총계 합계, 마이너스 △ 표기, 전년 0인 항목의 증감률</li>
+      <li><b>수입금 전주 대비</b> — 누계가 전주와 같거나 줄어든 항목, 금주실적과 누계 증가분 차이, 목표 변경, 전년 누계 감소</li>
+      <li><b>수입금 증감 내역</b> — 현황 표 증감액과 한 칸씩 대조, 사유 문구의 "○○천원 증가/감소"와 실제 부호</li>
+      <li><b>민원·SNS</b> — 합계, 증감, 전주 누계 + 금주 = 이번 주 누계, 기간 연속성</li>
+      <li><b>보고서 구성</b> — 주간: 전주 추진실적/추진계획, 월간·분기: 추진계획만 / 실적 표는 '처리일자', 계획 표는 '처리시한'</li>
+      <li><b>날짜</b> — 요일 오류, 존재하지 않는 날짜, 기간 일수(○일간), 거꾸로 된 기간, 실적인데 미래 날짜, 계획인데 지난 날짜, 부서 머리 날짜 불일치</li>
+      <li><b>부서별 서식</b> — 같은 부서 안에서 날짜 표기(11. 9. / 11.9.) 혼용, 마침표 누락, 글머리(▸/‣) 혼용</li>
+      <li><b>전주 계획 반영</b> — 지난주 추진계획 중 처리시한이 지난 항목이 이번 주 실적에 있는지, 일자가 바뀌었는지</li>
+      <li><b>표 안 합계·누계</b> — '계/합계/총계' 행·열 합계, 증감 열, 누계 = 전주 누계 + 금주, 누계가 전주와 동일</li>
+      <li><b>표기</b> — 달성율→달성률 등 율/률, 낱자(ㅋ 등) 오타, 괄호 짝, "및" 띄어쓰기, 용어 혼용</li>
+    </ol>
+  </details>
+  <details><summary>자동 점검으로 잡기 어려운 것</summary>
+    <ul>
+      <li>문장 오탈자, 문맥상 어색한 표현, 사유가 실제 증감 내용을 잘 설명하는지</li>
+      <li>담당자·직함·부서명이 실제와 맞는지, 일정이 몇 년씩 바뀐 것이 의도된 것인지</li>
+      <li>구형 .hwp 파일 — 한글에서 <b>다른 이름으로 저장 → .hwpx</b> 로 바꾼 뒤 넣어 주세요</li>
+    </ul>
+  </details>
+</div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   1. HWPX(zip) 읽기 — 외부 라이브러리 없이 브라우저 기능만 사용
+   ============================================================ */
+async function readZip(buf){
+  const dv=new DataView(buf); let e=-1;
+  for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-65557);i--){ if(dv.getUint32(i,true)===0x06054b50){e=i;break;} }
+  if(e<0) throw new Error('HWPX(zip) 형식이 아닙니다. 구형 .hwp 파일이라면 한글에서 .hwpx로 저장해 주세요.');
+  const cnt=dv.getUint16(e+10,true); let p=dv.getUint32(e+16,true); const ents={};
+  for(let k=0;k<cnt;k++){
+    const method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true), nlen=dv.getUint16(p+28,true), xlen=dv.getUint16(p+30,true), clen=dv.getUint16(p+32,true), lho=dv.getUint32(p+42,true);
+    const name=new TextDecoder().decode(new Uint8Array(buf,p+46,nlen)); ents[name]={method,csize,lho}; p+=46+nlen+xlen+clen;
+  }
+  return { names:Object.keys(ents), async text(name){
+    const en=ents[name]; if(!en) return null; const l=en.lho;
+    const data=new Uint8Array(buf,l+30+dv.getUint16(l+26,true)+dv.getUint16(l+28,true),en.csize);
+    if(en.method===0) return new TextDecoder().decode(data);
+    if(en.method===8){
+      if(typeof DecompressionStream==='undefined') throw new Error('이 브라우저는 압축 해제를 지원하지 않습니다. Chrome·Edge 최신 버전을 사용해 주세요.');
+      const s=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      return await new Response(s).text();
+    }
+    throw new Error('지원하지 않는 압축 방식: '+en.method);
+  }};
+}
+const ln=el=>el.localName;
+function parseContainer(el){ const blocks=[]; for(const ch of el.children){ if(ln(ch)==='p') parseP(ch,blocks); } return blocks; }
+function parseP(p,blocks){
+  let parts=[];
+  for(const run of p.children){
+    if(ln(run)!=='run') continue;
+    for(const c of run.children){
+      if(ln(c)==='t') parts.push(c.textContent);
+      else if(ln(c)==='tbl'){ const t=parts.join(''); if(t.trim()) blocks.push({k:'p',text:t}); parts=[]; blocks.push({k:'tbl',tbl:parseTbl(c)}); }
+    }
+  }
+  const t=parts.join(''); if(t.trim()) blocks.push({k:'p',text:t});
+}
+function parseTbl(tbl){
+  const rows=[];
+  for(const tr of tbl.children){
+    if(ln(tr)!=='tr') continue; const row=[];
+    for(const tc of tr.children){
+      if(ln(tc)!=='tc') continue; let col=row.length,r=rows.length,cs=1,rs=1,sub=null;
+      for(const x of tc.children){ const n=ln(x);
+        if(n==='cellAddr'){col=+x.getAttribute('colAddr');r=+x.getAttribute('rowAddr');}
+        else if(n==='cellSpan'){cs=+x.getAttribute('colSpan')||1;rs=+x.getAttribute('rowSpan')||1;}
+        else if(n==='subList') sub=x; }
+      const blocks=sub?parseContainer(sub):[];
+      row.push({col,row:r,cs,rs,blocks,text:flatten(blocks)});
+    }
+    rows.push(row);
+  }
+  return {rows};
+}
+function blockLines(blocks){ const out=[]; for(const b of blocks){ if(b.k==='p') out.push(b.text); else { out.push('[TABLE]'); for(const r of b.tbl.rows) out.push('| '+r.map(c=>c.text).join(' | ')+' |'); out.push('[/TABLE]'); } } return out; }
+function flatten(blocks){ return blockLines(blocks).map(s=>s.trim()).filter(Boolean).join(' / '); }
+function nestedTables(cell){ const out=[]; (function w(bl){ for(const b of bl){ if(b.k==='tbl'){ out.push(b.tbl); for(const r of b.tbl.rows) for(const c of r) w(c.blocks); } } })(cell.blocks); return out; }
+
+async function loadHwpx(file){
+  if(/\.hwp$/i.test(file.name)) throw new Error('구형 .hwp 파일입니다. 한글에서 [다른 이름으로 저장] → 파일 형식 HWPX(*.hwpx)로 저장한 뒤 넣어 주세요.');
+  const zip=await readZip(await file.arrayBuffer());
+  const secs=zip.names.filter(n=>/^Contents\/section\d+\.xml$/i.test(n)).sort((a,b)=>+a.match(/\d+/)[0]-+b.match(/\d+/)[0]);
+  if(!secs.length) throw new Error('본문(section) XML을 찾지 못했습니다.');
+  let blocks=[];
+  for(const s of secs){
+    const xml=new DOMParser().parseFromString(await zip.text(s),'application/xml');
+    if(xml.getElementsByTagName('parsererror').length) throw new Error('본문 XML을 해석하지 못했습니다: '+s);
+    blocks=blocks.concat(parseContainer(xml.documentElement));
+  }
+  return buildDoc(blocks,file.name);
+}
+
+/* ============================================================
+   2. 문서 구조화 — 공통 현황 / 부서별 섹션
+   ============================================================ */
+const nz=s=>(s||'').replace(/[\s\/]+/g,'');
+const W='월화수목금토일';
+const dowOf=(y,m,d)=>{ const dt=new Date(y,m-1,d); if(dt.getFullYear()!==y||dt.getMonth()!==m-1||dt.getDate()!==d) return null; return W[(dt.getDay()+6)%7]; };
+const fmtD=(m,d)=>`${m}. ${d}.`;
+const dval=(y,m,d)=>new Date(y,m-1,d).getTime();
+const DAY=86400000;
+
+function buildDoc(blocks,fileName){
+  const doc={fileName,blocks,front:{},depts:[],title:'',type:'',year:null,date:null};
+  let cur=null, heading='', lastTitle='', pendingFront=null, inFront=true;
+  for(let i=0;i<blocks.length;i++){
+    const b=blocks[i];
+    if(b.k==='p'){
+      const t=b.text;
+      const dm=t.match(/【\s*([^】\d][^】]*?)\s*】/);
+      if(dm){
+        inFront=false;
+        const name=dm[1].replace(/\s+/g,'');
+        const after=t.slice(t.indexOf('】')+1);
+        const dd=after.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*\(\s*([월화수목금토일])\s*\)/);
+        cur={name,headerText:t,title:lastTitle.trim(),date:dd?{y:+dd[1],m:+dd[2],d:+dd[3],w:dd[4],raw:dd[0]}:null,sections:[],items:[],tables:[],lines:[]};
+        doc.depts.push(cur); heading='';
+        const hm=after.match(/[▣◈]\s*(.+)$/); if(hm){heading=hm[1].trim(); cur.sections.push(heading);}
+        continue;
+      }
+      if(/업무\s*보고\s*$/.test(t.trim())){ lastTitle=t; continue; }
+      if(inFront){
+        if(/▣\s*수입금\s*현황/.test(t)) pendingFront='rev';
+        else if(/수입금\s*증감\s*내역/.test(t)) pendingFront='revDet';
+        else if(/▣\s*민원/.test(t)) pendingFront='civil';
+        else if(/▣\s*SNS/.test(t)) pendingFront='sns';
+        else if(/▣\s*행정사무감사/.test(t)) pendingFront='audit';
+        const cm=t.match(/【\s*(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(?:~\s*(\d{1,2})\.\s*(\d{1,2})\.)?\s*(현재)?\s*】/);
+        if(cm && pendingFront){ doc.front[pendingFront+'Date']={y:+cm[1],m:+cm[2],d:+cm[3],m2:cm[4]?+cm[4]:null,d2:cm[5]?+cm[5]:null,raw:cm[0]}; }
+        (doc.front.lines=doc.front.lines||[]).push(t);
+      } else if(cur){
+        const hm=t.match(/[▣◈]\s*(.+)$/);
+        if(hm){ heading=hm[1].trim(); cur.sections.push(heading); }
+        cur.lines.push(t);
+      }
+    } else {
+      if(inFront){
+        if(pendingFront==='audit'){ (doc.front.audit=doc.front.audit||[]).push(b.tbl); }
+        else if(pendingFront && !doc.front[pendingFront]){ doc.front[pendingFront]=b.tbl; }
+        (doc.front.tables=doc.front.tables||[]).push(b.tbl);
+      } else if(cur){
+        cur.tables.push({heading,tbl:b.tbl});
+        for(const l of blockLines([b])) cur.lines.push(l);
+      }
+    }
+  }
+  // 보고 일자 (부서 머리 날짜의 최빈값)
+  const cnt={}; for(const d of doc.depts) if(d.date){ const k=`${d.date.y}-${d.date.m}-${d.date.d}`; cnt[k]=(cnt[k]||0)+1; }
+  const best=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+  if(best){ const [y,m,d]=best[0].split('-').map(Number); doc.date={y,m,d}; doc.year=y; }
+  const titles=doc.depts.map(d=>d.title).filter(Boolean);
+  doc.title=titles[0]||'';
+  doc.type=/주간/.test(doc.title)?'주간':/분기/.test(doc.title)?'분기':/\d+\s*월/.test(doc.title)?'월간':'주간';
+  if(!doc.year){ const fd=doc.front.revDate; doc.year=fd?fd.y:new Date().getFullYear(); }
+  // 부서 업무 항목 추출
+  for(const d of doc.depts) extractItems(doc,d);
+  return doc;
+}
+
+function extractItems(doc,dept){
+  for(const {heading,tbl} of dept.tables){
+    const hdr=tbl.rows[0]||[]; const hn=hdr.map(c=>nz(c.text));
+    if(hn[0]==='업무내용'){
+      const kind=hn.some(h=>h.includes('추진실적'))?'result':hn.some(h=>h.includes('추진계획'))?'plan':'other';
+      const dateIdx=hn.findIndex(h=>/^처리(일자|시한|기한)$/.test(h));
+      const dateHdr=dateIdx>=0?hn[dateIdx]:'';
+      const tinfo={kind,dateHdr,heading,tbl};
+      (dept.itemTables=dept.itemTables||[]).push(tinfo);
+      for(let r=1;r<tbl.rows.length;r++){
+        const row=tbl.rows[r]; if(!row.length) continue;
+        const dc=dateIdx>=0?row.find(c=>c.col===hdr[dateIdx].col):null;
+        dept.items.push({kind,heading,dateHdr,title:row[0].text,ntitle:normTitle(row[0].text),content:row[1]?row[1].text:'',contentCell:row[1]||null,dateText:dc?dc.text:null,hasDateCell:!!dc,cells:row,tbl});
+      }
+    } else if(hn[0]==='구분' && hn.some(h=>h.includes('사업추진내용')||h.includes('추진경위'))){
+      (dept.devTables=dept.devTables||[]).push({heading,tbl});
+    }
+  }
+}
+function normTitle(t){ return t.replace(/\[[^\]]*\]/g,'').replace(/[○「」『』\s\/·ㆍ‧,.()]/g,''); }
+function bigrams(s){ const a=[]; for(let i=0;i<s.length-1;i++) a.push(s.slice(i,i+2)); return a; }
+function sim(a,b){ if(!a||!b) return 0; if(a===b) return 1; if(a.includes(b)||b.includes(a)) return 0.9; const A=bigrams(a),B=bigrams(b); if(!A.length||!B.length) return 0; const m={}; for(const x of A) m[x]=(m[x]||0)+1; let k=0; for(const x of B) if(m[x]>0){k++;m[x]--;} return 2*k/(A.length+B.length); }
+
+/* 날짜 토큰 추출 */
+function datesIn(text,year){
+  const out=[]; if(!text) return out;
+  const re=/(?<![\d.])(\d{1,2})\.\s{0,2}(\d{1,2})\.?/g; let m;
+  while((m=re.exec(text))){ const mo=+m[1],d=+m[2]; if(mo>=1&&mo<=12&&d>=1&&d<=31) out.push({m:mo,d,raw:m[0],t:dval(guessYear(year,mo),mo,d)}); }
+  return out;
+}
+let REF=null; // 보고 기준 (연, 월)
+function guessYear(y,mo){ if(REF && REF.m>=10 && mo<=3) return y+1; if(REF && REF.m<=3 && mo>=10) return y-1; return y; }
+
+/* 숫자 */
+function num(s){
+  if(s==null) return null; let t=String(s).trim().replace(/,/g,'');
+  if(t===''||t==='-'||t==='–') return 0;
+  const m=t.match(/^(△|▲|-)?\s*(\d+(?:\.\d+)?)\s*(%|명|대|개소|개|권|톤|건|면|회|매|세대|천원|원|kg|ea)?$/i);
+  if(!m) return null; const v=parseFloat(m[2]); return (m[1]==='△'||m[1]==='-')?-v:v;
+}
+const isPct=s=>/%\s*$/.test(String(s||'').trim());
+const f0=v=>v==null?'':(v<0?'△':'')+Math.abs(Math.round(v)).toLocaleString('ko-KR');
+const f1=v=>v==null?'':(v<0?'△':'')+Math.abs(v).toFixed(1)+'%';
+
+/* ============================================================
+   3. 검토 규칙
+   ============================================================ */
+let F=[]; let WEEKLY_OK=true;
+function add(sev,cat,dept,where,msg,detail){ F.push({sev,cat,dept:dept||'공통 현황',where:where||'',msg,detail:detail||''}); }
+
+function parseRevenue(tbl){
+  if(!tbl) return null;
+  const rows=[]; let group=null, groupEnd=-1, sub=null, subEnd=-1; const keys={};
+  for(let i=2;i<tbl.rows.length;i++){
+    const c=tbl.rows[i]; if(c.length<8) continue;
+    const v=c.slice(-7).map(x=>x.text.trim()); let lab=nz(c[c.length-8].text);
+    let isSub=false;
+    if(i>groupEnd) {group=null;}
+    if(i>subEnd) {sub=null;}
+    if(lab==='소계'){ const g=c[c.length-9]; group=nz(g.text); groupEnd=i+(g.rs||1)-1; isSub=true; }
+    else if(c.length>=9 && group){ const s=c[c.length-9]; sub=nz(s.text); subEnd=i+(s.rs||1)-1; }
+    const display=isSub?group+' 소계':(group?group+' > '+(sub?sub+' > ':'')+lab:lab);
+    let key=isSub?group+'|소계':(group?group+'|'+(sub||'')+'|'+lab:lab);
+    if(keys[key]){keys[key]++; key+='#'+keys[key];} else keys[key]=1;
+    rows.push({i,key,display,lab,group:isSub?group:group,isSub,isTotal:lab==='총계',inGroup:!!group&&!isSub,raw:v,
+      tgt:num(v[0]),wk:num(v[1]),cum:num(v[2]),rate:v[3],py:num(v[4]),diff:num(v[5]),pct:v[6]});
+  }
+  // rowSpan이 없는 문서 대비
+  if(!rows.some(r=>r.inGroup)){
+    let g=null; for(const r of rows){ if(r.isSub){g=r.group;continue;} if(r.isTotal||['경영지원부','주차사업부'].includes(r.lab)){g=null;continue;} if(g){r.inGroup=true;r.group=g;r.display=g+' > '+r.lab;} }
+  }
+  return rows;
+}
+
+function checkRevenue(cur,prev){
+  const R=parseRevenue(cur.front.rev); if(!R||!R.length){ add('주의','수입금','','수입금 현황','수입금 현황 표를 찾지 못했습니다.'); return null; }
+  const C='수입금';
+  for(const r of R){
+    if(r.cum==null||r.py==null) continue;
+    const calc=r.cum-r.py;
+    if(r.diff!=null && calc!==r.diff){
+      if(calc===-r.diff) add('오류',C,'',r.display,`증감액 부호가 틀렸습니다: ${r.raw[5]} → ${f0(calc)}${calc>0?' (증가)':' (감소)'}`,`누계 ${f0(r.cum)} − 전년 ${f0(r.py)} = ${f0(calc)}`);
+      else add('오류',C,'',r.display,`증감액이 맞지 않습니다: ${r.raw[5]} → ${f0(calc)}`,`누계 ${f0(r.cum)} − 전년 ${f0(r.py)} = ${f0(calc)}`);
+    }
+    if(r.tgt){ const rt=Math.round(r.cum/r.tgt*1000)/10, rv=num(r.rate); if(rv!=null && Math.abs(rt-rv)>0.051) add('오류',C,'',r.display,`달성률이 맞지 않습니다: ${r.rate} → ${rt.toFixed(1)}%`,`${f0(r.cum)} ÷ ${f0(r.tgt)}`); }
+    if(r.py){
+      const p=Math.round(calc/r.py*1000)/10, pv=num(r.pct);
+      if(pv!=null && Math.abs(p-pv)>0.051){
+        if(Math.abs(p+pv)<0.051&&p!==0) add('오류',C,'',r.display,`증감률 부호가 틀렸습니다: ${r.pct} → ${f1(p)}`,`${f0(calc)} ÷ ${f0(r.py)}`);
+        else add('오류',C,'',r.display,`증감률이 맞지 않습니다: ${r.pct} → ${f1(p)}`,`${f0(calc)} ÷ ${f0(r.py)}`);
+      } else if(calc<0 && pv===0 && !/△/.test(r.pct)) add('참고',C,'',r.display,`감소인데 증감률이 '${r.pct}'로 표기됨 → '△0.0%' 권장`);
+    } else if(r.py===0 && !/^[-–]?$/.test(r.pct.trim())){
+      add('주의',C,'',r.display,`전년 실적이 0이라 증감률을 계산할 수 없는데 '${r.pct}'로 표기됨 → '-' 또는 '순증' 표기 권장`,r.pct===r.rate?'달성률과 같은 값이 들어가 있음':'');
+    }
+    for(const [x,raw] of [[r.diff,r.raw[5]],[num(r.pct),r.pct]]) if(x!=null&&x<0&&/^-/.test(raw.trim())) add('오류',C,'',r.display,`마이너스는 '△'로 표기해야 합니다: ${raw}`);
+  }
+  // 소계·총계
+  const F5=[['tgt','목표'],['wk','금주실적'],['cum','누계'],['py','전년 누계'],['diff','증감액']];
+  const subs=R.filter(r=>r.isSub);
+  for(const s of subs){ const items=R.filter(r=>r.inGroup&&r.group===s.group);
+    for(const [f,nm] of F5){ if(f==='diff'&&s.diff!==s.cum-s.py) continue; const t=items.reduce((a,r)=>a+(r[f]||0),0); if(s[f]!=null&&t!==s[f]) add('오류',C,'',s.display,`${nm} 소계가 항목 합과 다릅니다: 표기 ${f0(s[f])} / 항목 합 ${f0(t)}`,items.map(r=>`${r.lab} ${f0(r[f])}`).join(' + ')); } }
+  const tot=R.find(r=>r.isTotal);
+  if(tot){ const tops=R.filter(r=>!r.isTotal&&!r.inGroup);
+    for(const [f,nm] of F5){ const val=r=>f==='diff'&&r.cum!=null&&r.py!=null?r.cum-r.py:(r[f]||0); const t=tops.reduce((a,r)=>a+val(r),0); if(tot[f]!=null&&t!==tot[f]) add('오류',C,'','총계',`${nm} 총계가 부서 합과 다릅니다: 표기 ${f0(tot[f])} / 부서 합 ${f0(t)}`,tops.map(r=>`${r.display} ${f0(r[f])}`).join(' + ')); } }
+  // 전주 대비
+  let P=null;
+  if(prev){ P=parseRevenue(prev.front.rev);
+    if(P){ const pm={}; for(const r of P) pm[r.key]=r;
+      for(const r of R){ const a=pm[r.key]; r.prev=a||null; if(!a){ add('참고','수입금(전주 대비)','',r.display,'전주 보고서에 없던 항목입니다.'); continue; }
+        const inc=r.cum-a.cum; r.inc=inc;
+        if(!WEEKLY_OK){ if(inc<0) add('오류','수입금(전주 대비)','',r.display,`누계가 이전 보고보다 줄었습니다: ${f0(a.cum)} → ${f0(r.cum)}`); continue; }
+        if(inc===0) add('주의','수입금(전주 대비)','',r.display,`누계가 전주와 같습니다 (${f0(r.cum)}) — 수입금은 매주 늘어야 하므로 확인 필요`,`금주실적 ${f0(r.wk)}`);
+        else if(inc<0) add('오류','수입금(전주 대비)','',r.display,`누계가 전주보다 줄었습니다: ${f0(a.cum)} → ${f0(r.cum)}`);
+        if(inc!==0 && r.wk!=null && inc!==r.wk){ const d=inc-r.wk;
+          if(Math.abs(d)<=1) add('참고','수입금(전주 대비)','',r.display,`금주실적과 누계 증가분이 ${Math.abs(d)} 차이 (천원 단위 반올림으로 보임)`,`전주 누계 ${f0(a.cum)} + 금주 ${f0(r.wk)} = ${f0(a.cum+r.wk)} / 이번 주 누계 ${f0(r.cum)}`);
+          else add('주의','수입금(전주 대비)','',r.display,`금주실적(${f0(r.wk)})과 누계 증가분(${f0(inc)})이 ${f0(d)} 차이`,`전주 누계 ${f0(a.cum)} + 금주 ${f0(r.wk)} = ${f0(a.cum+r.wk)} / 이번 주 누계 ${f0(r.cum)}`); }
+        if(a.tgt!==r.tgt) add('참고','수입금(전주 대비)','',r.display,`목표가 바뀌었습니다: ${f0(a.tgt)} → ${f0(r.tgt)} (추경 등 근거 확인)`);
+        if(r.py<a.py) add('오류','수입금(전주 대비)','',r.display,`전년 동기 누계가 전주보다 줄었습니다: ${f0(a.py)} → ${f0(r.py)}`);
+      }
+      const cd=cur.front.revDate, pd=prev.front.revDate;
+      if(cd&&pd){ const gap=(dval(cd.y,cd.m,cd.d)-dval(pd.y,pd.m,pd.d))/DAY; if(gap!==7) add('참고','수입금(전주 대비)','','기준일',`수입금 기준일 간격이 ${gap}일입니다 (전주 ${pd.m}. ${pd.d}. → 이번 주 ${cd.m}. ${cd.d}.)`); }
+    }
+  }
+  checkRevDetail(cur,R);
+  return {R,P};
+}
+
+function checkRevDetail(cur,R){
+  const t=cur.front.revDet; if(!t) return; const C='수입금 증감내역';
+  const seq=[]; for(const r of R){ if(r.isTotal) continue; if(!r.inGroup&&!r.isSub){ seq.push([r.display+' (증감액)',r.raw[5],r]); seq.push([r.display+' (세부내역)',r.raw[5],r]); } else seq.push([r.display,r.raw[5],r]); }
+  const got=[]; const reasons=[];
+  for(let i=1;i<t.rows.length;i++) for(const c of t.rows[i]){ const x=c.text.trim(); if(/^△?[\d,]+$/.test(x)) got.push(x); else if(x.length>15) reasons.push(x); }
+  if(got.length!==seq.length) add('참고',C,'','증감 내역 표',`현황 표와 칸 수가 달라(현황 ${seq.length} / 내역 ${got.length}) 순서대로 대조한 결과가 정확하지 않을 수 있습니다.`);
+  for(let i=0;i<Math.min(got.length,seq.length);i++){ if(num(got[i])!==num(seq[i][1])) add('오류',C,'',seq[i][0],`증감 내역 ${got[i]} ↔ 수입금 현황 ${seq[i][1]} 불일치`); }
+  // 사유 문구 방향
+  const amt=R.filter(r=>!r.isTotal&&r.diff!=null);
+  for(const txt of reasons){ const re=/([\d,]{3,})천원\s*(증가|감소)/g; let m;
+    while((m=re.exec(txt))){ const n=num(m[1]); const hit=amt.filter(r=>Math.abs(r.diff)===n); if(!hit.length) continue;
+      const bad=hit.every(r=>(r.diff>0&&m[2]==='감소')||(r.diff<0&&m[2]==='증가'));
+      if(bad){ const ctx=txt.slice(Math.max(0,m.index-40),m.index+m[0].length).replace(/\s*\/\s*/g,' ');
+        add('오류',C,'',hit.map(r=>r.display).join(', '),`사유 문구는 "${m[1]}천원 ${m[2]}"인데 표의 증감액은 ${f0(hit[0].diff)} → "${m[2]==='감소'?'증가':'감소'}"로 수정`,'…'+ctx); }
+    } }
+}
+
+function checkCivil(cur,prev){
+  const t=cur.front.civil; if(!t) return; const C='민원 현황';
+  const parse=tb=>{ const o=[]; for(let i=2;i<tb.rows.length;i++){ const c=tb.rows[i]; if(c.length<5) continue; o.push({lab:nz(c[0].text),wk:num(c[1].text),cum:num(c[2].text),py:num(c[3].text),diff:num(c[4].text),raw:c.slice(0,5).map(x=>x.text.trim())}); } return o; };
+  const R=parse(t); const tot=R.find(r=>r.lab==='총계'); const items=R.filter(r=>r!==tot);
+  for(const r of R){ if(r.cum!=null&&r.py!=null&&r.diff!=null&&r.cum-r.py!==r.diff) add('오류',C,'',r.lab,`증감이 맞지 않습니다: ${r.raw[4]} → ${f0(r.cum-r.py)}`,`${f0(r.cum)} − ${f0(r.py)}`);
+    if(/^-\d/.test(r.raw[4])) add('오류',C,'',r.lab,`마이너스는 '△'로 표기: ${r.raw[4]}`); }
+  if(tot) for(const [f,nm] of [['wk','금주'],['cum','누계'],['py','전년 누계'],['diff','증감']]){ const s=items.reduce((a,r)=>a+(r[f]||0),0); if(tot[f]!=null&&s!==tot[f]) add('오류',C,'','총계',`${nm} 합계가 맞지 않습니다: 표기 ${f0(tot[f])} / 합 ${f0(s)}`); }
+  if(prev&&prev.front.civil&&WEEKLY_OK){ const P={}; for(const r of parse(prev.front.civil)) P[r.lab]=r;
+    for(const r of R){ const a=P[r.lab]; if(!a) continue;
+      if(a.cum+(r.wk||0)!==r.cum) add('주의',C,'',r.lab,`전주 누계 ${f0(a.cum)} + 금주 ${f0(r.wk)} = ${f0(a.cum+(r.wk||0))}인데 이번 주 누계 ${f0(r.cum)}`);
+      if(r.py<a.py) add('오류',C,'',r.lab,`전년 누계가 전주보다 줄었습니다: ${f0(a.py)} → ${f0(r.py)}`); } }
+}
+
+function checkSNS(cur,prev){
+  const t=cur.front.sns; if(!t) return; const C='SNS 시민소통'; const labs=[];
+  let tot=null; const items=[]; let main='';
+  for(let i=1;i<t.rows.length;i++){ const c=t.rows[i]; if(c.length<4){ main+=c.map(x=>x.text).join(' '); continue; }
+    const r={lab:nz(c[0].text),s:num(c[1].text),a:num(c[2].text),b:num(c[3].text)}; labs.push(r.lab);
+    if(r.s!=null&&r.a!=null&&r.b!=null&&r.a+r.b!==r.s) add('오류',C,'',r.lab,`계 ${f0(r.s)} ≠ 페이스북 ${f0(r.a)} + 인스타그램 ${f0(r.b)}`);
+    if(r.lab==='총계') tot=r; else items.push(r); }
+  if(tot) for(const [f,nm] of [['s','계'],['a','페이스북'],['b','인스타그램']]){ const s=items.reduce((a,r)=>a+(r[f]||0),0); if(s!==tot[f]) add('오류',C,'','총계',`${nm} 합계 불일치: 표기 ${f0(tot[f])} / 합 ${f0(s)}`); }
+  const mm=main.match(/\(([^()]{2,12}(?:부|팀|본부|센터))\)/g)||[];
+  for(const x of new Set(mm)){ const n=nz(x.slice(1,-1)); if(!labs.includes(n)) add('참고',C,'','주요 내용',`주요 내용의 '${x}'가 표의 부서 목록에 없습니다`,'표 부서: '+labs.filter(l=>l!=='총계').join(', ')); }
+  const dashes=(main.match(/(^|\/)\s*-\s*\(/g)||[]).length, paren=(main.match(/\(/g)||[]).length;
+  if(dashes>0 && dashes<paren-0) add('참고',C,'','주요 내용','글머리 "-"가 일부 항목에만 붙어 있습니다');
+  const cd=cur.front.snsDate, pd=prev&&prev.front.snsDate;
+  if(cd&&pd&&pd.m2){ const next=new Date(pd.y,pd.m2-1,pd.d2+1); if(next.getMonth()+1!==cd.m||next.getDate()!==cd.d) add('주의',C,'','집계 기간',`전주 집계 기간이 ${pd.m2}. ${pd.d2}.에 끝났는데 이번 주는 ${cd.m}. ${cd.d}.부터 시작합니다 (기간 누락·중복 확인)`); }
+}
+
+function checkAudit(cur){
+  const C='행감 지적사항';
+  for(const t of (cur.front.audit||[])){ const h=t.rows[0]; if(!h) continue;
+    const ci=h.find(c=>nz(c.text)==='추진실적'), pi=h.find(c=>nz(c.text)==='추진계획'); if(!ci||!pi) continue;
+    let blank=0,dash=0;
+    for(let i=1;i<t.rows.length;i++){ const row=t.rows[i]; const rc=row.find(c=>c.col===ci.col), pc=row.find(c=>c.col===pi.col); const no=(row.find(c=>/[➀-➉⑪-⑳㉑-㉟]/.test(c.text))||{text:''}).text.slice(0,18);
+      if(pc&&/완료/.test(pc.text)&&rc&&/^[-\s]*$/.test(rc.text)) add('주의',C,'',no||'행 '+i,`'${pc.text.replace(/^[•\s]+/,'').trim()}' 내용이 추진계획 칸에 있고 추진실적 칸은 '-' → 완료 내용은 추진실적 칸으로`);
+      for(const c of [rc,pc]) if(c){ if(c.text.trim()==='') blank++; else if(/^-$/.test(c.text.trim())) dash++; } }
+    if(blank&&dash) add('참고',C,'','빈칸 표기',`내용 없는 칸이 공란(${blank})과 '-'(${dash})로 섞여 있습니다`);
+  }
+}
+
+/* 부서별 구성·날짜·서식 */
+function checkDepts(cur,prev){
+  const Y=cur.year, rep=cur.date, repT=rep?dval(rep.y,rep.m,rep.d):null;
+  const mon=repT!=null?repT-((new Date(repT).getDay()+6)%7)*DAY:null; // 보고 주 월요일
+  // 머리 날짜
+  const titleVar={};
+  for(const d of cur.depts){
+    if(!d.date){ add('주의','보고서 구성',d.name,'부서 머리','보고 일자를 찾지 못했습니다',d.headerText.trim()); continue; }
+    const w=dowOf(d.date.y,d.date.m,d.date.d);
+    if(w!==d.date.w) add('오류','날짜·요일',d.name,'부서 머리 일자',`${d.date.y}. ${d.date.m}. ${d.date.d}.(${d.date.w}) → 실제 ${w}요일`);
+    if(rep&&(d.date.m!==rep.m||d.date.d!==rep.d)) add('오류','보고서 구성',d.name,'부서 머리 일자',`다른 부서는 ${rep.m}. ${rep.d}.인데 이 부서만 ${d.date.m}. ${d.date.d}.`);
+    const style=d.date.raw.replace(/\d+/g,'#').replace(/[월화수목금토일]/,'요');
+    (titleVar[style]=titleVar[style]||[]).push(d.name);
+    const tk=d.title.replace(/\s+/g,' '); (titleVar['T:'+tk]=titleVar['T:'+tk]||[]).push(d.name);
+  }
+  const dateStyles=Object.entries(titleVar).filter(([k])=>!k.startsWith('T:'));
+  if(dateStyles.length>1){ const major=dateStyles.sort((a,b)=>b[1].length-a[1].length)[0][0];
+    for(const [k,v] of dateStyles) if(k!==major) add('참고','서식·표기',v.join(', '),'부서 머리 일자',`일자 표기 형식이 다른 부서와 다릅니다 ('${k.replace(/#/g,'n')}' / 대부분 '${major.replace(/#/g,'n')}')`); }
+  const titles=Object.entries(titleVar).filter(([k])=>k.startsWith('T:'));
+  if(titles.length>1){ const major=titles.sort((a,b)=>b[1].length-a[1].length)[0][0];
+    for(const [k,v] of titles) if(k!==major) add('참고','서식·표기',v.join(', '),'보고서 제목',`제목이 '${k.slice(2)}'로 다른 부서('${major.slice(2)}')와 다릅니다`); }
+
+  for(const d of cur.depts){
+    const secs=d.sections.map(s=>s.replace(/\s+/g,' '));
+    const hasRes=secs.some(s=>/추진실적/.test(s));
+    const hasCombined=secs.some(s=>/실적\s*및\s*계획/.test(s)) || (d.devTables&&d.devTables.length>0) || d.tables.some(t=>/실적\s*\/?\s*‧?\s*\/?\s*계획/.test(t.tbl.rows.map(r=>r.map(c=>c.text).join(' ')).join(' ')));
+    if(cur.type==='주간'){
+      for(const s of secs) if(/추진실적/.test(s)&&!/전주/.test(s)&&!/및\s*계획/.test(s)) add('주의','보고서 구성',d.name,'▣ '+s,"주간보고의 실적 제목은 '▣ 전주 추진실적'으로 통일 필요");
+      for(const s of secs) if(/전주\s*추진실적\s*\(/.test(s)) add('참고','보고서 구성',d.name,'▣ '+s,'다른 부서와 달리 실적 제목에 괄호 설명이 붙어 있습니다');
+      if(!hasRes&&!hasCombined) add('주의','보고서 구성',d.name,'구성',"주간보고인데 '▣ 전주 추진실적'이 없습니다");
+      if(!secs.some(s=>/계획/.test(s))) add('주의','보고서 구성',d.name,'구성',"'▣ 추진계획'이 없습니다");
+    } else {
+      for(const s of secs) if(/전주\s*추진실적/.test(s)) add('오류','보고서 구성',d.name,'▣ '+s,`${cur.type} 보고는 추진실적 없이 추진계획만 작성해야 합니다`);
+      for(const it of (d.itemTables||[])) if(it.kind==='result'){ add('오류','보고서 구성',d.name,'실적 표',`${cur.type} 보고에 '추진실적' 표가 들어 있습니다`); break; }
+    }
+    // 표 머리글 처리일자/처리시한
+    const hdrSeen=new Set();
+    for(const it of (d.itemTables||[])){
+      const want=it.kind==='result'?'처리일자':it.kind==='plan'?'처리시한':null; if(!want) continue;
+      const key=it.kind+it.dateHdr; if(hdrSeen.has(key)) continue; hdrSeen.add(key);
+      if(!it.dateHdr) add('주의','처리일자·시한',d.name,it.kind==='result'?'실적 표':'계획 표',`표에 '${want}' 열이 없습니다`);
+      else if(it.dateHdr!==want) add('오류','처리일자·시한',d.name,(it.kind==='result'?'추진실적':'추진계획')+' 표 머리글',`'${it.dateHdr}' → '${want}'로 수정 (${it.kind==='result'?'실적은 처리일자':'계획은 처리시한'})`);
+      if(/실적/.test(it.heading)&&it.kind==='plan') add('주의','보고서 구성',d.name,'▣ '+it.heading,'실적 제목 아래에 계획 표가 있습니다');
+      if(/계획/.test(it.heading)&&!/실적/.test(it.heading)&&it.kind==='result') add('주의','보고서 구성',d.name,'▣ '+it.heading,'계획 제목 아래에 실적 표가 있습니다');
+    }
+    // 항목별 날짜
+    const styleCount={spaced:[],compact:[]};
+    for(const it of d.items){
+      const w=shortTitle(it.title);
+      if(!it.hasDateCell){ if(it.dateHdr) add('참고','처리일자·시한',d.name,w,`'${it.dateHdr}' 칸이 비어 있거나 병합되어 있습니다`); continue; }
+      const dt=(it.dateText||'').trim();
+      if(!dt){ add('참고','처리일자·시한',d.name,w,`'${it.dateHdr}' 칸이 비어 있습니다`); continue; }
+      const ds=datesIn(dt,Y);
+      for(const m of dt.matchAll(/(?<![\d.])(\d{1,2})\.\s?(\d{1,2})(?![\d.])/g)) add('주의','처리일자·시한',d.name,w,`날짜 끝 마침표 누락: '${m[0]}' → '${m[0]}.'`);
+      for(const x of ds){ if(/\.\s+\d/.test(x.raw)) styleCount.spaced.push(w+' '+x.raw.trim()); else styleCount.compact.push(w+' '+x.raw.trim()); }
+      if(!ds.length) continue;
+      const last=ds[ds.length-1];
+      if(it.kind==='result'&&repT!=null){
+        if(last.t>repT) add('주의','처리일자·시한',d.name,w,`실적인데 처리일자(${last.raw.trim()})가 보고일(${rep.m}. ${rep.d}.) 이후입니다 → 진행 중이면 '추진중' 표기 또는 계획으로 이동`);
+        else if(last.t<repT-21*DAY) add('참고','처리일자·시한',d.name,w,`전주 실적인데 처리일자(${last.raw.trim()})가 3주 이상 지났습니다`);
+      }
+      if(it.kind==='plan'&&mon!=null&&cur.type==='주간'){ if(last.t<mon) add('주의','처리일자·시한',d.name,w,`추진계획인데 처리시한(${last.raw.trim()})이 이번 주 이전입니다`); }
+      // 내용 속 일자와 처리일자 비교
+      const cd=datesIn(it.content,Y).filter(x=>x.m>=1);
+      if(cd.length && !cd.some(x=>x.t===last.t) && it.kind==='result') add('참고','처리일자·시한',d.name,w,`처리일자 ${last.raw.trim()}가 본문 일자(${[...new Set(cd.map(x=>fmtD(x.m,x.d)))].slice(0,4).join(', ')})에 없습니다`);
+    }
+    if(styleCount.spaced.length&&styleCount.compact.length){
+      const [minor,major]=styleCount.spaced.length<styleCount.compact.length?[styleCount.spaced,'붙여 쓰기(11.9.)']:[styleCount.compact,'띄어 쓰기(11. 9.)'];
+      add('참고','서식·표기',d.name,'처리일자·시한 표기',`부서 안에서 날짜 표기가 섞여 있습니다. 대부분 ${major}인데 다른 형식: ${minor.slice(0,6).join(' / ')}${minor.length>6?' 외':''}`);
+    }
+    // 글머리
+    const tri=(d.lines.join('\n').match(/▸/g)||[]).length, tri2=(d.lines.join('\n').match(/‣/g)||[]).length;
+    if(tri&&tri2) add('참고','서식·표기',d.name,'글머리 기호',`글머리 '▸'(${tri}개)와 '‣'(${tri2}개)가 섞여 있습니다`);
+    // 표 안의 '추진계획/추진실적' 행 일자 (SNS 홍보계획 등)
+    if(repT!=null&&cur.type==='주간'){
+      const all=[]; for(const {tbl} of d.tables) (function w(t){ for(const r of t.rows) for(const c of r) for(const b of c.blocks) if(b.k==='tbl'){ all.push([b.tbl,r]); w(b.tbl); } })(tbl);
+      for(const [t,parentRow] of all) for(const row of t.rows){
+        const lab=row[0]?nz(row[0].text):''; if(!/^(추진계획|추진실적|금주실적|전주실적)$/.test(lab)) continue;
+        const ds=datesIn(row.slice(1).map(c=>c.text).join(' '),Y); if(!ds.length) continue; const first=ds[0];
+        const nm=shortTitle((parentRow.find(c=>/○/.test(c.text))||{text:''}).text)||'표 안 일정';
+        if(/계획/.test(lab)&&first.t<mon) add('주의','처리일자·시한',d.name,nm,`'${row[0].text.trim()}'인데 일자(${first.raw.trim()})가 이번 주(${new Date(mon).getMonth()+1}. ${new Date(mon).getDate()}.~) 이전입니다`);
+        if(/실적/.test(lab)&&first.t>repT) add('주의','처리일자·시한',d.name,nm,`'${row[0].text.trim()}'인데 일자(${first.raw.trim()})가 보고일 이후입니다`);
+        if(lab==='금주실적'&&first.t<mon) add('참고','서식·표기',d.name,nm,`지난주 일자(${first.raw.trim()})인데 '금주실적'으로 표기 → '전주실적' 권장`);
+      }
+    }
+    // 개발사업부형 표: 실적·계획 행의 비고 일자
+    for(const {tbl} of (d.devTables||[])) for(const row of tbl.rows){
+      const lab=row.find(c=>/^(실\s*적|계\s*획|계\s*속)$/.test(c.text.trim())); if(!lab) continue;
+      const last=row[row.length-1]; const ds=datesIn(last.text,Y); if(!ds.length||repT==null) continue;
+      const nm=shortTitle((row.find(c=>/○/.test(c.text))||{text:''}).text)||'항목';
+      const isPlan=/계/.test(lab.text);
+      if(isPlan&&cur.type==='주간'){ const old=ds.filter(x=>x.t<mon&&!/~/.test(last.text)); if(old.length) add('참고','처리일자·시한',d.name,nm,`계획 행의 일자(${old.map(x=>x.raw.trim()).join(', ')})가 이번 주 이전입니다`); }
+    }
+  }
+  if(prev){ const pn=prev.depts.map(d=>d.name), cn=cur.depts.map(d=>d.name);
+    for(const n of pn) if(!cn.includes(n)) add('주의','보고서 구성',n,'부서','전주에는 있던 부서가 이번 주 보고서에 없습니다');
+    for(const n of cn) if(!pn.includes(n)) add('참고','보고서 구성',n,'부서','전주에 없던 부서입니다'); }
+}
+function shortTitle(t){ const s=(t||'').split(' / ').filter(x=>!/^\[[^\]]*\]$/.test(x.trim())).join(' ').replace(/○\s*/,'').replace(/\s+/g,' ').trim(); return s.length>40?s.slice(0,40)+'…':s; }
+
+/* 전주 계획 → 이번 주 실적 반영 */
+function checkCarry(cur,prev){
+  if(!prev||!prev.date||!cur.date||!WEEKLY_OK||cur.type!=='주간') return; const C='전주 계획 반영';
+  const pT=dval(prev.date.y,prev.date.m,prev.date.d), pMon=pT-((new Date(pT).getDay()+6)%7)*DAY;
+  const cT=dval(cur.date.y,cur.date.m,cur.date.d), cMon=cT-((new Date(cT).getDay()+6)%7)*DAY;
+  const pref=REF; REF={y:prev.date.y,m:prev.date.m};
+  for(const pd of prev.depts){
+    const cd=cur.depts.find(d=>d.name===pd.name); if(!cd) continue;
+    for(const it of pd.items){ if(it.kind!=='plan') continue;
+      const ds=datesIn(it.dateText||'',prev.year); if(!ds.length) continue; const last=ds[ds.length-1];
+      if(!(last.t>=pMon&&last.t<cMon)) continue;
+      const score=x=>{ const ts=sim(it.ntitle,x.ntitle), cs=it.content&&x.content? sim(nz(it.content).slice(0,120),nz(x.content).slice(0,120)):0;
+        if(it.content.length>40&&x.content.length>40&&cs<0.3) return Math.min(ts,cs+0.2); return Math.max(ts,cs*0.95); };
+      const best=(arr)=>arr.map(x=>[x,score(x)]).sort((a,b)=>b[1]-a[1])[0];
+      const r=best(cd.items.filter(x=>x.kind==='result')); const w=shortTitle(it.title);
+      if(r&&r[1]>=0.5){ const rd=datesIn(r[0].dateText||'',cur.year); const rl=rd[rd.length-1];
+        if(rl&&rl.t!==last.t&&ds.length===1&&rd.length===1) add('참고',C,cd.name,w,`전주 계획 ${last.raw.trim()} → 실적 ${rl.raw.trim()}로 일자가 바뀌었습니다 (실제 일자 확인)`); continue; }
+      const p=best(cd.items.filter(x=>x.kind==='plan'));
+      if(p&&p[1]>=0.5){ const nd=datesIn(p[0].dateText||'',cur.year); const nl=nd[nd.length-1];
+        add('주의',C,cd.name,w,`전주 계획(처리시한 ${last.raw.trim()})이 실적에 없고 이번 주 계획에 다시 있습니다${nl?` (→ ${nl.raw.trim()})`:''} — 지연이면 사유 기재`); continue; }
+      add('주의',C,cd.name,w,`전주 계획(처리시한 ${last.raw.trim()})이 이번 주 '전주 추진실적'에 없습니다 — 실적 누락 또는 미추진 여부 확인`);
+    }
+    // 실적 내용이 전주 실적과 똑같은 경우
+    for(const it of cd.items){ if(it.kind!=='result'||!it.content||it.content.length<30) continue;
+      if(pd.items.some(x=>x.kind==='result'&&x.content===it.content)) add('주의','누계·전주 비교',cd.name,shortTitle(it.title),'실적 내용이 전주 실적과 글자 하나까지 같습니다 (복사 후 수정 누락?)'); }
+  }
+  REF=pref;
+}
+
+/* 표 안 계·누계·증감 */
+function grid(tbl){ return tbl.rows.map(r=>{ const m={}; for(const c of r) m[c.col]=c; return m; }); }
+function checkTableMath(dept,tbl,where){
+  const C='표 합계'; const G=grid(tbl); const rows=tbl.rows;
+  const TOT=/^(계|합계|총계)$/;
+  const labels=rows.map(r=>r[0]?nz(r[0].text):'');
+  const timeRows=labels.some(l=>/^(소계|누계|금주|전주)$/.test(l));
+  // 열 방향: '계' 행 = 다른 행 합
+  if(!timeRows) for(let i=0;i<rows.length;i++){ if(!TOT.test(labels[i])) continue;
+    for(const c of rows[i]){ if(c===rows[i][0]) continue; const v=num(c.text); if(v==null||isPct(c.text)) continue;
+      let s=0,n=0,parts=[]; for(let j=0;j<rows.length;j++){ if(j===i||TOT.test(labels[j])) continue; const x=G[j][c.col]; if(!x) continue; const xv=num(x.text); if(xv==null||isPct(x.text)) continue; if(x.cs!==c.cs) continue; s+=xv;n++;parts.push(x.text.trim()); }
+      if(n>=2&&Math.abs(s-v)>0.001) add('오류',C,dept,where,`'${rows[i][0].text.trim()}' 행 값 ${c.text.trim()} ≠ 나머지 행 합 ${f0(s)}`,parts.join(' + ')); } }
+  // 행 방향: 머리글의 '계' 열 = 같은 묶음의 다른 열 합
+  for(let h=0;h<rows.length;h++){
+    const hr=rows[h]; if(hr.some(c=>num(c.text)!=null&&c.text.trim()!=='')) continue;
+    const tc=hr.find(c=>TOT.test(nz(c.text))); if(!tc) continue;
+    let lo=tc.col+tc.cs, hi=Infinity;
+    for(let k=h-1;k>=0;k--){ const par=rows[k].find(c=>c.col<=tc.col&&tc.col<c.col+c.cs&&c.cs>tc.cs); if(par){ hi=par.col+par.cs; break; } }
+    const groups=tc.cs>1?hr.filter(c=>c!==tc&&c.cs===tc.cs&&c.col>=lo&&c.col<hi&&!/^(구분|비고)$/.test(nz(c.text))):null;
+    const excl=new Set(); for(let k=0;k<=h;k++) for(const c of rows[k]) if(/^(비고|구분)$/.test(nz(c.text))) for(let q=c.col;q<c.col+c.cs;q++) excl.add(q);
+    for(let j=h+1;j<rows.length;j++){
+      for(let o=0;o<tc.cs;o++){
+        const tcell=G[j][tc.col+o]; if(!tcell) continue; const tv=num(tcell.text); if(tv==null||isPct(tcell.text)||tcell.text.trim()==='-') continue;
+        let s=0,n=0,parts=[],bad=false;
+        if(groups){ for(const g of groups){ const x=G[j][g.col+o]; if(!x){bad=true;break;} const xv=num(x.text); if(xv==null){bad=true;break;} s+=xv;n++;parts.push(x.text.trim()); } }
+        else { for(const [col,x] of Object.entries(G[j])){ const cc=+col; if(cc<lo||cc>=hi||excl.has(cc)) continue; const xv=num(x.text); if(xv==null||isPct(x.text)) { if(x.text.trim()&&!/^[-–]$/.test(x.text.trim())) {bad=true;break;} continue; } s+=xv;n++;parts.push(x.text.trim()); } }
+        if(!bad&&n>=2&&Math.abs(s-tv)>0.001){ const rl=G[j][0]?G[j][0].text.trim():''; add('오류',C,dept,where,`${rl?"'"+rl+"' 행의 ":''}'${tc.text.trim()}' ${tcell.text.trim()} ≠ 항목 합 ${f0(s)} (차이 ${f0(tv-s)})`,parts.join(' + ')); }
+      }
+    }
+  }
+  // 증감 열 = 앞의 두 열 차이
+  for(let h=0;h<rows.length;h++){ const hr=rows[h]; const dc=hr.find(c=>/^증감(액)?$/.test(nz(c.text))); if(!dc) continue;
+    const idx=hr.indexOf(dc); if(idx<2) continue; const a=hr[idx-2], b=hr[idx-1]; const rc=hr[idx+1]&&/증감[률율]/.test(nz(hr[idx+1].text))?hr[idx+1]:null;
+    for(let j=h+1;j<rows.length;j++){ const A=G[j][a.col],B=G[j][b.col],D=G[j][dc.col]; if(!A||!B||!D) continue;
+      const av=num(A.text),bv=num(B.text),dv=num(D.text); const rl=G[j][0]?G[j][0].text.trim():'';
+      if(av!=null&&A.text.trim()!=='-'&&(B.text.trim()==='-'||B.text.trim()==='')&&(D.text.trim()==='-'||D.text.trim()==='')){ add('주의',C,dept,where,`'${nz(b.text)}'·'${nz(dc.text)}' 칸이 비어 있습니다 (${nz(a.text)} ${A.text.trim()})`,'전주 값을 넣고 증감을 계산해 주세요'); continue; }
+      if(av==null||bv==null||dv==null) continue;
+      if(Math.abs(av-bv-dv)>0.001) add('오류',C,dept,where,`${rl?"'"+rl+"' ":''}증감 ${D.text.trim()} ≠ ${A.text.trim()} − ${B.text.trim()} = ${f0(av-bv)}`);
+      if(rc&&bv){ const R=G[j][rc.col]; const rv=R?num(R.text):null; if(rv!=null){ const calc=Math.round((av-bv)/bv*1000)/10; if(Math.abs(calc-rv)>0.051) add('오류',C,dept,where,`${rl?"'"+rl+"' ":''}증감률 ${R.text.trim()} → ${calc.toFixed(1)}`); } }
+    } }
+}
+function checkDeptTables(cur,prev){
+  for(const d of cur.depts){
+    for(const it of d.items){ if(!it.contentCell) continue; const w=shortTitle(it.title);
+      for(const t of nestedTables(it.contentCell)) checkTableMath(d.name,t,w); }
+    for(const {tbl} of d.tables){ const hn=nz((tbl.rows[0]||[]).map(c=>c.text).join('')); if(hn.startsWith('업무내용')) continue;
+      const all=[]; (function w(t){ all.push(t); for(const r of t.rows) for(const c of r) for(const b of c.blocks) if(b.k==='tbl') w(b.tbl); })(tbl);
+      for(const t of all) if(t!==tbl||!/구분사업추진내용/.test(hn)) checkTableMath(d.name,t,'표'); }
+  }
+  // 누계 = 전주 누계 + 금주
+  if(!prev||!WEEKLY_OK) return;
+  for(const d of cur.depts){ const pd=prev.depts.find(x=>x.name===d.name); if(!pd) continue;
+    for(const it of d.items){ if(!it.contentCell) continue; const ts=nestedTables(it.contentCell).filter(t=>t.rows.some(r=>r[0]&&nz(r[0].text)==='누계')); if(!ts.length) continue;
+      const cand=pd.items.map(x=>[x,sim(it.ntitle,x.ntitle)]).sort((a,b)=>b[1]-a[1])[0]; if(!cand||cand[1]<0.7) continue;
+      const pts=cand[0].contentCell?nestedTables(cand[0].contentCell).filter(t=>t.rows.some(r=>r[0]&&nz(r[0].text)==='누계')):[];
+      ts.forEach((t,k)=>{ const p=pts[k]; if(!p) return; const w=shortTitle(it.title)+(ts.length>1?` (표 ${k+1})`:'');
+        const row=(tb,l)=>{ const r=tb.rows.find(r=>r[0]&&nz(r[0].text)===l); if(!r) return null; const m={}; for(const c of r.slice(1)) m[c.col]=c; return m; };
+        const hdr=(tb,col)=>{ let s=[]; for(const r of tb.rows){ if(r[0]&&/^(누계|금주)$/.test(nz(r[0].text))) break; const c=r.find(c=>c.col<=col&&col<c.col+c.cs); if(c&&nz(c.text)&&!s.includes(nz(c.text))) s.push(nz(c.text)); } return s.join('·')||('열'+col); };
+        const cC=row(t,'누계'), cW=row(t,'금주'), pC=row(p,'누계'); if(!cC||!pC) return;
+        const cols=Object.keys(cC).map(Number); const vals=cols.map(c=>[num(cC[c].text),pC[c]?num(pC[c].text):null]);
+        if(vals.every(([a,b])=>a!=null&&a===b)) { add('주의','누계·전주 비교',d.name,w,`누계가 전주와 같습니다 (${cols.map(c=>cC[c].text.trim()).join(', ')}) — 실적이 없으면 '금주 0'으로 표기, 있으면 누계 갱신`); return; }
+        if(!cW) return; const bad=[];
+        for(const c of cols){ const a=num(cC[c].text), b=pC[c]?num(pC[c].text):null, x=cW[c]?num(cW[c].text):null; if(a==null||b==null||x==null) continue; if(b+x!==a) bad.push(`${hdr(t,c)}: 전주 ${f0(b)} + 금주 ${f0(x)} = ${f0(b+x)} ≠ 누계 ${f0(a)} (차 ${f0(a-b-x)})`); }
+        if(bad.length) add('주의','누계·전주 비교',d.name,w,`누계가 '전주 누계 + 금주'와 맞지 않습니다 (${bad.length}개 열)`,bad.join('\n'));
+      });
+    } }
+}
+
+/* 전체 텍스트: 요일·날짜·기간·표기 */
+function allLines(doc){ const out=[]; const fl=[]; for(const b of doc.blocks){ /* front까지 */ }
+  let dept='공통 현황';
+  for(const b of doc.blocks){ const ls=blockLines([b]); for(const l of ls){ const m=l.match(/【\s*([^】\d][^】]*?)\s*】/); if(m) dept=m[1].replace(/\s+/g,''); out.push([dept,l]); } }
+  return out; }
+function checkText(doc){
+  const Y=doc.year; const seen=new Set();
+  const once=(k,f)=>{ if(seen.has(k)) return; seen.add(k); f(); };
+  for(const [dept,l] of allLines(doc)){
+    // 요일
+    const re=/(?:(20\d\d)\.\s*)?(?<![\d.])(\d{1,2})\.\s{0,2}(\d{1,2})\.?\s*\(\s*([월화수목금토일])\s*\)/g; let m, lastY=null, lastM=null;
+    const yAll=[...l.matchAll(/(20\d\d)\.\s*\d{1,2}\./g)];
+    while((m=re.exec(l))){
+      const mo=+m[2], d=+m[3], w=m[4];
+      let y=m[1]?+m[1]:null, cands;
+      if(!y){ const prior=yAll.filter(x=>x.index<m.index).pop(); const between=prior?l.slice(prior.index,m.index):'';
+        if(prior&&between.length<40&&!/\s\/\s|│|\|/.test(between)) y=+prior[1]; }
+      if(y) cands=[y]; else { y=guessYear(Y,mo); cands=[...new Set([y,Y])]; }
+      lastM=mo; const real=dowOf(y,mo,d);
+      if(!real) { once('nd'+dept+mo+'.'+d,()=>add('오류','날짜·요일',dept,ctx(l,m.index),`존재하지 않는 날짜: ${mo}. ${d}.`)); continue; }
+      if(real!==w){ const alt=cands.some(yy=>dowOf(yy,mo,d)===w); if(!alt) once('w'+dept+y+mo+d+w,()=>add('오류','날짜·요일',dept,ctx(l,m.index),`${mo}. ${d}.(${w}) → 실제 ${real}요일`,`${y}년 기준`)); }
+    }
+    const re2=/~\s*(\d{1,2})\.\s*\(\s*([월화수목금토일])\s*\)/g;
+    while((m=re2.exec(l))){ const before=[...l.slice(0,m.index).matchAll(/(\d{1,2})\.\s{0,2}\d{1,2}\.?\s*\(/g)].pop(); if(!before) continue; const mo=+before[1], d=+m[1]; const y=guessYear(Y,mo); const real=dowOf(y,mo,d); if(real&&real!==m[2]) once('w2'+dept+mo+d,()=>add('오류','날짜·요일',dept,ctx(l,m.index),`${mo}. ${d}.(${m[2]}) → 실제 ${real}요일`)); }
+    // 존재하지 않는 날짜 (요일 없는 것)
+    for(const x of l.matchAll(/(?<![\d.])(\d{1,2})\.\s?(\d{1,2})\.(?!\d)/g)){ const mo=+x[1],d=+x[2]; if(mo>=1&&mo<=12&&d>=1&&!dowOf(2024,mo,d)&&!(mo===2&&d===29)) once('nd'+dept+mo+'.'+d,()=>add('오류','날짜·요일',dept,ctx(l,x.index),`존재하지 않는 날짜: ${x[0]}`)); }
+    // 요일 괄호 앞 마침표 누락
+    for(const x of l.matchAll(/(?<![\d.])(\d{1,2})\.\s?(\d{1,2})\(\s*[월화수목금토일]\s*\)/g)) once('dot'+dept+x[0],()=>add('주의','서식·표기',dept,ctx(l,x.index),`마침표 누락: '${x[0]}' → '${x[0].replace(/(\d)\(/,'$1.(')}'`));
+    // 기간 역전
+    for(const x of l.matchAll(/(?<![\d.])(\d{1,2})\.\s?(\d{1,2})\.?\s*(?:\([월화수목금토일]\))?\s*~\s*(\d{1,2})\.\s?(\d{1,2})\./g)){ const a=[+x[1],+x[2]],b=[+x[3],+x[4]]; if(a[0]>12||b[0]>12) continue; const at=a[0]*40+a[1], bt=b[0]*40+b[1]; if(bt<at&&!(a[0]>=10&&b[0]<=3)) once('rev'+dept+x[0],()=>add('오류','날짜·요일',dept,ctx(l,x.index),`기간이 거꾸로 되어 있습니다: '${x[0]}'`)); }
+    // 기간 일수
+    for(const x of l.matchAll(/(?<![\d.])(\d{1,2})\.\s?(\d{1,2})\.?(?:\s*\([월화수목금토일]\))?\s*~\s*(?:(\d{1,2})\.\s?)?(\d{1,2})\.?(?:일)?(?:\s*\([월화수목금토일]\))?[^()〔〕\d]{0,8}[(〔,]\s*(\d{1,3})\s*일(?:간)?/g)){
+      const m1=+x[1],d1=+x[2],m2=x[3]?+x[3]:m1,d2=+x[4],N=+x[5]; if(m1>12||m2>12) continue; const ya=guessYear(Y,m1); const yb=m2<m1?ya+1:ya; if(!dowOf(ya,m1,d1)||!dowOf(yb,m2,d2)) continue;
+      const days=Math.round((dval(yb,m2,d2)-dval(ya,m1,d1))/DAY)+1; if(days!==N) once('dur'+dept+x[0],()=>add('주의','날짜·요일',dept,ctx(l,x.index),`기간 ${m1}. ${d1}.~${m2}. ${d2}.은 ${days}일인데 '${N}일'로 표기 (평일·운영일·휴장일만 센 것이면 '평일 N일'처럼 표현 보완)`)); }
+    // 낱자
+    for(const x of l.matchAll(/[ㄱ-ㅣ]/g)) once('jamo'+dept+l,()=>add('주의','맞춤법·오탈자',dept,ctx(l,x.index),`낱자 '${x[0]}'가 들어 있습니다 (오타 의심)`));
+    // 율/률
+    for(const x of l.matchAll(/([가-힣]*)([가-힣])(율|률)/g)){ const code=x[2].charCodeAt(0)-0xAC00; const jong=code%28; const want=(jong===0||jong===4)?'율':'률'; if(x[3]!==want) once('yul'+x[0],()=>add('참고','맞춤법·오탈자',dept,ctx(l,x.index),`'${x[0]}' → '${x[1]}${x[2]}${want}' (받침 있으면 '률', 없거나 ㄴ이면 '율')`)); }
+    // 및 띄어쓰기
+    for(const x of l.matchAll(/및(?=[가-힣])/g)) once('mit'+dept+l.slice(x.index,x.index+6),()=>add('참고','맞춤법·오탈자',dept,ctx(l,x.index),`'및' 뒤 띄어쓰기: '${l.slice(Math.max(0,x.index-3),x.index+5)}'`));
+    // 괄호 짝
+    for(const x of l.matchAll(/\[[^\]\n〔〕]{1,30}〕|〔[^〕\n\[\]]{1,30}\]/g)) once('br'+x[0],()=>add('참고','맞춤법·오탈자',dept,ctx(l,x.index),`괄호 짝이 맞지 않습니다: '${x[0]}'`));
+  }
+  // 용어 혼용
+  const txt=allLines(doc).map(x=>x[1]).join('\n');
+  for(const grp of TERM_GROUPS){ const found=grp.map(t=>[t,(txt.match(new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'))||[]).length]).filter(x=>x[1]>0);
+    if(found.length>1) add('참고','맞춤법·오탈자','전체',`용어 통일`,`같은 뜻의 표기가 섞여 있습니다: ${found.map(([t,n])=>`'${t}' ${n}회`).join(', ')}`); }
+}
+// 같은 뜻 다른 표기 (필요하면 여기에 추가)
+const TERM_GROUPS=[
+  ['베트남참전기념비','베트남참전기념탑'],
+  ['추진완료','추진 완료','처리완료','처리 완료','기 완료','旣 완료'],
+  ['주간 업무보고','주간업무보고'],
+];
+function ctx(l,i){ const s=l.replace(/^\|\s*/,''); const k=Math.max(0,i-18); return (k>0?'…':'')+l.slice(k,i+22).replace(/\s*\|\s*/g,' │ ').replace(/\s+/g,' ').trim()+'…'; }
+
+/* ============================================================
+   4. 실행 · 화면
+   ============================================================ */
+const st={cur:null,prev:null,curFile:null,prevFile:null,rev:null,view:'cat',sevOff:new Set()};
+const $=id=>document.getElementById(id);
+function msg(t){ const m=$('msg'); m.textContent=t||''; m.classList.toggle('show',!!t); }
+function docMeta(d){ return `${d.date?`${d.date.y}. ${d.date.m}. ${d.date.d}.`:'일자 미확인'} · ${d.type} · ${d.depts.length}개 부서`; }
+async function setFile(which,file){
+  msg('');
+  try{ const doc=await loadHwpx(file); st[which]=doc;
+    $(which==='cur'?'nameCur':'namePrev').textContent=file.name; $(which==='cur'?'metaCur':'metaPrev').textContent=docMeta(doc);
+    $(which==='cur'?'dropCur':'dropPrev').classList.add('loaded');
+  }catch(e){ st[which]=null; msg(e.message); }
+  $('runBtn').disabled=!st.cur;
+}
+function setupDrop(dropId,inputId,which){
+  const dz=$(dropId), inp=$(inputId);
+  inp.addEventListener('change',()=>{ if(inp.files[0]) setFile(which,inp.files[0]); });
+  ['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('over');}));
+  ['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('over');}));
+  dz.addEventListener('drop',async ev=>{ const fs=[...ev.dataTransfer.files]; if(fs.length>=2&&which==='cur'){ await setFile('cur',fs[0]); await setFile('prev',fs[1]); autoSwap(); } else if(fs[0]) setFile(which,fs[0]); });
+}
+function autoSwap(){ const a=st.cur,b=st.prev; if(a&&b&&a.date&&b.date&&dval(a.date.y,a.date.m,a.date.d)<dval(b.date.y,b.date.m,b.date.d)){ st.cur=b; st.prev=a;
+  const n1=$('nameCur').textContent; $('nameCur').textContent=$('namePrev').textContent; $('namePrev').textContent=n1; $('metaCur').textContent=docMeta(st.cur); $('metaPrev').textContent=docMeta(st.prev); msg('두 파일의 날짜를 보고 이번 주/지난주를 자동으로 바꿔 넣었습니다.'); } }
+setupDrop('dropCur','fileCur','cur'); setupDrop('dropPrev','filePrev','prev');
+
+function run(){
+  autoSwap(); F=[]; const cur=st.cur, prev=st.prev;
+  if(prev&&cur.date&&prev.date&&dval(prev.date.y,prev.date.m,prev.date.d)>=dval(cur.date.y,cur.date.m,cur.date.d)) msg('지난주 파일의 날짜가 이번 주보다 늦거나 같습니다. 파일을 확인해 주세요.');
+  REF=cur.date?{y:cur.date.y,m:cur.date.m}:null; WEEKLY_OK=true;
+  if(prev&&cur.date&&prev.date){ const gap=Math.round((dval(cur.date.y,cur.date.m,cur.date.d)-dval(prev.date.y,prev.date.m,prev.date.d))/DAY);
+    if(gap>10){ WEEKLY_OK=false; add('참고','보고서 구성','','비교 대상',`두 보고서의 간격이 ${gap}일입니다. 바로 전주 보고서가 아니어서 '금주실적 = 누계 증가분', 전주 계획 반영, 표 안 누계 비교는 생략했습니다.`); } }
+  if(prev&&cur.type!=='주간') add('참고','보고서 구성','','비교 대상',`이번 보고서가 ${cur.type} 보고(추진계획만 작성)라서 '전주 계획 → 실적 반영' 점검은 생략했습니다.`);
+  try{
+    st.rev=checkRevenue(cur,prev); checkCivil(cur,prev); checkSNS(cur,prev); checkAudit(cur);
+    checkDepts(cur,prev); checkCarry(cur,prev); checkDeptTables(cur,prev); checkText(cur);
+  }catch(e){ console.error(e); msg('검토 중 오류가 발생했습니다: '+e.message+' (서식이 많이 다른 문서일 수 있습니다)'); }
+  // 중복 제거
+  const u=new Set(); F=F.filter(f=>{ const k=[f.sev,f.cat,f.dept,f.where,f.msg].join('|'); if(u.has(k)) return false; u.add(k); return true; });
+  const order={'오류':0,'주의':1,'참고':2}; F.sort((a,b)=>order[a.sev]-order[b.sev]);
+  render(); $('xlsxBtn').disabled=false; $('printBtn').disabled=false;
+  $('result').style.display='block'; $('result').scrollIntoView({behavior:'smooth',block:'start'});
+}
+$('runBtn').addEventListener('click',run);
+$('resetBtn').addEventListener('click',()=>location.reload());
+$('printBtn').addEventListener('click',()=>{ document.querySelectorAll('details.group').forEach(d=>d.open=true); window.print(); });
+
+const CAT_ORDER=['수입금','수입금(전주 대비)','수입금 증감내역','민원 현황','SNS 시민소통','행감 지적사항','보고서 구성','처리일자·시한','날짜·요일','전주 계획 반영','누계·전주 비교','표 합계','서식·표기','맞춤법·오탈자'];
+function deptOrder(){ const a=['공통 현황']; if(st.cur) for(const d of st.cur.depts) a.push(d.name); a.push('전체'); return a; }
+function render(){
+  const cur=st.cur, prev=st.prev;
+  const cd=cur.front.revDate, pd=prev&&prev.front.revDate;
+  $('infoGrid').innerHTML=[
+    ['이번 주 보고서',`${cur.date?`${cur.date.y}. ${cur.date.m}. ${cur.date.d}.`:'-'} (${cur.type})`],
+    ['지난주 보고서',prev?`${prev.date?`${prev.date.y}. ${prev.date.m}. ${prev.date.d}.`:'-'} (${prev.type})`:'없음 — 전주 대비 점검 생략'],
+    ['수입금 기준일',`${cd?`${cd.m}. ${cd.d}.`:'-'}${pd?` (전주 ${pd.m}. ${pd.d}.)`:''}`],
+    ['검토 부서',`${cur.depts.length}개 부서`]
+  ].map(([k,v])=>`<div class="card"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join('');
+  $('cntErr').textContent=F.filter(f=>f.sev==='오류').length; $('cntWarn').textContent=F.filter(f=>f.sev==='주의').length; $('cntInfo').textContent=F.filter(f=>f.sev==='참고').length;
+  const cats=CAT_ORDER.filter(c=>F.some(f=>f.cat===c)); $('fCat').innerHTML='<option value="">전체 분류</option>'+cats.map(c=>`<option>${c}</option>`).join('');
+  const depts=[...new Set(F.map(f=>f.dept))].sort((a,b)=>dIdx(a)-dIdx(b)); $('fDept').innerHTML='<option value="">전체 부서</option>'+depts.map(c=>`<option>${esc(c)}</option>`).join('');
+  renderFindings(); renderRev();
+}
+function dIdx(n){ const o=deptOrder(); const i=o.indexOf(n); return i<0?o.length:i; }
+function filtered(){ const c=$('fCat').value, d=$('fDept').value, q=$('fText').value.trim(); return F.filter(f=>!st.sevOff.has(f.sev)&&(!c||f.cat===c)&&(!d||f.dept===d)&&(!q||[f.cat,f.dept,f.where,f.msg,f.detail].join(' ').includes(q))); }
+function renderFindings(){
+  const list=filtered(); const box=$('findings');
+  if(!list.length){ box.innerHTML=`<div class="empty">${F.length?'조건에 맞는 항목이 없습니다.':'발견된 문제가 없습니다.'}</div>`; return; }
+  const key=st.view==='cat'?'cat':'dept'; const groups={};
+  for(const f of list) (groups[f[key]]=groups[f[key]]||[]).push(f);
+  const names=Object.keys(groups).sort((a,b)=>key==='cat'?CAT_ORDER.indexOf(a)-CAT_ORDER.indexOf(b):dIdx(a)-dIdx(b));
+  const sevCls={'오류':'err','주의':'warn','참고':'info'};
+  box.innerHTML=names.map(n=>{ const g=groups[n]; const c=s=>g.filter(f=>f.sev===s).length;
+    const mini=['오류','주의','참고'].filter(s=>c(s)).map(s=>`<span class="pill ${sevCls[s]}">${s} ${c(s)}</span>`).join('');
+    return `<details class="group" open><summary>${esc(n)} <span class="cnt">${g.length}건</span><span class="mini">${mini}</span></summary>${g.map(f=>`<div class="f"><span class="badge ${sevCls[f.sev]}">${f.sev}</span><div><div class="where">${esc(f.where||'-')}<span class="sub">${esc(key==='cat'?f.dept:f.cat)}</span></div><div class="msg2">${esc(f.msg)}</div>${f.detail?`<div class="detail">${esc(f.detail)}</div>`:''}</div></div>`).join('')}</details>`; }).join('');
+}
+function renderRev(){
+  const T=$('revTable'); const R=st.rev&&st.rev.R; if(!R){ T.innerHTML=''; $('revNote').textContent='수입금 현황 표를 찾지 못했습니다.'; return; }
+  const hasP=!!(st.rev.P);
+  $('revNote').textContent=hasP?'이번 주 누계 − 지난주 누계 = 누계 증가분. 금주실적과 다르거나 0이면 색으로 표시합니다.':'지난주 보고서를 넣으면 전주 누계와 비교한 값이 표시됩니다.';
+  let h=`<tr><th>구분</th><th>목표</th>${hasP?'<th>전주 누계</th>':''}<th>금주실적</th><th>이번 주 누계</th>${hasP?'<th>누계 증가분</th><th>차이</th>':''}<th>전년 누계</th><th>증감액(표기)</th><th>증감액(계산)</th><th>판정</th></tr>`;
+  for(const r of R){ const calc=r.cum-r.py; const dOk=r.diff===calc; const inc=r.inc; const gap=inc!=null&&r.wk!=null?inc-r.wk:null;
+    let verdict='정상', cls='ok';
+    if(!dOk){verdict='증감액 오류';cls='bad';} else if(hasP&&r.prev&&inc===0){verdict='누계 동일';cls='wn';} else if(hasP&&r.prev&&inc<0){verdict='누계 감소';cls='bad';} else if(gap&&Math.abs(gap)>1){verdict='금주실적 차이';cls='wn';}
+    h+=`<tr class="${r.isSub||r.isTotal?'sub':''}"><td class="l">${esc(r.display)}</td><td>${f0(r.tgt)}</td>${hasP?`<td>${r.prev?f0(r.prev.cum):'-'}</td>`:''}<td>${f0(r.wk)}</td><td>${f0(r.cum)}</td>${hasP?`<td class="${inc===0?'wn':inc<0?'bad':''}">${r.prev?f0(inc):'-'}</td><td class="${gap&&Math.abs(gap)>1?'wn':''}">${gap==null||!r.prev?'-':gap===0?'0':f0(gap)}</td>`:''}<td>${f0(r.py)}</td><td class="${dOk?'':'bad'}">${esc(r.raw[5])}</td><td>${f0(calc)}</td><td class="${cls}">${verdict}</td></tr>`; }
+  T.innerHTML=h;
+}
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.querySelectorAll('.sev-card').forEach(c=>c.addEventListener('click',()=>{ const s=c.dataset.sev; if(st.sevOff.has(s)) st.sevOff.delete(s); else st.sevOff.add(s); c.classList.toggle('off',st.sevOff.has(s)); renderFindings(); }));
+document.querySelectorAll('#viewSeg button').forEach(b=>b.addEventListener('click',()=>{ st.view=b.dataset.view; document.querySelectorAll('#viewSeg button').forEach(x=>x.classList.toggle('on',x===b)); renderFindings(); }));
+['fCat','fDept'].forEach(id=>$(id).addEventListener('change',renderFindings)); $('fText').addEventListener('input',renderFindings);
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t)); $('pane-findings').style.display=t.dataset.tab==='findings'?'':'none'; $('pane-rev').style.display=t.dataset.tab==='rev'?'':'none'; }));
+$('themeBtn').addEventListener('click',()=>{ const r=document.documentElement; const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches; r.dataset.theme=dark?'light':'dark'; });
+
+/* ============================================================
+   5. 엑셀(.xlsx) 저장 — 라이브러리 없이 직접 생성
+   ============================================================ */
+const CRC=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(u){ let c=0xFFFFFFFF; for(let i=0;i<u.length;i++) c=CRC[(c^u[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function zipStore(files){
+  const enc=new TextEncoder(); const parts=[], cent=[]; let off=0;
+  for(const f of files){ const name=enc.encode(f.name), data=typeof f.data==='string'?enc.encode(f.data):f.data, crc=crc32(data);
+    const lh=new DataView(new ArrayBuffer(30)); lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true); lh.setUint32(14,crc,true); lh.setUint32(18,data.length,true); lh.setUint32(22,data.length,true); lh.setUint16(26,name.length,true);
+    parts.push(new Uint8Array(lh.buffer),name,data);
+    const ch=new DataView(new ArrayBuffer(46)); ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint32(16,crc,true); ch.setUint32(20,data.length,true); ch.setUint32(24,data.length,true); ch.setUint16(28,name.length,true); ch.setUint32(42,off,true);
+    cent.push(new Uint8Array(ch.buffer),name); off+=30+name.length+data.length; }
+  const csz=cent.reduce((a,b)=>a+b.length,0); const e=new DataView(new ArrayBuffer(22)); e.setUint32(0,0x06054b50,true); e.setUint16(8,files.length,true); e.setUint16(10,files.length,true); e.setUint32(12,csz,true); e.setUint32(16,off,true);
+  return new Blob([...parts,...cent,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+const xe=s=>String(s==null?'':s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const colL=i=>{ let s=''; i++; while(i){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26);} return s; };
+function sheetXml(rows,widths,opt){ // rows: [[{v,s}]]
+  let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+  x+='<sheetViews><sheetView workbookViewId="0">'+(opt.freeze?`<pane ySplit="${opt.freeze}" topLeftCell="A${opt.freeze+1}" activePane="bottomLeft" state="frozen"/>`:'')+'</sheetView></sheetViews>';
+  x+='<cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols><sheetData>';
+  rows.forEach((r,ri)=>{ x+=`<row r="${ri+1}">`; r.forEach((c,ci)=>{ if(c==null) return; const ref=colL(ci)+(ri+1); const s=c.s||0;
+    if(typeof c.v==='number'&&isFinite(c.v)) x+=`<c r="${ref}" s="${s}"><v>${c.v}</v></c>`; else x+=`<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xe(c.v)}</t></is></c>`; }); x+='</row>'; });
+  x+='</sheetData>'+(opt.filter?`<autoFilter ref="${opt.filter}"/>`:'')+(opt.merge?`<mergeCells count="${opt.merge.length}">${opt.merge.map(m=>`<mergeCell ref="${m}"/>`).join('')}</mergeCells>`:'')+'<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>';
+  return x;
+}
+function buildXlsx(){
+  const cur=st.cur, prev=st.prev; const S={hdr:1,txt:2,err:3,warn:4,info:5,num:6,title:7,numB:8,txtB:9,bad:10,wn:11};
+  const sevS={'오류':S.err,'주의':S.warn,'참고':S.info};
+  const dstr=d=>d&&d.date?`${d.date.y}. ${d.date.m}. ${d.date.d}.`:'-';
+  // 시트1 검토결과
+  const r1=[[{v:`주간업무보고 검토결과 — ${dstr(cur)} (${cur.type})${prev?` / 비교: ${dstr(prev)}`:''}`,s:S.title}],
+    [{v:`오류 ${F.filter(f=>f.sev==='오류').length}건 · 주의 ${F.filter(f=>f.sev==='주의').length}건 · 참고 ${F.filter(f=>f.sev==='참고').length}건   (이번 주: ${cur.fileName}${prev?` / 지난주: ${prev.fileName}`:''})`,s:S.txt}],
+    ['번호','심각도','분류','부서','위치 / 항목','내용','근거 · 계산'].map(v=>({v,s:S.hdr}))];
+  const sorted=[...F].sort((a,b)=>({'오류':0,'주의':1,'참고':2}[a.sev]-{'오류':0,'주의':1,'참고':2}[b.sev])||CAT_ORDER.indexOf(a.cat)-CAT_ORDER.indexOf(b.cat)||dIdx(a.dept)-dIdx(b.dept));
+  sorted.forEach((f,i)=>r1.push([{v:i+1,s:S.num},{v:f.sev,s:sevS[f.sev]},{v:f.cat,s:S.txt},{v:f.dept,s:S.txt},{v:f.where,s:S.txt},{v:f.msg,s:S.txt},{v:f.detail,s:S.txt}]));
+  const sh1=sheetXml(r1,[6,8,16,16,30,70,45],{freeze:3,filter:`A3:G${r1.length}`,merge:['A1:G1','A2:G2']});
+  // 시트2 수입금
+  const R=st.rev&&st.rev.R||[]; const hasP=!!(st.rev&&st.rev.P);
+  const hdr2=['구분','목표','전주 누계','금주실적','이번 주 누계','누계 증가분','차이(증가분−금주)','전년 누계','증감액(표기)','증감액(계산)','판정'];
+  const r2=[[{v:`수입금 전주 대비 — 기준일 ${cur.front.revDate?`${cur.front.revDate.m}. ${cur.front.revDate.d}.`:'-'}${hasP&&prev.front.revDate?` (전주 ${prev.front.revDate.m}. ${prev.front.revDate.d}.)`:''}  (단위: 천원)`,s:S.title}],hdr2.map(v=>({v,s:S.hdr}))];
+  for(const r of R){ const calc=r.cum-r.py, inc=r.inc, gap=inc!=null&&r.wk!=null?inc-r.wk:null; const b=r.isSub||r.isTotal;
+    let verdict='정상',vs=b?S.txtB:S.txt; if(r.diff!==calc){verdict='증감액 오류';vs=S.bad;} else if(hasP&&r.prev&&inc===0){verdict='누계 동일';vs=S.wn;} else if(hasP&&r.prev&&inc<0){verdict='누계 감소';vs=S.bad;} else if(gap&&Math.abs(gap)>1){verdict='금주실적 차이';vs=S.wn;}
+    const n=v=>({v:v==null?'':v,s:b?S.numB:S.num});
+    r2.push([{v:r.display,s:b?S.txtB:S.txt},n(r.tgt),n(r.prev?r.prev.cum:null),n(r.wk),n(r.cum),r.prev?{v:inc,s:inc===0?S.wn:inc<0?S.bad:(b?S.numB:S.num)}:n(null),r.prev?{v:gap,s:gap&&Math.abs(gap)>1?S.wn:(b?S.numB:S.num)}:n(null),n(r.py),{v:r.raw[5],s:r.diff===calc?(b?S.txtB:S.txt):S.bad},n(calc),{v:verdict,s:vs}]); }
+  const sh2=sheetXml(r2,[36,13,13,11,13,12,12,13,12,12,13],{freeze:2,merge:['A1:K1']});
+  // 시트3 요약
+  const r3=[[{v:'분류·부서별 요약',s:S.title}],['분류','오류','주의','참고','계'].map(v=>({v,s:S.hdr}))];
+  for(const c of CAT_ORDER){ const g=F.filter(f=>f.cat===c); if(!g.length) continue; r3.push([{v:c,s:S.txt},...['오류','주의','참고'].map(s=>({v:g.filter(f=>f.sev===s).length,s:S.num})),{v:g.length,s:S.numB}]); }
+  r3.push([]); r3.push(['부서','오류','주의','참고','계'].map(v=>({v,s:S.hdr})));
+  for(const d of [...new Set(F.map(f=>f.dept))].sort((a,b)=>dIdx(a)-dIdx(b))){ const g=F.filter(f=>f.dept===d); r3.push([{v:d,s:S.txt},...['오류','주의','참고'].map(s=>({v:g.filter(f=>f.sev===s).length,s:S.num})),{v:g.length,s:S.numB}]); }
+  const sh3=sheetXml(r3,[24,9,9,9,9],{freeze:0});
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0;&quot;△&quot;#,##0;0"/></numFmts>
+<fonts count="4"><font><sz val="10"/><name val="맑은 고딕"/><family val="3"/></font><font><b/><sz val="10"/><name val="맑은 고딕"/><family val="3"/></font><font><b/><sz val="13"/><name val="맑은 고딕"/><family val="3"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="맑은 고딕"/><family val="3"/></font></fonts>
+<fills count="8"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2457C5"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFDECEC"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFF4E0"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE9F1FC"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF0F2F5"/></patternFill></fill><fill><patternFill patternType="none"/></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFC9CED6"/></left><right style="thin"><color rgb="FFC9CED6"/></right><top style="thin"><color rgb="FFC9CED6"/></top><bottom style="thin"><color rgb="FFC9CED6"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="12">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>
+<xf numFmtId="0" fontId="1" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>
+<xf numFmtId="0" fontId="1" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="top"/></xf>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="164" fontId="1" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="1" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>
+<xf numFmtId="164" fontId="1" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>
+<xf numFmtId="164" fontId="1" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>
+</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const names=['검토결과','수입금 전주대비','요약'];
+  const files=[
+    {name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${names.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`},
+    {name:'_rels/.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${names.map((n,i)=>`<sheet name="${xe(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'검토결과'!$A$3:$G$${r1.length}</definedName></definedNames></workbook>`},
+    {name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${names.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${names.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:'xl/styles.xml',data:styles},
+    {name:'xl/worksheets/sheet1.xml',data:sh1},{name:'xl/worksheets/sheet2.xml',data:sh2},{name:'xl/worksheets/sheet3.xml',data:sh3}];
+  return zipStore(files);
+}
+$('xlsxBtn').addEventListener('click',()=>{
+  const blob=buildXlsx(); const d=st.cur.date; const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=`주간업무보고_검토결과_${d?`${d.y}${String(d.m).padStart(2,'0')}${String(d.d).padStart(2,'0')}`:'결과'}.xlsx`;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+});
+</script>
+</body>
+</html>
