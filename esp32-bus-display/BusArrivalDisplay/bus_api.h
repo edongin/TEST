@@ -62,6 +62,9 @@ void applyRouteFilter(Result& result, const char* filter);
 // 먼저 도착하는 노선이 위로 오게 정렬합니다. 정보 없는 노선은 맨 아래.
 void sortByArrival(Result& result);
 
+// JSON 이 아닌 오류 응답(인증키 오류 XML 등)을 알기 쉬운 문구로 바꿉니다.
+void describeErrorBody(const char* body, size_t len, char* out, size_t outSize);
+
 // UTF-8 글자가 중간에 잘리지 않게 문자열을 복사합니다.
 void copyUtf8(char* dst, size_t dstSize, const char* src);
 

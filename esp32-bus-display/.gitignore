@@ -3,3 +3,4 @@ BusArrivalDisplay/config.h
 .pio/
 test_native/.deps/
 test_native/test_parse
+test_native/test_weather

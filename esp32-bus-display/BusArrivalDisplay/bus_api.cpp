@@ -149,14 +149,14 @@ static bool xmlTag(const char* s, size_t len, const char* tag, char* out, size_t
 }
 
 // JSON 이 아닌 응답(인증키 오류 등)을 사람이 이해할 수 있는 문구로 바꿉니다.
-static void describeNonJson(const char* body, size_t len, Result& r) {
+void describeErrorBody(const char* body, size_t len, char* out, size_t outSize) {
   struct Known {
     const char* code;
     const char* message;
   };
   static const Known known[] = {
       {"SERVICE_KEY_IS_NOT_REGISTERED", "인증키 미등록 (승인 직후면 1~2시간 뒤 다시 시도)"},
-      {"LIMITED_NUMBER_OF_SERVICE_REQUESTS", "오늘 호출 한도 초과 (갱신 간격을 늘리세요)"},
+      {"LIMITED_NUMBER_OF_SERVICE_REQUESTS", "오늘 호출 한도 초과"},
       {"SERVICE_ACCESS_DENIED", "이 API 활용신청이 안 되어 있음"},
       {"DEADLINE_HAS_EXPIRED", "API 활용기간 만료"},
       {"UNREGISTERED_IP", "등록되지 않은 IP"},
@@ -164,7 +164,7 @@ static void describeNonJson(const char* body, size_t len, Result& r) {
   };
   for (const Known& k : known) {
     if (containsN(body, len, k.code)) {
-      setError(r, k.message);
+      copyUtf8(out, outSize, k.message);
       return;
     }
   }
@@ -173,11 +173,15 @@ static void describeNonJson(const char* body, size_t len, Result& r) {
       xmlTag(body, len, "errMsg", msg, sizeof(msg)) ||
       xmlTag(body, len, "headerMsg", msg, sizeof(msg)) ||
       xmlTag(body, len, "resultMsg", msg, sizeof(msg))) {
-    r.ok = false;
-    formatUtf8(r.error, sizeof(r.error), "API 오류: %s", msg);
+    formatUtf8(out, outSize, "API 오류: %s", msg);
     return;
   }
-  setError(r, "응답을 해석할 수 없음");
+  copyUtf8(out, outSize, "응답을 해석할 수 없음");
+}
+
+static void describeNonJson(const char* body, size_t len, Result& r) {
+  r.ok = false;
+  describeErrorBody(body, len, r.error, sizeof(r.error));
 }
 
 // ---------------------------------------------------------------------------

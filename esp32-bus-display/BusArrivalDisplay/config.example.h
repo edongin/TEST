@@ -9,54 +9,82 @@
 #define WIFI_SSID     "와이파이이름"
 #define WIFI_PASSWORD "와이파이비밀번호"
 
-// ----- 어느 지역 API 를 쓸지 -----
-//   1 = 경기도 (경기도_버스도착정보 조회 서비스)
-//   2 = 서울시 (서울특별시_정류소정보조회 서비스, getStationByUid)
-//   3 = 그 외 지역 (국토교통부_(TAGO)_버스도착정보)
-#define BUS_PROVIDER 1
-
 // ----- 공공데이터포털(data.go.kr) 인증키 -----
 // "일반 인증키(Encoding)" 또는 "(Decoding)" 어느 쪽을 넣어도 됩니다.
+// 버스와 날씨 모두 이 키 하나로 씁니다 (각 API 를 활용신청만 해 두면 됨).
 #define SERVICE_KEY "여기에_인증키를_붙여넣기"
 
-// ----- 정류장 -----
-//   경기도: 정류소 ID (9자리 숫자, 예: "208000123")
-//   서울:   정류소 고유번호 (정류장 표지판의 5자리 숫자, 예: "01234")
-//   TAGO:   정류소 ID (예: "DJB8001793")
-#define STATION_ID "208000123"
+// =============================================================================
+//  버스
+// =============================================================================
+
+// 어느 지역 API 를 쓸지
+//   1 = 경기도 (경기도_버스도착정보 조회 서비스)
+//   2 = 서울시 (서울특별시_정류소정보조회 서비스)
+//   3 = 그 외 지역 (국토교통부_(TAGO)_버스도착정보)
+#define BUS_PROVIDER 1
 
 // TAGO 를 쓸 때만: 도시 코드 (예: 대전 "25"). 다른 지역은 비워 두세요.
 #define TAGO_CITY_CODE ""
 
-// 화면 맨 위에 보일 정류장 이름. 경기도 API 는 정류장 이름을 주지 않아서 직접 적어 주세요.
-// 비워 두면 API 가 알려주는 이름을 씁니다 (서울, TAGO).
-#define STATION_LABEL "우리집 앞 정류장"
+// 정류장 (최대 3곳 권장). 화면을 터치할 때마다 1 → 2 → 3 → 날씨 순서로 바뀝니다.
+//   이름   : 화면 맨 위에 보일 이름
+//   정류장 ID
+//     경기도: 정류소 ID (9자리 숫자, 예: "208000123")
+//     서울:   정류소 고유번호 (정류장 표지판의 5자리 숫자, 예: "01234")
+//     TAGO:   정류소 ID (예: "DJB8001793")
+//   노선   : 보고 싶은 노선만 쉼표로 (예: "11-3, 5"). 비워 두면 전부.
+static const StationConfig STATIONS[] = {
+    // 이름              정류장 ID     노선
+    {"집 앞 (서울 방향)", "208000123", ""},
+    {"집 앞 (안양 방향)", "208000124", ""},
+    {"회사 앞",          "208000456", ""},
+};
 
-// 보고 싶은 노선만 쉼표로 적기 (예: "11-3, 5, 9"). 비워 두면 전부 보여줍니다.
-#define ROUTE_FILTER ""
+// 정류장 화면에서 몇 초마다 새 정보를 받을지
+#define BUS_UPDATE_SEC 15
+
+// 정류장 화면을 띄운 뒤 몇 분 동안 보여줄지. 지나면 기본 화면(날씨 또는 꺼짐)으로 돌아갑니다.
+#define STATION_SHOW_MIN 30
 
 // true 면 먼저 오는 버스가 위로, false 면 API 가 준 순서 그대로
 #define SORT_BY_ARRIVAL true
 
-// ----- 갱신 주기 -----
-// 개발계정 인증키는 하루 호출 수가 제한됩니다(보통 1,000회 정도).
-// 90초 간격으로 하루 종일 켜 두면 960회. 갱신 사이에는 화면이 알아서 시간을 줄여 갑니다.
-#define UPDATE_INTERVAL_SEC 90
-
-// 이 시간대에만 화면을 켜고 API 를 부릅니다 (호출 수 절약). 0 과 24 면 하루 종일.
-#define ACTIVE_START_HOUR 5   // 05:00 부터
-#define ACTIVE_END_HOUR   24  // 24:00 까지
-
 // 노선이 한 화면에 다 안 들어가면 몇 초마다 다음 페이지로 넘길지
 #define PAGE_INTERVAL_SEC 6
 
-// ----- 보드와 화면 연결 -----
+// =============================================================================
+//  날씨 (기상청 단기예보)
+// =============================================================================
+
+// 날씨를 볼 위치의 위도, 경도 (지도 앱에서 위치를 길게 누르면 나옵니다)
+#define WEATHER_LAT 37.5665   // 예: 서울시청
+#define WEATHER_LON 126.9780
+
+// 날씨 화면 제목에 붙일 동네 이름
+#define WEATHER_LABEL "우리 동네"
+
+// 기본 화면 시간표 (시작 시각 이상, 끝 시각 미만)
+//   오늘 날씨: 오전에 켜 두기
+#define TODAY_WEATHER_START 6    // 06:00 부터
+#define TODAY_WEATHER_END   12   // 12:00 전까지
+//   내일 날씨: 저녁에 켜 두기
+#define TOMORROW_WEATHER_START 20  // 20:00 부터
+#define TOMORROW_WEATHER_END   23  // 23:00 전까지
+//   그 밖의 시간에는 화면이 꺼져 있고, 터치하면 정류장 1 이 켜집니다.
+
+// 날씨를 몇 분마다 새로 받을지 (기상청 발표는 3시간마다)
+#define WEATHER_UPDATE_MIN 30
+
+// =============================================================================
+//  보드와 화면 연결
+// =============================================================================
 // Arduino IDE 에서 고른 보드에 따라 아래 중 하나가 자동으로 쓰입니다.
 //   - "Raspberry Pi Pico W" 를 고르면  -> [A] Pico WH(브레드보드) + ILI9341 모듈
 //   - "ESP32 Dev Module" 을 고르면     -> [B] ESP32 개발보드 + ILI9341 모듈, 또는 [C] CYD
 
 #if defined(ARDUINO_ARCH_RP2040)
-// [A] Raspberry Pi Pico WH (또는 Pico W) + ILI9341 3.2인치 SPI 모듈
+// [A] Raspberry Pi Pico WH (또는 Pico W, Pico 2 W) + ILI9341 3.2인치 SPI 모듈
 //     README 의 "Pico WH 배선표" 대로 연결하세요.
 #define TFT_SCLK 2    // 화면 SCK   (터치 T_CLK 도 같은 핀에)
 #define TFT_MOSI 3    // 화면 SDI   (터치 T_DIN 도 같은 핀에)
@@ -64,24 +92,15 @@
 #define TFT_CS   1    // 화면 CS
 #define TFT_DC   21   // 화면 D/C
 #define TFT_RST  20   // 화면 RESET
-#define TFT_BL   -1   // 화면 LED 는 3.3V 에 연결 (항상 켜짐). GPIO 에 연결했다면 그 번호
+#define TFT_BL   22   // 화면 LED (백라이트). 3.3V 에 바로 꽂았다면 -1 (그러면 화면을 완전히 끌 수 없음)
 
-// 나중에 터치를 쓸 때: T_CS -> GP15, T_IRQ -> GP28 (T_CLK, T_DIN, T_DO 는 위와 같은 핀)
+#define TOUCH_CS  15  // 터치 T_CS
+#define TOUCH_IRQ 28  // 터치 T_IRQ
+#define TOUCH_SHARED_SPI 1  // 터치가 화면과 같은 SPI 선(GP0, GP2, GP3)을 같이 씀
 
-// 새로고침 버튼: Pico 위의 흰색 BOOTSEL 버튼을 씁니다. 버튼을 따로 달았다면 그 핀 번호.
-#define REFRESH_BUTTON_PIN -1
-#define REFRESH_USE_BOOTSEL 1
-
-// SB Components "UHF Reader for Pico W" 보드를 쓸 때만 1 (RFID 모듈, 부저 등을 꺼 둠)
-#define UHF_READER_BOARD 0
-#if UHF_READER_BOARD
-#undef  REFRESH_BUTTON_PIN
-#define REFRESH_BUTTON_PIN 10  // 보드의 BT2 버튼
-#define UHF_EN_PIN     26      // RFID 모듈 켜기/끄기
-#define UHF_BUZZER_PIN 22      // 부저
-#define UHF_LCD_BL_PIN 12      // 보드의 1.14인치 작은 화면 백라이트
-#define UHF_SD_CS_PIN  17      // SD 카드
-#endif
+// 터치 대신 쓸 수 있는 버튼: Pico 위의 흰색 BOOTSEL 버튼. 버튼을 따로 달았다면 그 핀 번호.
+#define NEXT_BUTTON_PIN -1
+#define USE_BOOTSEL_BUTTON 1
 
 #else
 // ESP32 에서는 0 = [B] 개발보드 + ILI9341 모듈, 1 = [C] CYD
@@ -107,12 +126,25 @@
 #define TFT_RST  4    // RESET
 #define TFT_BL   22   // LED (백라이트). 3V3 에 직접 꽂았다면 -1
 #define TFT_USE_HSPI 0
-// 나중에 터치: T_CLK 25, T_DIN 32, T_DO 39(VN), T_CS 33, T_IRQ 36(VP)
 #endif
 
-// 이 버튼을 누르면 바로 새로고침 (BOOT 버튼 = 0번 핀). 안 쓰면 -1
-#define REFRESH_BUTTON_PIN 0
+// 터치 (개발보드와 CYD 모두 같은 핀)
+#define TOUCH_SCLK 25
+#define TOUCH_MOSI 32
+#define TOUCH_MISO 39
+#define TOUCH_CS   33
+#define TOUCH_IRQ  36
+#define TOUCH_SHARED_SPI 0
+
+// 터치 대신 쓸 수 있는 버튼 (BOOT 버튼 = 0번 핀). 안 쓰면 -1
+#define NEXT_BUTTON_PIN 0
+#define USE_BOOTSEL_BUTTON 0
 #endif
+
+// 터치 감지 방법
+//   1 = T_IRQ 핀으로 감지 (기본)
+//   2 = 누르는 힘을 직접 읽어서 감지 (1 로 터치가 안 되거나 저절로 눌릴 때 바꿔 보세요)
+#define TOUCH_MODE 1
 
 // 화면 통신 속도. 점퍼선이 길어서 화면에 줄이 가거나 깨지면 20000000 으로 낮추세요.
 #define TFT_SPI_HZ 27000000

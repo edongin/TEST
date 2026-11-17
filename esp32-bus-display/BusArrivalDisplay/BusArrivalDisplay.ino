@@ -1,68 +1,80 @@
 // =============================================================================
-//  버스 도착 알림판 (Raspberry Pi Pico W / ESP32)
-//  공공데이터포털 버스 도착정보 API 를 불러와서 ILI9341 화면에 보여줍니다.
+//  버스 도착 + 날씨 알림판 (Raspberry Pi Pico W / ESP32)
+//
+//  - 평소(기본 화면): 오전에는 오늘 날씨, 저녁에는 내일 날씨, 그 밖에는 화면 꺼짐
+//  - 화면을 터치할 때마다: 정류장1 → 정류장2 → 정류장3 → 기본 화면
+//  - 정류장 화면에서는 15초마다 도착 정보를 새로 받고, 30분이 지나면 기본 화면으로
+//
 //  설정은 config.h 에서 합니다 (config.example.h 를 복사해서 만드세요).
 // =============================================================================
 #include <WiFi.h>
 #include <time.h>
 
 #include "app_config.h"
+#include "app_logic.h"
 #include "bus_api.h"
 #include "bus_fetch.h"
 #include "display.h"
 #include "platform.h"
+#include "touch.h"
+#include "weather_fetch.h"
 
-static const char* APP_TITLE = "버스 도착 알림판";
-static const uint32_t RETRY_AFTER_ERROR_MS = 30 * 1000UL;
-static const uint32_t STALE_AFTER_SEC = 10 * 60;  // 10분 넘게 갱신 못 하면 경고
+static const char* APP_TITLE = "버스와 날씨 알림판";
+static const uint32_t BUS_STALE_SEC = 2 * 60;          // 2분 넘게 갱신 못 하면 경고
+static const uint32_t WEATHER_RETRY_MS = 2 * 60000UL;  // 날씨 실패 시 다시 시도 간격
+static const char* const WEEKDAYS[] = {"일", "월", "화", "수", "목", "금", "토"};
 
-// 결과가 4KB 정도라서 스택 대신 전역 변수로 둡니다.
-static bus::Result current;   // 화면에 보여주는 정보
-static bus::Result incoming;  // 새로 받는 중인 정보 (성공했을 때만 current 로 옮김)
-static bool haveData = false;
+static const app::Schedule SCHEDULE = {TODAY_WEATHER_START, TODAY_WEATHER_END,
+                                       TOMORROW_WEATHER_START, TOMORROW_WEATHER_END};
 
-static uint32_t dataFetchedAtMs = 0;
-static uint32_t nextFetchAtMs = 0;
+// 지금 보여줄 화면 종류: 0 ~ STATION_COUNT-1 은 정류장
+enum { KIND_TODAY = 100, KIND_TOMORROW, KIND_OFF };
+
+// ----- 화면 상태 -----
+static int screen = -1;  // -1 = 기본 화면, 0~ = 정류장 번호
+static uint32_t stationShownAtMs = 0;
+static bool displayOn = true;
+static int drawnKind = -1;  // 마지막으로 그린 화면 종류
+
+// ----- 버스 -----
+static bus::Result busData;      // 화면에 보여주는 정보
+static bus::Result busIncoming;  // 새로 받는 중인 정보 (성공했을 때만 busData 로 옮김)
+static bool haveBus = false;
+static uint32_t busFetchedAtMs = 0, nextBusFetchMs = 0;
+static char busFooterTime[24] = "";
+static char busError[112] = "";
+
+// ----- 날씨 -----
+static WeatherData weatherData, weatherIncoming;
+static bool haveWeather = false;
+static uint32_t nextWeatherFetchMs = 0;
+static char weatherFooter[64] = "";
+static char weatherError[112] = "";
+
+// ----- Wi-Fi -----
 static uint32_t lastReconnectMs = 0;
-static uint32_t lastButtonMs = 0;
-static bool sleeping = false;
-
-static char footer[48] = "";
-static char warning[112] = "";  // 마지막 갱신이 실패한 이유 (성공하면 지움)
 static bool wifiLost = false;
 
 // ---------------------------------------------------------------------------
 
-static const char* stationTitle() {
-  if (STATION_LABEL[0]) return STATION_LABEL;
-  if (current.station[0]) return current.station;
-  return "정류장 " STATION_ID;
+static void stationTitle(int index, char* out, size_t size) {
+  const StationConfig& st = STATIONS[index];
+  const char* name = st.label[0] ? st.label : (busData.station[0] ? busData.station : st.id);
+  snprintf(out, size, "%d/%d  %s", index + 1, STATION_COUNT, name);
 }
 
-static bool timeIsSet(struct tm* now) { return platformLocalTime(now); }
-
-static bool inActiveHours() {
+static void clockText(const char* format, char* out, size_t size) {
   struct tm now;
-  if (!timeIsSet(&now)) return true;  // 시간을 모르면 일단 켜 둠
-  int start = ACTIVE_START_HOUR, end = ACTIVE_END_HOUR;
-  if (start == end || (start == 0 && end == 24)) return true;
-  if (start < end) return now.tm_hour >= start && now.tm_hour < end;
-  return now.tm_hour >= start || now.tm_hour < end;  // 예: 22시 ~ 다음날 2시
-}
-
-static void updateFooterTime() {
-  struct tm now;
-  if (timeIsSet(&now)) {
-    strftime(footer, sizeof(footer), "%H:%M:%S 갱신", &now);
+  if (platformLocalTime(&now)) {
+    strftime(out, size, format, &now);
   } else {
-    snprintf(footer, sizeof(footer), "방금 갱신");
+    out[0] = '\0';
   }
 }
 
 static void connectWifi() {
   displayMessage(APP_TITLE, "Wi-Fi 연결 중...", WIFI_SSID);
   platformWifiBegin(WIFI_SSID, WIFI_PASSWORD);
-
   Serial.printf("[Wi-Fi] %s 에 연결 중", WIFI_SSID);
   for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) {
     delay(500);
@@ -73,33 +85,140 @@ static void connectWifi() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("[Wi-Fi] 연결됨, IP %s\n", WiFi.localIP().toString().c_str());
     platformStartClock();
-    displayMessage(APP_TITLE, "도착 정보 불러오는 중...", stationTitle());
+    displayMessage(APP_TITLE, "시계 맞추는 중...", nullptr);
+    for (int i = 0; i < 20; i++) {  // 최대 10초 기다림 (못 맞춰도 계속 진행)
+      struct tm t;
+      if (platformLocalTime(&t)) break;
+      delay(500);
+    }
   } else {
     Serial.println("[Wi-Fi] 연결 실패, 계속 다시 시도합니다");
     displayMessage(APP_TITLE, "Wi-Fi 연결 실패", "이름/비밀번호, 2.4GHz 인지 확인하세요");
+    delay(3000);
   }
 }
 
-static void doFetch() {
-  uint32_t now = millis();
-  if (fetchArrivals(incoming)) {
-    current = incoming;
-    haveData = true;
-    dataFetchedAtMs = now;
-    warning[0] = '\0';
-    updateFooterTime();
-    nextFetchAtMs = now + UPDATE_INTERVAL_SEC * 1000UL;
+// ---------------------------------------------------------------------------
+// 정류장 화면
+// ---------------------------------------------------------------------------
+
+static void fetchBus(int index, uint32_t now) {
+  nextBusFetchMs = now + BUS_UPDATE_SEC * 1000UL;
+  if (fetchArrivals(STATIONS[index], busIncoming)) {
+    busData = busIncoming;
+    haveBus = true;
+    busFetchedAtMs = millis();
+    busError[0] = '\0';
+    clockText("%H:%M:%S 갱신", busFooterTime, sizeof(busFooterTime));
     return;
   }
-
-  const uint32_t intervalMs = UPDATE_INTERVAL_SEC * 1000UL;
-  nextFetchAtMs = now + (intervalMs < RETRY_AFTER_ERROR_MS ? intervalMs : RETRY_AFTER_ERROR_MS);
-  if (haveData) {
-    // 예전 정보는 계속 보여주고, 아래쪽에 경고만 띄웁니다.
-    snprintf(warning, sizeof(warning), "갱신 실패: %s", incoming.error);
-  } else {
-    displayMessage(APP_TITLE, incoming.error, "30초 뒤 다시 시도합니다");
+  snprintf(busError, sizeof(busError), "갱신 실패: %s", busIncoming.error);
+  if (!haveBus) {
+    char title[96];
+    stationTitle(index, title, sizeof(title));
+    displayMessage(title, busIncoming.error, "잠시 후 다시 시도합니다");
   }
+}
+
+static void showStation(int index, bool firstDraw, bool online, uint32_t now) {
+  char title[96];
+  stationTitle(index, title, sizeof(title));
+
+  if (firstDraw) {
+    displayMessage(title, online ? "도착 정보 불러오는 중..." : "Wi-Fi 다시 연결 중...", nullptr);
+  }
+  if (online && (int32_t)(now - nextBusFetchMs) >= 0) {
+    fetchBus(index, now);
+    now = millis();
+  }
+  if (!haveBus) return;
+
+  uint32_t ageSec = (now - busFetchedAtMs) / 1000;
+  uint32_t shownMin = (now - stationShownAtMs) / 60000UL;
+  const uint32_t limitMin = (uint32_t)STATION_SHOW_MIN;
+  uint32_t leftMin = shownMin < limitMin ? limitMin - shownMin : 0;
+
+  char footer[64];
+  snprintf(footer, sizeof(footer), "%s  (%lu분 더 표시)", busFooterTime, (unsigned long)leftMin);
+
+  char warning[112] = "";
+  if (wifiLost) {
+    snprintf(warning, sizeof(warning), "Wi-Fi 끊김, 다시 연결 중...");
+  } else if (busError[0] && ageSec > BUS_STALE_SEC) {
+    snprintf(warning, sizeof(warning), "%s", busError);
+  }
+
+  int page = (int)((now / 1000) / PAGE_INTERVAL_SEC);
+  displayArrivals(busData, ageSec, title, footer, warning, page);
+}
+
+// ---------------------------------------------------------------------------
+// 날씨 화면
+// ---------------------------------------------------------------------------
+
+static void weatherTitle(bool tomorrow, const WeatherData* w, char* out, size_t size) {
+  const char* what = tomorrow ? "내일 날씨" : "오늘 날씨";
+  if (w && w->ok) {
+    snprintf(out, size, "%s  %d/%d(%s)", what, w->month, w->mday, WEEKDAYS[w->wday % 7]);
+  } else {
+    snprintf(out, size, "%s", what);
+  }
+}
+
+static void showWeather(bool tomorrow, bool firstDraw, bool online, uint32_t now) {
+  struct tm t;
+  bool timeKnown = platformLocalTime(&t);
+  char title[96];
+
+  // 받아 둔 날씨가 지금 보여줄 날짜와 맞는지 (오늘↔내일, 날짜가 바뀐 경우)
+  if (haveWeather) {
+    bool matches = timeKnown && weatherData.tomorrow == tomorrow;
+    if (matches) {
+      char target[9];
+      weather::dateAfter(t, tomorrow ? 1 : 0, target, nullptr);
+      matches = strcmp(target, weatherData.day.date) == 0;
+    }
+    if (!matches) {
+      haveWeather = false;
+      nextWeatherFetchMs = now;  // 바로 새로 받기
+    }
+  }
+
+  if (firstDraw && !haveWeather) {
+    weatherTitle(tomorrow, nullptr, title, sizeof(title));
+    displayMessage(title,
+                   !online      ? "Wi-Fi 다시 연결 중..."
+                   : !timeKnown ? "시계 맞추는 중..."
+                                : "날씨 불러오는 중...",
+                   nullptr);
+    nextWeatherFetchMs = now;
+  }
+
+  if (online && timeKnown && (int32_t)(now - nextWeatherFetchMs) >= 0) {
+    if (fetchWeather(tomorrow, weatherIncoming)) {
+      bool wasShowing = haveWeather;
+      weatherData = weatherIncoming;
+      haveWeather = true;
+      weatherError[0] = '\0';
+      char at[16];
+      clockText("%H:%M 갱신", at, sizeof(at));
+      snprintf(weatherFooter, sizeof(weatherFooter), "%s  %s", WEATHER_LABEL, at);
+      nextWeatherFetchMs = millis() + WEATHER_UPDATE_MIN * 60000UL;
+      if (!wasShowing) displayClear();  // "불러오는 중" 글자 지우기
+    } else {
+      nextWeatherFetchMs = millis() + WEATHER_RETRY_MS;
+      snprintf(weatherError, sizeof(weatherError), "날씨 갱신 실패: %s", weatherIncoming.error);
+      if (!haveWeather) {
+        weatherTitle(tomorrow, nullptr, title, sizeof(title));
+        displayMessage(title, weatherIncoming.error, "잠시 후 다시 시도합니다");
+      }
+    }
+  }
+  if (!haveWeather) return;
+
+  weatherTitle(tomorrow, &weatherData, title, sizeof(title));
+  const char* warning = wifiLost ? "Wi-Fi 끊김, 다시 연결 중..." : weatherError;
+  displayWeather(weatherData, title, timeKnown ? t.tm_hour : 12, weatherFooter, warning);
 }
 
 // ---------------------------------------------------------------------------
@@ -107,79 +226,83 @@ static void doFetch() {
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.printf("\n=== 버스 도착 알림판 시작 (%s) ===\n", platformBoardName());
+  Serial.printf("\n=== 버스와 날씨 알림판 시작 (%s, 정류장 %d곳) ===\n", platformBoardName(),
+                STATION_COUNT);
 
   platformBoardInit();
-
   displayBegin();
+  touchBegin();
   connectWifi();
-  nextFetchAtMs = millis();
 }
 
 void loop() {
   uint32_t now = millis();
 
-  // 1) 밤에는 화면을 끄고 API 도 부르지 않습니다.
-  if (!inActiveHours()) {
-    if (!sleeping) {
-      Serial.println("[화면] 쉬는 시간이라 화면을 끕니다");
-      displaySetSleep(true);
-      sleeping = true;
-    }
-    delay(1000);
-    return;
-  }
-  if (sleeping) {
-    Serial.println("[화면] 다시 켭니다");
-    displaySetSleep(false);
-    sleeping = false;
-    nextFetchAtMs = now;  // 켜지자마자 새 정보
-  }
-
-  // 2) Wi-Fi 가 끊기면 20초마다 다시 연결
+  // 1) Wi-Fi 가 끊기면 20초마다 다시 연결
   bool online = WiFi.status() == WL_CONNECTED;
   if (!online && now - lastReconnectMs > 20000) {
     lastReconnectMs = now;
     Serial.println("[Wi-Fi] 끊김, 다시 연결 시도");
     platformWifiReconnect(WIFI_SSID, WIFI_PASSWORD);
     now = millis();
+    online = WiFi.status() == WL_CONNECTED;
   }
-  if (online && wifiLost) {
-    Serial.println("[Wi-Fi] 다시 연결됨");
-    nextFetchAtMs = now;
-  }
-  if (online) platformStartClock();  // 처음 연결됐을 때 한 번만 실제로 시작됨
+  if (online && wifiLost) Serial.println("[Wi-Fi] 다시 연결됨");
   wifiLost = !online;
+  if (online) platformStartClock();  // 처음 연결됐을 때 한 번만 실제로 시작됨
 
-  // 3) 버튼을 누르면 바로 새로고침
-  if (now - lastButtonMs > 1000 && platformRefreshPressed()) {
-    lastButtonMs = now;
-    nextFetchAtMs = now;
-    Serial.println("[버튼] 새로고침");
-  }
-
-  // 4) 정해진 간격마다 API 호출
-  if (online && (int32_t)(now - nextFetchAtMs) >= 0) {
-    doFetch();
-    now = millis();
-  }
-
-  // 5) 화면 그리기 (바뀐 곳만 다시 그림)
-  if (haveData) {
-    uint32_t ageSec = (now - dataFetchedAtMs) / 1000;
-    char shown[112];
-    if (wifiLost) {
-      snprintf(shown, sizeof(shown), "Wi-Fi 끊김, 다시 연결 중...");
-    } else if (warning[0]) {
-      snprintf(shown, sizeof(shown), "%s", warning);
-    } else if (ageSec > STALE_AFTER_SEC) {
-      snprintf(shown, sizeof(shown), "%lu분 전 정보입니다", (unsigned long)(ageSec / 60));
+  // 2) 터치: 기본 화면 → 정류장1 → 정류장2 → 정류장3 → 기본 화면
+  if (touchTapped()) {
+    screen = app::nextScreen(screen, STATION_COUNT);
+    if (screen >= 0) {
+      stationShownAtMs = now;
+      haveBus = false;
+      busError[0] = '\0';
+      nextBusFetchMs = now;
+      Serial.printf("[터치] 정류장 %d: %s\n", screen + 1, STATIONS[screen].label);
     } else {
-      shown[0] = '\0';
+      Serial.println("[터치] 기본 화면");
     }
-    int page = (int)((now / 1000) / PAGE_INTERVAL_SEC);
-    displayArrivals(current, ageSec, stationTitle(), footer, shown, page);
   }
 
-  delay(100);
+  // 3) 정류장 화면은 정해진 시간이 지나면 기본 화면으로
+  if (screen >= 0 && app::stationTimedOut(now, stationShownAtMs, STATION_SHOW_MIN)) {
+    Serial.printf("[화면] %d분이 지나 기본 화면으로\n", STATION_SHOW_MIN);
+    screen = -1;
+  }
+
+  // 4) 지금 보여줄 화면 정하기
+  struct tm t;
+  bool timeKnown = platformLocalTime(&t);
+  int kind;
+  if (screen >= 0) {
+    kind = screen;
+  } else {
+    switch (app::homeModeAt(SCHEDULE, timeKnown ? t.tm_hour : 0, timeKnown)) {
+      case app::HOME_TODAY: kind = KIND_TODAY; break;
+      case app::HOME_TOMORROW: kind = KIND_TOMORROW; break;
+      default: kind = KIND_OFF; break;
+    }
+  }
+
+  // 5) 화면 켜기/끄기, 화면 종류가 바뀌면 새로 그리기
+  bool wantOn = kind != KIND_OFF;
+  if (wantOn != displayOn) {
+    Serial.printf("[화면] %s\n", wantOn ? "켜기" : "끄기");
+    displaySetSleep(!wantOn);
+    displayOn = wantOn;
+    drawnKind = -1;
+  }
+  bool firstDraw = kind != drawnKind;
+  if (firstDraw && wantOn) displayClear();
+  drawnKind = kind;
+
+  // 6) 화면 그리기
+  if (kind < STATION_COUNT) {
+    showStation(kind, firstDraw, online, now);
+  } else if (kind == KIND_TODAY || kind == KIND_TOMORROW) {
+    showWeather(kind == KIND_TOMORROW, firstDraw, online, now);
+  }
+
+  delay(10);
 }

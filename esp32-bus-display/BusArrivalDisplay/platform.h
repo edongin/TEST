@@ -3,11 +3,11 @@
 
 #include <time.h>
 
-// 전원을 켠 직후 보드 고유 부품 정리 (예: UHF 리더 보드의 RFID 모듈과 부저 끄기)
+// 전원을 켠 직후 보드 준비 (버튼 핀 설정 등)
 void platformBoardInit();
 
-// 새로고침 버튼이 눌려 있으면 true (config.h 의 REFRESH_BUTTON_PIN / REFRESH_USE_BOOTSEL)
-bool platformRefreshPressed();
+// 터치 대신 쓰는 버튼이 눌려 있으면 true (config.h 의 NEXT_BUTTON_PIN / USE_BOOTSEL_BUTTON)
+bool platformButtonPressed();
 
 // Wi-Fi 연결 시작 / 끊겼을 때 다시 연결
 void platformWifiBegin(const char* ssid, const char* password);
