@@ -1196,8 +1196,14 @@ async function takeTurn(kind){
     msg(`⏪ ${p.name}: <b>${v}칸</b> 뒤로 가요!`); await wait(450);
     await moveBack(p, v); if(gid!==game.gid) return;
     await settle(p, p.pos!==start);
-  } else if(pend && pend.type==='help' && lastOther(p)){
-    const q=lastOther(p);
+  } else if(pend && pend.type==='help' && lastPlace(p)===p){
+    // 내가 꼴등 → 내가 앞으로
+    toast(`🤝 내가 꼴등! ${v}칸 앞으로!`,'good');
+    msg(`🤝 ${p.name}가 꼴등이라 직접 <b>${v}칸</b> 앞으로!`.replace(/(섭|님)가 /,'$1이 ')); sfx.event(); await wait(900);
+    await moveSteps(p, v); if(gid!==game.gid) return;
+    await settle(p, p.pos!==start);
+  } else if(pend && pend.type==='help'){
+    const q=lastPlace(p);
     toast(`🤝 꼴등 ${q.name} ${v}칸 앞으로!`,'good');
     msg(`🤝 ${p.name} 제자리! 꼴등 ${q.name} <b>${v}칸</b> 앞으로!`); sfx.event(); await wait(900);
     await moveSteps(q, v); if(gid!==game.gid) return;
@@ -1217,12 +1223,12 @@ async function moveBack(p, steps){
   const target=Math.max(1, p.pos-steps);
   for(let i=p.pos-1;i>=target;i--) await hop(p, i);
 }
-// 나를 뺀 남은 사람 중 꼴등 (같으면 랜덤)
-function lastOther(p){
-  const others=game.players.filter(q=>q!==p && !q.done);
-  if(!others.length) return null;
-  const min=Math.min(...others.map(q=>q.pos));
-  return pickOne(others.filter(q=>q.pos===min));
+// 남은 사람 중 꼴등. 내가 꼴등(공동 꼴등 포함)이면 나, 아니면 꼴등 중 랜덤
+function lastPlace(p){
+  const left=game.players.filter(q=>!q.done);
+  const min=Math.min(...left.map(q=>q.pos));
+  if(p.pos===min) return p;
+  return pickOne(left.filter(q=>q.pos===min));
 }
 
 async function moveSteps(p, steps){
@@ -1305,7 +1311,7 @@ async function runEvent(p){
     await eventCard('✂️','반쪽 주사위!','다음 번 주사위 숫자를 반으로 나눠서 가요 (5 → 3칸)','#7D4CD6');
   } else if(t==='help'){
     p.pending={type:'help', icon:'🤝', label:'꼴등 돕기'};
-    await eventCard('🤝','꼴등 친구 돕기!','다음 번 주사위만큼 꼴등 친구가 앞으로 가요 (나는 제자리)','#F7931E');
+    await eventCard('🤝','꼴등 친구 돕기!','다음 번 주사위만큼 꼴등이 앞으로 가요 (내가 꼴등이 아니면 나는 제자리)','#F7931E');
   } else if(t==='warp'){
     const others=game.players.filter(q=>q!==p && !q.done && q.pos>0);
     if(!others.length){ await eventCard('🌀','순간이동 실패!','판 위에 친구가 없어서 그대로 있어요','#9C4DCC'); updateUI(); return false; }
