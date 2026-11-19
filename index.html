@@ -312,7 +312,7 @@ button{font-family:inherit;cursor:pointer;border:none}
       <button class="mode-card" data-board="chaos">
         <div class="dice-prev bicon">🌪️🎁</div>
         난장판
-        <small>4~5턴마다 맵이 흔들려 뱀·사다리가 바뀌고, 🎁 이벤트 칸이 18개 있어요!</small>
+        <small>모두 4~5턴씩 하면 맵이 흔들려 뱀·사다리가 바뀌고, 🎁 이벤트 칸이 18개 있어요!</small>
       </button>
     </div>
     <h2 style="margin-top:22px">어떤 주사위로 할까요?</h2>
@@ -1072,7 +1072,7 @@ function updateUI(){
   $('#turnName').innerHTML=`<span style="color:${p.ch===3?'#C9A400':col}">${p.name}</span>`;
   let st='';
   if(p.pending && !game.over) st+=`<span class="st-chip pend">${p.pending.icon} ${p.pending.label}</span>`;
-  if(isChaos() && !game.over) st+= game.shakeIn<=1 ? `<span class="st-chip shk soon">🌪️ 이번 턴 뒤 흔들!</span>` : `<span class="st-chip shk">🌪️ ${game.shakeIn}턴 뒤 흔들</span>`;
+  if(isChaos() && !game.over) st+= game.shakeIn<=1 ? `<span class="st-chip shk soon">🌪️ 이번 턴 끝나면 흔들!</span>` : `<span class="st-chip shk">🌪️ ${game.shakeIn}턴 뒤 흔들</span>`;
   $('#tcStatus').innerHTML=st;
   updateRollLabels();
   game.players.forEach(q=>{
@@ -1406,16 +1406,17 @@ async function finish(p){
 }
 
 async function nextTurn(gid){
-  if(isChaos()){
+  const n=game.players.length;
+  let i=game.turn;
+  for(let k=0;k<n;k++){ i=(i+1)%n; if(!game.players[i].done) break; }
+  // 난장판: 모두 한 번씩 굴려야 1턴. 순서가 처음으로 돌아오면 한 턴이 끝난 것
+  if(isChaos() && i<=game.turn){
     game.shakeIn--;
     if(game.shakeIn<=0){
       await shuffleBoard(gid); if(gid!==game.gid) return;
       game.shakeIn=randInt(4,5);
     }
   }
-  const n=game.players.length;
-  let i=game.turn;
-  for(let k=0;k<n;k++){ i=(i+1)%n; if(!game.players[i].done) break; }
   game.turn=i; game.busy=false; setBtns(true); updateUI();
 }
 
