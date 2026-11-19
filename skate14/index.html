@@ -42,12 +42,19 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
   padding:0 max(10px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(10px,env(safe-area-inset-left,0px))}
 #ctl{grid-template-columns:1fr 1.15fr 1.15fr 1fr}
 #twinCtl{grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
-#twinCtl .cb:nth-child(3){margin-left:8px}
+#twinCtl .cb:nth-child(4){margin-left:8px}
+.autoLbl{display:none}
+#twinCtl.auto{grid-template-columns:1fr 1fr 1fr}
+#twinCtl.auto [data-twin="1"]{display:none}
+#twinCtl.auto .autoLbl{display:flex;order:3;align-items:center;justify-content:center;text-align:center;font-size:13px;line-height:1.35;border-radius:22px;background:rgba(196,232,255,.75);color:var(--ink2);height:74px}
+#twinCtl.auto .cb[data-twin="0"]{font-size:32px}
 .cb{height:74px;border-radius:22px;background:rgba(255,255,255,.88);box-shadow:0 6px 0 rgba(0,0,0,.2);font-size:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
 .cb small{font-size:13px;margin-top:4px;color:var(--ink2)}
 .cb:active,.cb.on{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.2);background:#fff}
 .cb.jump{background:rgba(255,236,170,.95)}
 .cb.duck{background:rgba(200,232,255,.95)}
+.cb.now{animation:nowpulse .35s ease-in-out infinite alternate;background:#fff176!important;box-shadow:0 6px 0 rgba(0,0,0,.2),0 0 0 6px rgba(255,214,0,.85)}
+@keyframes nowpulse{from{transform:scale(1)}to{transform:scale(1.1)}}
 .cb.pulse{animation:pulse .8s ease-in-out infinite;background:#fff59d}
 .cb.seven{font-size:28px}
 .cb.seven small{font-size:11px;white-space:nowrap}
@@ -55,6 +62,12 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .cb.seven[data-twin="1"]{background:rgba(196,232,255,.95)}
 @keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 6px 0 rgba(0,0,0,.2),0 0 0 0 rgba(255,198,46,.9)}50%{transform:scale(1.07);box-shadow:0 6px 0 rgba(0,0,0,.2),0 0 0 10px rgba(255,198,46,0)}}
 
+/* Hammer */
+.hammer{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 100px);z-index:6;width:68px;height:68px;border-radius:50%;background:#fff;box-shadow:0 5px 0 rgba(0,0,0,.2);font-size:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.hammer b{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-weight:normal;font-size:14px;min-width:24px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.hammer small{font-size:11px;color:var(--ink2);margin-top:2px}
+.hammer:active{transform:translateY(3px)}
+.item .cnt{font-size:14px;color:var(--ink2)}
 /* Hint */
 #hint{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 74px);transform:translateX(-50%);width:min(92vw,460px);z-index:6;
   background:var(--paper);border-radius:24px;padding:14px 16px;box-shadow:0 8px 0 rgba(0,0,0,.12),0 18px 40px rgba(0,0,0,.25);
@@ -124,6 +137,16 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .devchip{display:inline-block;font-size:13px;padding:2px 8px;border-radius:999px;background:#2b2b40;color:#ffe14d;vertical-align:middle;letter-spacing:1px}
 #xferText{width:100%;box-sizing:border-box;font:13px/1.4 ui-monospace,Menlo,monospace;border:2px solid #d5d7e3;border-radius:12px;padding:8px;color:var(--ink);background:#f7f8fc;resize:vertical;-webkit-user-select:text;user-select:text;touch-action:auto}
 .note{font-size:15px;color:var(--ink2);margin:6px 0 0;line-height:1.45}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+.setrow label{font-size:18px}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:40px;height:40px;border-radius:12px;background:#eef0f7;font-size:22px;box-shadow:0 3px 0 rgba(0,0,0,.12)}
+.stepper input{width:84px;height:40px;border:2px solid #d5d7e3;border-radius:12px;text-align:center;font:18px var(--font);color:var(--ink);background:#fff;-webkit-user-select:text;user-select:text;touch-action:auto}
+.ownGroup{margin:6px 0}
+.ownGroup h4{margin:6px 0;font-weight:normal;font-size:15px;color:var(--ink2);text-align:left}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font-size:14px;padding:7px 11px;border-radius:999px;background:#eef0f7;box-shadow:0 2px 0 rgba(0,0,0,.1)}
+.chips button.on{background:var(--green);color:#fff}
 .stars{font-size:52px;letter-spacing:4px;color:#d9dbe6;line-height:1.1}
 .stars b{color:var(--gold);font-weight:normal;display:inline-block;animation:starpop .5s ease-out both}
 .stars b:nth-child(2){animation-delay:.25s}.stars b:nth-child(3){animation-delay:.5s}
@@ -146,10 +169,11 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 <div id="hud" hidden>
   <button class="round" id="btnPause" aria-label="일시정지">❚❚</button>
   <div class="hstage" id="hStage"></div>
-  <div class="hright"><span class="pill hearts" id="hHearts"></span><span class="pill"><i class="ci"></i><b id="hCoins">0</b></span></div>
+  <div class="hright"><span class="pill" id="hShield" hidden>🛡<b id="hShieldN"></b></span><span class="pill hearts" id="hHearts"></span><span class="pill"><i class="ci"></i><b id="hCoins">0</b></span></div>
   <div class="prog"><i id="hProg"></i></div>
 </div>
 
+<button id="btnHammer" class="hammer" hidden aria-label="망치로 장애물 부수기">🔨<b id="hammerN">0</b><small>부수기</small></button>
 <div id="ctl" class="ctl" hidden>
   <button class="cb" data-act="left" aria-label="왼쪽">◀<small>왼쪽</small></button>
   <button class="cb duck" data-act="duck" aria-label="숙이기">▼<small>숙이기</small></button>
@@ -157,6 +181,7 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
   <button class="cb" data-act="right" aria-label="오른쪽">▶<small>오른쪽</small></button>
 </div>
 <div id="twinCtl" class="ctl" hidden>
+  <div class="autoLbl" aria-hidden="true">오른쪽 7은<br>자동으로 움직여요</div>
   <button class="cb seven" data-twin="0" data-a="jump" aria-label="왼쪽 7 점프">▲<small>왼쪽 7 점프</small></button>
   <button class="cb seven" data-twin="0" data-a="duck" aria-label="왼쪽 7 숙이기">▼<small>왼쪽 7 숙이기</small></button>
   <button class="cb seven" data-twin="1" data-a="duck" aria-label="오른쪽 7 숙이기">▼<small>오른쪽 7 숙이기</small></button>
@@ -192,6 +217,7 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
     <button class="tab on" data-tab="sticker">스티커</button>
     <button class="tab" data-tab="skin">색깔</button>
     <button class="tab" data-tab="board">보드</button>
+    <button class="tab" data-tab="item">아이템</button>
   </div>
   <div class="items" id="items"></div>
 </section>
@@ -202,6 +228,8 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
     <p class="note" style="margin:0 0 6px">난이도</p>
     <div class="seg" id="segDiff"></div>
     <p class="note" id="diffNote"></p>
+    <p class="note" style="margin:16px 0 6px">7 + 7 도우미</p>
+    <div class="seg" id="segAuto"><button data-v="1">켜기 (오른쪽 7 자동)</button><button data-v="0">끄기 (둘 다 직접)</button></div>
     <p class="note" style="margin:16px 0 6px">소리</p>
     <div class="seg" id="segSound"><button data-v="1">켜기</button><button data-v="0">끄기</button></div>
     <p class="note" style="margin:16px 0 6px">기록</p>
@@ -226,6 +254,25 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
       </div>
     </div>
     <div style="margin-top:16px"><button class="btn go" data-back>확인</button></div>
+  </div>
+</section>
+
+<section id="setup" class="screen dim" hidden>
+  <div class="panel">
+    <h2>기록 맞추기</h2>
+    <p class="note" style="margin:0 0 12px">전에 하던 기록이 있으면 여기에 적어 주세요. 처음 시작하면 "처음부터 시작"을 누르면 돼요.</p>
+    <div class="setrow"><label for="suStage">깬 스테이지</label><div class="stepper"><button data-step="-1" data-for="suStage">−</button><input id="suStage" type="number" inputmode="numeric" min="0" max="100" value="0"><button data-step="1" data-for="suStage">+</button></div></div>
+    <p class="note" style="margin:-4px 0 10px">예: 15를 적으면 1–15 스테이지가 깬 상태가 되고 16 스테이지부터 할 수 있어요.</p>
+    <div class="setrow"><label for="suCoins">코인</label><div class="stepper"><button data-step="-50" data-for="suCoins">−</button><input id="suCoins" type="number" inputmode="numeric" min="0" max="99999" value="0"><button data-step="50" data-for="suCoins">+</button></div></div>
+    <div class="setrow"><label for="suHammer">🔨 망치</label><div class="stepper"><button data-step="-1" data-for="suHammer">−</button><input id="suHammer" type="number" inputmode="numeric" min="0" max="99" value="0"><button data-step="1" data-for="suHammer">+</button></div></div>
+    <div class="setrow"><label for="suShield">🛡 쉴드</label><div class="stepper"><button data-step="-1" data-for="suShield">−</button><input id="suShield" type="number" inputmode="numeric" min="0" max="99" value="0"><button data-step="1" data-for="suShield">+</button></div></div>
+    <p class="note" style="margin:12px 0 6px">산 물건 (눌러서 표시)</p>
+    <div id="suOwned"></div>
+    <div class="col" style="margin:16px auto 0">
+      <button class="btn go" id="suSave">저장하고 시작</button>
+      <button class="btn grey" id="suSkip">처음부터 시작</button>
+    </div>
+    <p class="note">나중에 다시 바꾸려면 첫 화면의 "넘버블럭스" 글자를 빠르게 3번 눌러요.</p>
   </div>
 </section>
 
@@ -255,9 +302,9 @@ const SMALL_NUMS = NUMS.filter(n => n <= 20);
 // ============================================================ data
 const RAINBOW = ['#e8262b', '#ff8a00', '#ffd200', '#3dbb3d', '#1fc6e8', '#3a5bd9', '#8b3fc6'];
 const DIFF = {
-  easy:   { name: '쉬움',   speed: 0.8,  hearts: 5, win: 1.45, rate: 2.2, density: 0.8,  approach: 1.35, tApp: 0.8,  tGap: 0.75, note: '느리게 달리고, 하트 5개, 타이밍 판정이 넉넉해요.' },
-  normal: { name: '보통',   speed: 1.0,  hearts: 4, win: 1.0,  rate: 3.0, density: 1.0,  approach: 1.1,  tApp: 0.7,  tGap: 0.65, note: '하트 4개. 스테이지가 갈수록 빨라져요.' },
-  hard:   { name: '어려움', speed: 1.2,  hearts: 3, win: 0.75, rate: 4.0, density: 1.2,  approach: 0.9,  tApp: 0.6,  tGap: 0.55, note: '빠르고 하트 3개, 판정이 엄격해요.' },
+  easy:   { name: '쉬움',   speed: 0.68, hearts: 6, win: 1.9,  rate: 1.6, density: 0.65, approach: 1.4,  tApp: 0.85, tGap: 0.85, lowY: 0.3,  laneTol: 0.45, note: '아주 느리게 달리고, 하트 6개 + 쉴드, 타이밍 판정이 아주 넉넉해요.' },
+  normal: { name: '보통',   speed: 0.8,  hearts: 5, win: 1.45, rate: 2.2, density: 0.8,  approach: 1.35, tApp: 0.8,  tGap: 0.75, lowY: 0.36, laneTol: 0.5,  note: '느리게 달리고, 하트 5개 + 쉴드.' },
+  hard:   { name: '어려움', speed: 1.0,  hearts: 4, win: 1.0,  rate: 3.0, density: 1.0,  approach: 1.1,  tApp: 0.7,  tGap: 0.65, lowY: 0.42, laneTol: 0.55, note: '하트 4개 + 쉴드. 스테이지가 갈수록 빨라져요.' },
 };
 const THEMES = {
   playground: { name: '놀이터', sky: ['#62bdf7', '#d4f0ff'], ground: '#93d96a', ground2: '#86cd5e', road: '#e2c493', road2: '#d7b783', line: '#fff8e6', side: '#f3dfb6', side2: '#e9d3a5', curb: '#c99a5b', hill: '#b6e68f' },
@@ -293,7 +340,7 @@ const stickerPrice = n => n <= 10 ? 300 : n <= 20 ? 400 : n < 50 ? 500 : n < 100
 
 // ============================================================ save
 const SAVE_KEY = 'nb-skate14-v1';
-const DEFAULT_SAVE = () => ({ unlocked: 1, stars: {}, coins: 0, owned: ['skin:classic', 'board:rainbow'], skin: 'classic', board: 'rainbow', sticker: 0, diff: 'easy', sound: true, seen: {}, dev: false, devInv: false });
+const DEFAULT_SAVE = () => ({ unlocked: 1, stars: {}, coins: 0, owned: ['skin:classic', 'board:rainbow'], skin: 'classic', board: 'rainbow', sticker: 0, diff: 'easy', sound: true, seen: {}, dev: false, devInv: false, twinAuto: true, items: { hammer: 0, shield: 0 }, setupDone: false });
 let save = DEFAULT_SAVE();
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s && typeof s === 'object') save = Object.assign(DEFAULT_SAVE(), s); } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
@@ -383,7 +430,7 @@ const pick = (arr, r) => arr[Math.floor(r * arr.length) % arr.length];
 // ============================================================ level building
 const JUMPV = 7.2, GRAV = 21, DUCK_T = 0.75;
 const stageD = n => clamp((n - 6) / 94, 0, 1);
-function stageSpeed(n) { const df = DIFF[save.diff]; return (n <= 5 ? 4.4 : 5.0 + 2.6 * stageD(n)) * df.speed; }
+function stageSpeed(n) { const df = DIFF[save.diff]; return (n <= 5 ? 4.3 : 4.7 + 2.1 * stageD(n)) * df.speed; }
 
 function newLevel(n) {
   return { n, theme: themeOf(n), tutorial: n <= 5, speed: stageSpeed(n), L: 0, obs: [], coins: [], ramps: [], rails: [], forks: [], hints: [], arrows: [], walkers: [], crowd: [], manuals: [], missions: [] };
@@ -404,6 +451,10 @@ const INTROS = {
   twinrail: ['7 7', '7 두 명이 나란히 레일을 타요! 화면을 빠르게 연타!'],
   mission: ['🌉', '미션! 강에 다리가 올라가 있어요. 14가 2 일곱 명으로 나뉘어요 (2 × 7 = 14). 반짝이는 동그라미를 왼쪽부터 차례로 눌러 2, 4, 6 … 14까지 세면 다리가 내려와요!'],
   twinair: ['7 7', '더블 점프대! 공중에서 14가 7 + 7로 나뉘어요. 왼쪽 동그라미는 왼쪽 7, 오른쪽 동그라미는 오른쪽 7이 기술을 해요!'],
+};
+const INTRO_AUTO = {
+  twinduck: '갈림길에 높은 막대도 있어요! 왼쪽 7의 ▼ 버튼을 누르면 숙여요. 오른쪽 7은 혼자서 알아서 해요.',
+  twinair: '더블 점프대! 공중에서 14가 7 + 7로 나뉘어요. 왼쪽 동그라미만 눌러요. 오른쪽 7은 혼자서 기술을 해요!',
 };
 const introHint = (lv, z, key) => lv.hints.push({ z, need: 'tap', intro: key, text: INTROS[key][1], icon: INTROS[key][0], done: false });
 const hint = (lv, z, need, text, icon, extra = {}) => lv.hints.push(Object.assign({ z, need, text, icon, done: false }, extra));
@@ -483,7 +534,7 @@ function buildTutorial(lv) {
     lv.rails.push({ z: 28, len: 13, lane: -1 });
     coinLine(lv, 28.5, 10, -1, 1.25, 1.0);
     coinLine(lv, 46, 5, 0);
-    hint(lv, 52, 'tap', '길이 둘로 갈라져요! 14가 7 두 명으로 나뉘어요 (7 + 7 = 14). 왼쪽 버튼은 왼쪽 7, 오른쪽 버튼은 오른쪽 7이 점프해요.', '7 7');
+    hint(lv, 52, 'tap', '길이 둘로 갈라져요! 14가 7 두 명으로 나뉘어요 (7 + 7 = 14). 왼쪽 버튼은 왼쪽 7, 오른쪽 버튼은 오른쪽 7이 점프해요.', '7 7', { autoText: '길이 둘로 갈라져요! 14가 7 두 명으로 나뉘어요 (7 + 7 = 14). 왼쪽 7은 ▲ 버튼으로 점프! 오른쪽 7은 혼자서 알아서 움직여요.' });
     const f = { z: 60, len: 28 };
     lv.forks.push(f);
     for (const [side, zs] of [[-1, [68, 80]], [1, [74, 85]]]) for (const z of zs) addObs(lv, z, side, 'low');
@@ -510,8 +561,9 @@ function generate(lv) {
   for (let i = specials.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [specials[i], specials[j]] = [specials[j], specials[i]]; }
   let z = 12, lane = 0;
   coinLine(lv, 6, 5, 0);
-  const gapT = lerp(1.65, 0.95, d) / df.density;
+  const gapT = lerp(1.8, 1.1, d) / df.density;
   const sp = Math.max(v * gapT, 5.2);
+  const LK = { easy: 0.7, normal: 0.85, hard: 1 }[save.diff] || 1;   // shorter stages on easier settings
   const introduced = {};
   const intro = (key, zz) => { if (!introduced[key]) { introduced[key] = true; introHint(lv, zz, key); } };
 
@@ -573,7 +625,7 @@ function generate(lv) {
     for (let k = 0; k < 4; k++) lv.arrows.push({ z: z + 2 + k * 2.5, lane: rl });
     coinLine(lv, z + 1, 3, rl, 1.6);
     z += 12;
-    const len = Math.round(12 + d * 8 + R() * 4);
+    const len = Math.round((12 + d * 8 + R() * 4) * LK);
     lv.rails.push({ z, len, lane: rl, slide });
     coinLine(lv, z + 0.6, Math.floor(len / 1.25), rl, 1.25, 1.0);
     z += len + 7; lane = rl;
@@ -581,7 +633,7 @@ function generate(lv) {
   function fork() {
     z += 6;
     const twinRail = n >= 18 && R() < 0.5;
-    const len = Math.round(26 + d * 14) + (twinRail ? 12 : 0);
+    const len = Math.round((26 + d * 14) * LK) + (twinRail ? 12 : 0);
     const f = { z, len }; lv.forks.push(f);
     const gap = Math.max(v * lerp(1.45, 0.95, d) / df.density, 5);
     let r0 = 1e9, r1 = -1e9;
@@ -623,7 +675,7 @@ function generate(lv) {
     z = m.z + m.len + 9; lane = 0;
   }
   if (isMission(n)) specials.splice(Math.floor(specials.length / 2), 0, 'mission');
-  const baseRows = 2 + Math.floor(d * 2);
+  const baseRows = 2 + Math.floor(d * 2) - (LK < 0.8 ? 1 : 0);
   pattern(baseRows + 1);
   for (const sp2 of specials) {
     if (sp2 === 'ramp') ramp(); else if (sp2 === 'rail') rail(); else if (sp2 === 'fork') fork(); else if (sp2 === 'mission') mission(); else manual();
@@ -687,6 +739,8 @@ function startStage(n) {
   G.run = { coins: 0, bonus: 0, P: 0, G: 0, N: 0, B: 0, hits: 0 };
   resetPlayer();
   P.hearts = DIFF[save.diff].hearts;
+  P.shieldExtra = save.items && save.items.shield > 0 ? 1 : 0;
+  P.shield = lv.tutorial ? 0 : 1 + P.shieldExtra;
   G.startT = G.rt; G.clackZ = 0;
   camX = 0; camZ = -CAM_BACK; camY = CAM_H;
   showScreen(null);
@@ -749,7 +803,7 @@ cv.addEventListener('pointerdown', e => {
   if (G.qte && G.qte.kind === 'timing') { qteTap(x, y); return; }
   if (G.qte && G.qte.kind === 'mash') { mashTap(); return; }
   if (P.mode === 'mission') { missionTap(x, y); return; }
-  if (P.mode === 'twin') { swipe = { x, y, done: false, twin: x < W / 2 ? 0 : 1 }; return; }
+  if (P.mode === 'twin') { swipe = { x, y, done: false, twin: save.twinAuto ? 0 : x < W / 2 ? 0 : 1 }; return; }
   swipe = { x, y, done: false };
 });
 cv.addEventListener('pointermove', e => {
@@ -780,6 +834,7 @@ window.addEventListener('keydown', e => {
   const k = e.key;
   const map = { ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right', ArrowUp: 'jump', w: 'jump', ' ': 'jump', ArrowDown: 'duck', s: 'duck' };
   if (k === 'Escape' || k === 'p') { togglePause(true); return; }
+  if (k === 'h') { useHammer(); return; }
   if (G.hint && (G.hint.need === 'tap' || G.hint.need === 'msg') && (k === ' ' || k === 'Enter')) { resolveHint(); e.preventDefault(); return; }
   if (G.qte && G.qte.kind === 'timing' && (k === ' ' || k === 'Enter')) { const it = G.qte.items.find(i => !i.j); if (it) qteTap(it.x * W, it.y * H); e.preventDefault(); return; }
   if (G.qte && G.qte.kind === 'mash' && map[k]) { mashTap(); e.preventDefault(); return; }
@@ -796,7 +851,8 @@ function activateHint(h) {
   G.hint = h;
   const el = document.getElementById('hint');
   document.getElementById('hintIcon').textContent = h.icon || '';
-  document.getElementById('hintText').textContent = h.text;
+  const autoTxt = save.twinAuto ? (h.autoText || INTRO_AUTO[h.intro]) : null;
+  document.getElementById('hintText').textContent = autoTxt || h.text;
   document.getElementById('hintOk').hidden = h.need !== 'tap';
   el.hidden = false;
   const btn = { left: 'left', right: 'right', jump: 'jump', duck: 'duck', lane: h.lane < 0 ? 'left' : 'right' }[h.need];
@@ -887,6 +943,7 @@ function applyJudge(it, k) {
 
 function updateTiming() {
   const q = G.qte, w = judgeWin();
+  if (q.twin && save.twinAuto) for (const it of q.items) if (!it.j && it.side === 1 && G.rt >= it.t) applyJudge(it, 'P');
   for (const it of q.items) if (!it.j && G.rt > it.t + w.N + 0.08) { applyJudge(it, 'B'); }
   const u = clamp((G.rt - q.t0) / (q.end - q.t0), 0, 1);
   const good = q.items.filter(i => i.j && i.j !== 'B').length;
@@ -980,6 +1037,15 @@ function updateTwin(dt) {
       return;
     }
   }
+  if (save.twinAuto && T.phase === 'run' && !T.grind) {
+    // helper: the right 7 jumps and ducks by itself
+    const v = G.lv.speed * 0.8;
+    for (const o of G.lv.obs) {
+      if (o.lane !== 1 || o.done || o.autoDone) continue;
+      const tt = (o.z - P.z) / v;
+      if (tt > 0 && tt < 0.16) { o.autoDone = true; if (o.type === 'high') twinDuck(1); else twinJump(1); }
+    }
+  }
   for (const t of T.tw) {
     if (t.duck > 0) t.duck -= dt;
     if (T.grind) { t.y = 0.5; if (Math.random() < 0.4) { const p = P3(t.x, 0.5, P.z); burst(p[0], p[1], 1, ['#ffe14d', '#ff8a00'], 160, 3, 700); } continue; }
@@ -994,6 +1060,13 @@ function hurt() {
   P.inv = 1.5; G.shake = 0.4; P.wob = 0.7; SFX.hit();
   const p = playerScreen(); burst(p[0], p[1], 12, ['#ff5c5c', '#fff'], 220, 6);
   if (G.lv.tutorial) { popText('괜찮아요! 다시 해봐요', '#fff', 0.4, 1.2, 28); return; }
+  if (P.shield > 0) {
+    P.shield--;
+    if (P.shield < P.shieldExtra) { P.shieldExtra--; save.items.shield = Math.max(0, save.items.shield - 1); persist(); }
+    SFX.judge('G'); popText('쉴드가 막아줬어요!', '#7fd4ff', 0.4, 1.1, 30, '하트는 그대로예요');
+    const sp = playerScreen(); burst(sp[0], sp[1], 22, ['#7fd4ff', '#ffffff', '#b3e5ff'], 260, 7);
+    updateHud(true); return;
+  }
   P.hearts--; G.run.hits++;
   updateHud(true);
   if (P.hearts <= 0) {
@@ -1276,7 +1349,7 @@ function update(rdt) {
   if (G.twin) updateTwin(dt);
   // live events (falling tree, movers, dropping boxes)
   for (const o of lv.obs) {
-    if (!o.ev || o.done) continue;
+    if (!o.ev || o.done || o.smashed) continue;
     const u = evU(o);
     if (u > 0 && !o.started) { o.started = true; evStart(o); }
     if (u >= 1 && !o.landed) {
@@ -1296,16 +1369,16 @@ function update(rdt) {
     if (P.mode === 'twin' && G.twin) {
       if (o.lane === 0 || o.lane === null || G.twin.grind) continue;
       const t = G.twin.tw[o.lane < 0 ? 0 : 1];
-      if (o.type === 'low' && t.y < 0.42) hurt();
+      if (o.type === 'low' && t.y < DIFF[save.diff].lowY) hurt();
       else if (o.type === 'high' && !(t.duck > 0 && t.y < 0.3)) hurt();
       continue;
     }
     if (P.mode === 'trick' || P.mode === 'manual') continue;
-    const inLane = o.lane === null || Math.abs(P.x - o.lane) < 0.55;
+    const inLane = o.lane === null || Math.abs(P.x - o.lane) < DIFF[save.diff].laneTol;
     if (!inLane) continue;
     let hit = false;
     if (o.type === 'block') hit = true;
-    else if (o.type === 'low') hit = P.y < 0.42;
+    else if (o.type === 'low') hit = P.y < DIFF[save.diff].lowY;
     else if (o.type === 'high') hit = !(P.duck > 0 && P.y < 0.3);
     if (hit) hurt();
     else if (o.type === 'low') popText('알리!', '#fff', 0.36, 0.55, 26);
@@ -1346,6 +1419,7 @@ function update(rdt) {
   camY = lerp(camY, CAM_H + Math.max(0, P.y) * 0.4, Math.min(1, rdt * 5));
   camZ = P.z - CAM_BACK;
   const grinding = P.mode === 'grind' || (G.twin && G.twin.grind);
+  updateCue();
   updateLoops(!P.air && (P.mode === 'ride' || P.mode === 'twin' || P.mode === 'finish' || P.mode === 'manual'), grinding, v * (ts || 0));
   updateHud();
 }
@@ -1421,7 +1495,7 @@ function render() {
     for (const c of lv.crowd) if (c.z > zMin && c.z < zMax) spr.push({ z: c.z, draw: () => drawCrowd(c) });
     if (lv.L > zMin) spr.push({ z: lv.L, draw: () => drawFinish(lv) });
   }
-  for (const o of lv.obs) if (o.z > zMin && o.z < zMax) spr.push({ z: o.z, draw: () => drawObstacle(o, th, lv.theme) });
+  for (const o of lv.obs) if (!o.smashed && o.z > zMin && o.z < zMax) spr.push({ z: o.z, draw: () => drawObstacle(o, th, lv.theme) });
   for (const c of lv.coins) if (!c.taken && c.z > zMin && c.z < zMax) spr.push({ z: c.z, draw: () => drawCoin(c) });
   for (const r of lv.ramps) if (r.z + r.len > zMin && r.z < zMax) spr.push({ z: r.z + r.len, draw: () => drawRamp(r) });
   for (const r of lv.rails) if (r.z + r.len > zMin && r.z < zMax) spr.push({ z: r.z > P.z ? r.z : P.z + 0.02, draw: () => drawRail(r), noFade: true });
@@ -1893,6 +1967,7 @@ function drawPlayerAll() {
   if (P.mode === 'trick' && G.qte && G.qte.twin) { drawTwinAir(); return; }
   if (P.mode === 'mission' && G.mission && G.mission.phase !== 'brake') { drawTwos(); return; }
   if (P.mode === 'twin' && G.twin) {
+    if (P.shield > 0) for (const t of G.twin.tw) { const sp = P3(t.x, t.y + 0.7, P.z); ctx.save(); ctx.globalAlpha = 0.2; ctx.fillStyle = '#7fd4ff'; ctx.beginPath(); ctx.ellipse(sp[0], sp[1], 0.3 * sp[2], 0.75 * sp[2], 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
     const T = G.twin, u = clamp((G.rt - T.t0) / 0.55, 0, 1);
     const mix = T.phase === 'split' ? u : T.phase === 'merge' ? 1 - u : 1;
     for (let i = 0; i < 2; i++) {
@@ -1910,6 +1985,7 @@ function drawPlayerAll() {
     return;
   }
   shadow(P.x, P.z, 0.32, 0.22 * (1 - Math.min(0.7, P.y / 2.5)));
+  if (P.shield > 0 && G.scene === 'play' && P.mode !== 'crash') { const sp = P3(P.x, P.y + 0.75, P.z); ctx.save(); ctx.globalAlpha = 0.22 + 0.06 * Math.sin(G.rt * 5); ctx.fillStyle = '#7fd4ff'; ctx.beginPath(); ctx.ellipse(sp[0], sp[1], 0.48 * sp[2], 0.85 * sp[2], 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 0.6; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(2, sp[2] * 0.02); ctx.stroke(); ctx.restore(); }
   const board = boardOf(save.board);
   const yb = P.y + (P.crouch > 0 && P.anim ? P.crouch * 0.15 : 0);
   const pitch = P.mode === 'manual' ? 0.14 * P.manual + Math.sin(G.rt * 7) * 0.02 * (P.wob > 0 ? 3 : 1) : 0;
@@ -2097,8 +2173,15 @@ function drawOverlay() {
       circ(x, y + 5, R, 'rgba(0,0,0,.18)'); circ(x, y, R, it.col); circ(x, y, R * 0.8, shade(it.col, 0.25));
       ctx.fillStyle = '#fff'; ctx.font = `${R * 0.95}px Jua, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(it.sym, x, y + R * 0.05);
       const rr = R * (1 + 1.5 * Math.max(0, dt / q.app));
-      ctx.strokeStyle = Math.abs(dt) < 0.08 ? '#ffe14d' : '#ffffff'; ctx.lineWidth = Math.max(4, R * 0.12);
+      const jw = judgeWin(), nowHit = dt <= jw.G && dt >= -jw.N;
+      ctx.strokeStyle = nowHit ? '#ffe14d' : '#ffffff'; ctx.lineWidth = Math.max(4, R * (nowHit ? 0.2 : 0.12));
       ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.stroke();
+      if (nowHit && !(q.twin && save.twinAuto && it.side === 1)) {
+        ctx.font = `${R * 0.6}px Jua, sans-serif`; ctx.lineWidth = R * 0.12; ctx.strokeStyle = 'rgba(40,30,60,.6)'; ctx.strokeText('지금!', x, y - R * 1.55); ctx.fillStyle = '#ffe14d'; ctx.fillText('지금!', x, y - R * 1.55);
+      } else if (dt > 0 && !(q.twin && save.twinAuto && it.side === 1)) {
+        ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `${R * 0.38}px Jua, sans-serif`; ctx.fillText('기다려~', x, y - R * 1.5);
+      }
+      if (q.twin && save.twinAuto && it.side === 1) { ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `${R * 0.38}px Jua, sans-serif`; ctx.fillText('자동', x, y + R * 1.45); }
       ctx.globalAlpha = 1;
     }
   }
@@ -2151,23 +2234,66 @@ function drawOverlay() {
 // ============================================================ HUD + UI
 const $ = id => document.getElementById(id);
 let hudCache = {};
+let ctlMode = null, cueKey = '';
+// highlight the button to press right now (jump / duck / move) for the next obstacle
+function updateCue() {
+  let want = [];
+  if (G.scene === 'play' && !G.hint && !G.paused && G.lv) {
+    const v = G.lv.speed * (P.mode === 'twin' ? 0.8 : 1);
+    if (P.mode === 'ride' && !P.air) {
+      for (const o of G.lv.obs) {
+        if (o.done || o.z <= P.z) continue;
+        const t = (o.z - P.z) / v; if (t > 1.0) break;
+        const mine = o.lane === null || Math.abs(o.lane - P.x) < 0.55;
+        if (!mine) continue;
+        if (o.type === 'low' && t < 0.5) { want = ['ctl:jump']; break; }
+        if (o.type === 'high' && t < 0.5 && P.duck <= 0.05) { want = ['ctl:duck']; break; }
+        if (o.type === 'block' && t < 0.95) {
+          const bl = new Set(G.lv.obs.filter(q => Math.abs(q.z - o.z) < 0.3 && q.lane !== null && !q.done).map(q => q.lane));
+          const free = [-1, 0, 1].filter(l => !bl.has(l)).sort((a, b) => Math.abs(a - P.lane) - Math.abs(b - P.lane))[0];
+          if (free !== undefined) want = [free < P.lane ? 'ctl:left' : 'ctl:right'];
+          break;
+        }
+      }
+    } else if (P.mode === 'twin' && G.twin && G.twin.phase === 'run' && !G.twin.grind) {
+      for (const o of G.lv.obs) {
+        if (o.done || o.z <= P.z || !o.lane) continue;
+        const t = (o.z - P.z) / v; if (t > 0.5) break;
+        const i = o.lane < 0 ? 0 : 1; if (i === 1 && save.twinAuto) continue;
+        if (!G.twin.tw[i].air) want.push(`twin:${i}:${o.type === 'high' ? 'duck' : 'jump'}`);
+      }
+    }
+  }
+  const key = want.join(',');
+  if (key === cueKey) return;
+  cueKey = key;
+  document.querySelectorAll('#ctl .cb').forEach(b => b.classList.toggle('now', want.includes('ctl:' + b.dataset.act)));
+  document.querySelectorAll('#twinCtl .cb').forEach(b => b.classList.toggle('now', want.includes(`twin:${b.dataset.twin}:${b.dataset.a}`)));
+}
 function updateHud(force) {
   if (!G.lv || G.scene !== 'play') return;
   const hearts = G.lv.tutorial ? '연습' : '♥'.repeat(Math.max(0, P.hearts)) + '♡'.repeat(Math.max(0, DIFF[save.diff].hearts - P.hearts));
   if (force || hudCache.h !== hearts) { $('hHearts').textContent = hearts; hudCache.h = hearts; }
+  const sh = G.lv.tutorial ? 0 : P.shield || 0;
+  if (force || hudCache.s !== sh) { $('hShield').hidden = sh <= 0; $('hShieldN').textContent = sh > 1 ? '×' + sh : ''; hudCache.s = sh; }
+  const hm = (save.items && save.items.hammer) || 0;
+  if (force || hudCache.m !== hm) { $('btnHammer').hidden = hm <= 0; $('hammerN').textContent = hm; hudCache.m = hm; }
   if (force || hudCache.c !== G.run.coins) { $('hCoins').textContent = G.run.coins; hudCache.c = G.run.coins; }
   $('hProg').style.width = clamp(P.z / G.lv.L * 100, 0, 100) + '%';
 }
 function setControls(mode) {
   $('ctl').hidden = mode !== 'ride';
   $('twinCtl').hidden = mode !== 'twin';
+  $('twinCtl').classList.toggle('auto', !!save.twinAuto);
+  ctlMode = mode;
 }
 function setPlaying(on) {
   $('hud').hidden = !on;
+  if (!on) $('btnHammer').hidden = true;
   setControls(on ? 'ride' : null);
   if (!on) { $('hint').hidden = true; G.hint = null; }
 }
-const SCREENS = ['menu', 'map', 'shop', 'settings', 'pause', 'result'];
+const SCREENS = ['menu', 'map', 'shop', 'settings', 'pause', 'result', 'setup'];
 // Developer mode: in the shop's sticker tab tap the picture of the 100 sticker 3 times,
 // leave the shop, come back, and tap the 100 picture once more — all within 20 seconds.
 let curScreen = null, devLog = [];
@@ -2191,6 +2317,7 @@ function showScreen(id) {
   if (id === 'map') renderMap();
   if (id === 'shop') renderShop();
   if (id === 'settings') renderSettings();
+  if (id === 'setup') renderSetup();
   $('devChip').hidden = !save.dev;
 }
 function goMenu() {
@@ -2199,6 +2326,57 @@ function goMenu() {
   showScreen('menu');
 }
 function goMap() { goMenu(); showScreen('map'); }
+// ---------- first-run setup: enter the stage reached, coins and purchases
+let suOwned = new Set();
+function allShopKeys() {
+  return [
+    ['스티커', STICKER_NUMS.map(n => ['sticker:' + n, n + ''])],
+    ['14 색깔', SKINS.filter(s => s.price).map(s => ['skin:' + s.id, s.name])],
+    ['보드', BOARDS.filter(b => b.price).map(b => ['board:' + b.id, b.name])],
+  ];
+}
+function renderSetup() {
+  const cleared = Math.max(0, Math.min(100, Math.max(...Object.keys(save.stars).map(Number).filter(n => save.stars[n] > 0), save.unlocked - 1, 0)));
+  $('suStage').value = cleared; $('suCoins').value = save.coins;
+  $('suHammer').value = (save.items && save.items.hammer) || 0; $('suShield').value = (save.items && save.items.shield) || 0;
+  suOwned = new Set(save.owned);
+  const box = $('suOwned'); box.innerHTML = '';
+  for (const [title, keys] of allShopKeys()) {
+    const g = document.createElement('div'); g.className = 'ownGroup';
+    g.innerHTML = `<h4>${title}</h4>`;
+    const c = document.createElement('div'); c.className = 'chips';
+    for (const [k, label] of keys) {
+      const b = document.createElement('button'); b.textContent = label; b.classList.toggle('on', suOwned.has(k));
+      b.onclick = () => { if (suOwned.has(k)) suOwned.delete(k); else suOwned.add(k); b.classList.toggle('on', suOwned.has(k)); SFX.ui(); };
+      c.appendChild(b);
+    }
+    g.appendChild(c); box.appendChild(g);
+  }
+}
+document.querySelectorAll('.stepper button').forEach(b => b.onclick = () => {
+  const inp = $(b.dataset.for), v = (parseInt(inp.value, 10) || 0) + parseInt(b.dataset.step, 10);
+  inp.value = clamp(v, +inp.min, +inp.max); SFX.ui();
+});
+const numIn = (id) => { const e = $(id); return clamp(parseInt(e.value, 10) || 0, +e.min, +e.max); };
+$('suSave').onclick = () => {
+  const cleared = numIn('suStage');
+  save.unlocked = Math.min(100, cleared + 1);
+  for (let n = 1; n <= 100; n++) { if (n <= cleared) save.stars[n] = Math.max(save.stars[n] || 0, 1); else delete save.stars[n]; }
+  save.coins = numIn('suCoins');
+  save.items = { hammer: numIn('suHammer'), shield: numIn('suShield') };
+  save.owned = ['skin:classic', 'board:rainbow', ...[...suOwned].filter(k => k !== 'skin:classic' && k !== 'board:rainbow')];
+  if (!save.owned.includes('skin:' + save.skin)) save.skin = 'classic';
+  if (!save.owned.includes('board:' + save.board)) save.board = 'rainbow';
+  if (save.sticker && !save.owned.includes('sticker:' + save.sticker)) save.sticker = 0;
+  save.setupDone = true; persist(); SFX.buy(); toast('기록을 맞췄어요!'); showScreen('menu');
+};
+$('suSkip').onclick = () => { save.setupDone = true; persist(); SFX.ui(); showScreen('menu'); };
+// triple-tap the rainbow title to reopen the setup screen
+let logoTaps = [];
+document.querySelector('.logo').addEventListener('click', () => {
+  const now = performance.now(); logoTaps = logoTaps.filter(t => now - t < 1200); logoTaps.push(now);
+  if (logoTaps.length >= 3) { logoTaps = []; audioInit(); SFX.ui(); showScreen('setup'); }
+});
 function togglePause(on) {
   if (G.scene !== 'play' || G.result) return;
   G.paused = on; $('pause').hidden = !on;
@@ -2258,7 +2436,8 @@ function renderShop() {
   let list;
   if (shopTab === 'sticker') list = STICKER_NUMS.map(n => ({ key: 'sticker:' + n, name: `${n} 스티커`, price: stickerPrice(n), n }));
   else if (shopTab === 'skin') list = SKINS.map(s => ({ key: 'skin:' + s.id, name: s.name, price: s.price, skin: s }));
-  else list = BOARDS.map(b => ({ key: 'board:' + b.id, name: b.name, price: b.price, board: b }));
+  else if (shopTab === 'board') list = BOARDS.map(b => ({ key: 'board:' + b.id, name: b.name, price: b.price, board: b }));
+  else { renderItemShop(box); return; }
   for (const it of list) {
     const d = document.createElement('div'); d.className = 'item';
     const owned = save.owned.includes(it.key);
@@ -2289,6 +2468,46 @@ function renderShop() {
   tip.textContent = shopTab === 'sticker' ? '스티커는 14의 등에 붙어요. 스케이트 탈 때 보여요!' : '깬 스테이지를 다시 하면 코인을 더 모을 수 있어요.';
   box.appendChild(tip);
 }
+const ITEMS = [
+  { id: 'hammer', icon: '🔨', name: '망치', price: 60, desc: '스케이트 탈 때 🔨 버튼을 누르면 앞에 오는 장애물 하나를 부숴요. 나무도 부술 수 있어요!' },
+  { id: 'shield', icon: '🛡', name: '쉴드 +1', price: 80, desc: '다음 판에 쉴드가 하나 더 생겨요. 한 번 부딪혀도 하트가 줄지 않아요. (매 판 쉴드 1개는 공짜)' },
+];
+function renderItemShop(box) {
+  save.items = save.items || { hammer: 0, shield: 0 };
+  for (const it of ITEMS) {
+    const d = document.createElement('div'); d.className = 'item';
+    const ic = document.createElement('div'); ic.style.fontSize = '64px'; ic.style.lineHeight = '110px'; ic.textContent = it.icon; d.appendChild(ic);
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name; d.appendChild(nm);
+    const cnt = document.createElement('div'); cnt.className = 'cnt'; cnt.textContent = `가지고 있는 개수: ${save.items[it.id] || 0}`; d.appendChild(cnt);
+    const ds = document.createElement('div'); ds.className = 'note'; ds.style.margin = '0'; ds.style.fontSize = '13px'; ds.textContent = it.desc; d.appendChild(ds);
+    const b = document.createElement('button');
+    b.innerHTML = `<i class="ci"></i> ${it.price}` + (save.coins < it.price ? ' (부족)' : '');
+    b.disabled = save.coins < it.price;
+    b.onclick = () => { if (save.coins < it.price) return; save.coins -= it.price; save.items[it.id] = (save.items[it.id] || 0) + 1; persist(); SFX.buy(); toast(`${it.name}을(를) 샀어요!`); renderShop(); };
+    d.appendChild(b); box.appendChild(d);
+  }
+  const tip = document.createElement('p'); tip.className = 'note'; tip.style.gridColumn = '1/-1'; tip.style.color = '#fff'; tip.style.textShadow = '0 2px 0 rgba(0,0,0,.3)';
+  tip.textContent = '아이템은 여러 개 살 수 있어요. 쓰면 하나씩 줄어요.';
+  box.appendChild(tip);
+}
+function useHammer() {
+  if (G.scene !== 'play' || G.paused || G.hint || !save.items || save.items.hammer <= 0) return;
+  if (!(P.mode === 'ride' || P.mode === 'twin' || P.mode === 'trick')) return;
+  const xs = P.mode === 'twin' && G.twin ? [-1, 1] : [P.lane];
+  let target = null;
+  for (const o of G.lv.obs) {
+    if (o.done || o.z <= P.z + 0.3 || o.z - P.z > 30) continue;
+    if (o.lane === null || xs.some(x => Math.abs(x - o.lane) < 0.5)) { target = o; break; }
+  }
+  if (!target) { popText('부술 장애물이 없어요', '#fff', 0.4, 0.8, 24); return; }
+  target.done = true; target.smashed = true;
+  save.items.hammer--; persist(); updateHud(true);
+  SFX.hit(); SFX.judge('P'); G.shake = 0.2;
+  const p = P3(target.lane === null ? clamp(P.x, -1, 1) : target.lane, 0.6, target.z);
+  burst(p[0], p[1], 30, target.ev === 'tree' ? ['#58b84a', '#8a5a2b', '#ffffff'] : ['#ff8a00', '#ffd200', '#ffffff', '#c8935a'], 320, 8);
+  popText('쾅! 부쉈어요!', '#ffe14d', 0.36, 1, 34, target.ev === 'tree' ? '나무가 사라졌어요' : '');
+}
+document.getElementById('btnHammer').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); useHammer(); });
 function equip(it) { if (it.n) save.sticker = it.n; if (it.skin) save.skin = it.skin.id; if (it.board) save.board = it.board.id; }
 function drawPreview(c, it) {
   const g = c.getContext('2d');
@@ -2321,6 +2540,7 @@ function renderSettings() {
     seg.appendChild(b);
   }
   $('diffNote').textContent = DIFF[save.diff].note + ' 언제든 바꿀 수 있어요.';
+  document.querySelectorAll('#segAuto button').forEach(b => { b.classList.toggle('on', (b.dataset.v === '1') === !!save.twinAuto); b.onclick = () => { save.twinAuto = b.dataset.v === '1'; persist(); SFX.ui(); renderSettings(); }; });
   document.querySelectorAll('#segSound button').forEach(b => { b.classList.toggle('on', (b.dataset.v === '1') === save.sound); b.onclick = () => { setSound(b.dataset.v === '1'); audioInit(); SFX.ui(); renderSettings(); }; });
   $('btnReset').textContent = resetArm ? '정말 지울까요? 한 번 더 누르면 지워져요' : '처음부터 다시 하기';
   $('resetNote').textContent = resetArm ? '스테이지 기록, 코인, 산 물건이 모두 지워져요.' : '';
@@ -2433,6 +2653,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 goMenu();
+if (!save.setupDone) showScreen('setup');
 requestAnimationFrame(frame);
 </script>
 
