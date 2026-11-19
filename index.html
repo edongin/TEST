@@ -1206,8 +1206,9 @@ async function takeTurn(kind){
     const q=lastPlace(p);
     toast(`🤝 꼴등 ${q.name} ${v}칸 앞으로!`,'good');
     msg(`🤝 ${p.name} 제자리! 꼴등 ${q.name} <b>${v}칸</b> 앞으로!`); sfx.event(); await wait(900);
+    const qStart=q.pos;
     await moveSteps(q, v); if(gid!==game.gid) return;
-    await settle(q, false); if(gid!==game.gid || game.over) return;
+    await settle(q, q.pos!==qStart); if(gid!==game.gid || game.over) return; // 꼴등도 도착 칸 이벤트 적용
     await settle(p, false); // 본인은 제자리 → 지금 칸의 뱀/사다리 적용
   } else {
     if(p.pos+v<=100) msg(`${p.name}: <b>${v}칸</b> 앞으로 폴짝폴짝!`);
@@ -1245,8 +1246,10 @@ async function moveSteps(p, steps){
 }
 
 // 사다리 / 뱀 / 겹침(+1칸) 처리를 반복
+// 도착한 칸 처리: 뱀/사다리 → 겹침(+1칸) → 이벤트.
+// canEvent: 이번에 '움직여서' 이 칸에 왔는지 (제자리면 이벤트 없이 뱀/사다리만 적용)
 async function settle(p, canEvent=false){
-  for(let guard=0; guard<40; guard++){
+  for(let guard=0; guard<60; guard++){
     if(!p.el.isConnected) return; // 새 게임이 시작됨
     if(p.pos===100){ await finish(p); return; }
     if(LADDERS[p.pos]){
@@ -1268,11 +1271,11 @@ async function settle(p, canEvent=false){
       toast(`앗, ${other.name}랑 겹쳤어요! +1칸`,'bump'); msg(`${other.name} 자리라서 ${p.name} 한 칸 더 앞으로!`);
       sfx.bump(); await wait(500);
       await hop(p, p.pos+1);
-      continue;
+      canEvent=true; continue;
     }
     if(canEvent && isChaos() && EVENTS.has(p.pos)){
       canEvent=false;
-      if(await runEvent(p)) continue; // 말이 움직였으면 다시 확인
+      if(await runEvent(p)){ canEvent=true; continue; } // 순간이동·드론으로 움직였으면 새 칸도 확인
     }
     break;
   }
