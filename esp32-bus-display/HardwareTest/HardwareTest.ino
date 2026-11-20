@@ -32,6 +32,9 @@
 // 여기서 true 가 맞았다면 버스 알림판 config.h 의 TFT_INVERT_COLORS 도 true 로 바꾸면 됩니다.
 #define INVERT_COLORS false
 
+// 화면 통신 속도. 점퍼선 연결에서도 안정적이도록 낮게 잡았습니다 (10MHz).
+#define TFT_SPI_HZ 10000000
+
 Adafruit_ILI9341 tft(&SPI, TFT_DC, TFT_CS, TFT_RST);
 U8G2_FOR_ADAFRUIT_GFX u8f;
 
@@ -169,7 +172,7 @@ void setup() {
   SPI.setSCK(TFT_SCLK);
   SPI.setTX(TFT_MOSI);
   SPI.setRX(TFT_MISO);
-  tft.begin(27000000);
+  tft.begin(TFT_SPI_HZ);
   tft.setRotation(1);
   tft.invertDisplay(INVERT_COLORS);
   u8f.begin(tft);
