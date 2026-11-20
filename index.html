@@ -187,6 +187,17 @@ button{font-family:inherit;cursor:pointer;border:none}
 .mini-btns .btn{font-size:17px;padding:8px 16px}
 .board-tag{margin-left:10px;font-size:18px;background:#FF3EA5;color:#fff;border-radius:999px;padding:3px 12px;white-space:nowrap}
 .board-tag:empty{display:none}
+.ev-help{margin-left:8px;font-size:17px;background:#fff;color:#FF3EA5;border:3px solid #FF3EA5;border-radius:999px;padding:3px 12px;white-space:nowrap;box-shadow:0 3px 0 rgba(0,0,0,.12)}
+.link-btn{margin-top:12px;background:none;color:#FF3EA5;font-size:17px;text-decoration:underline}
+.modal{position:fixed;inset:0;z-index:70;background:rgba(40,60,90,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.ev-card{max-width:540px;max-height:calc(100vh - 32px);overflow-y:auto;text-align:left}
+.ev-card h2{text-align:center}
+.ev-row{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:14px;background:#f6f9fc;margin-bottom:6px;border-left:6px solid var(--c)}
+.ev-ic{font-size:21px;min-width:84px;text-align:center;white-space:nowrap}
+.ev-nm{font-size:19px;color:var(--c)}
+.ev-ds{font-size:14px;color:#556;line-height:1.35}
+.ev-rules{margin:10px 0 0;padding:10px 12px 10px 28px;background:#FFF8DC;border-radius:14px;font-size:14px;line-height:1.55;color:#5a4500}
+.ev-sub{font-size:16px;margin:12px 0 6px}
 .turn-card .tc-info{flex:none}
 .tc-status{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .st-chip{font-size:15px;border-radius:999px;padding:3px 10px;background:#eef4f8;white-space:nowrap}
@@ -215,7 +226,10 @@ button{font-family:inherit;cursor:pointer;border:none}
 .token.warp .tk-inner{transform:scale(0) rotate(300deg);transition:transform .35s ease-in}
 .dock{display:flex;flex-direction:column;gap:12px}
 @media (max-width: 899px){
-  .game-head .title{font-size:24px}
+  .game-head .title{font-size:19px;white-space:nowrap;letter-spacing:0}
+  .game-head .title span{-webkit-text-stroke:1px rgba(0,0,0,.25)}
+  .board-tag{font-size:13px;padding:3px 8px;margin-left:6px}
+  .ev-help{font-size:13px;padding:2px 8px;margin-left:5px;border-width:2px}
   .dock{gap:8px}
   .turn-card{padding:6px 12px;gap:10px}
   .turn-card .tc-char{height:46px}
@@ -315,7 +329,8 @@ button{font-family:inherit;cursor:pointer;border:none}
         <small>모두 4~5턴씩 하면 맵이 흔들려 뱀·사다리가 바뀌고, 🎁 이벤트 칸이 18개 있어요!</small>
       </button>
     </div>
-    <h2 style="margin-top:22px">어떤 주사위로 할까요?</h2>
+    <button class="link-btn" id="evHelp2">❓ 난장판 이벤트 목록 보기</button>
+    <h2 style="margin-top:18px">어떤 주사위로 할까요?</h2>
     <div class="mode-grid">
       <button class="mode-card sel" data-mode="normal">
         <div class="dice-prev" id="prevNormal"></div>
@@ -338,7 +353,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 
 <!-- 게임 -->
 <section id="game" class="hidden">
-  <div class="game-head"><h1 class="title" data-title="넘버블럭스 뱀과 사다리"></h1><span class="board-tag" id="boardTag"></span></div>
+  <div class="game-head"><h1 class="title" data-title="넘버블럭스 뱀과 사다리"></h1><span class="board-tag" id="boardTag"></span><button class="ev-help hidden" id="evHelp">❓ 이벤트</button></div>
   <div class="game-main">
     <div class="board-wrap">
       <div class="board" id="board"></div>
@@ -374,6 +389,15 @@ button{font-family:inherit;cursor:pointer;border:none}
     </div>
   </div>
 </section>
+
+<!-- 난장판 이벤트 목록 -->
+<div id="evModal" class="modal hidden">
+  <div class="card ev-card">
+    <h2>🎁 난장판 이벤트</h2>
+    <div id="evList"></div>
+    <button class="btn pink" id="evClose" style="margin-top:12px">닫기</button>
+  </div>
+</div>
 
 <!-- 끝 화면 -->
 <section id="endScreen" class="screen hidden">
@@ -1011,11 +1035,12 @@ function posXY(p){
 function setXY(p, xy){ p.xy=xy; p.el.style.left=xy.x+'%'; p.el.style.top=xy.y+'%'; }
 
 function startGame(){
-  game.players = setup.picks.map((ch,i)=>({ idx:i, name:setup.names[i], ch, pos:0, done:false, rank:0, xy:null, el:null, pending:null }));
+  game.players = setup.picks.map((ch,i)=>({ idx:i, name:setup.names[i], ch, pos:0, done:false, rank:0, xy:null, el:null, queue:[] }));
   game.turn=0; game.busy=false; game.over=false; game.rankCount=0; game.gid++;
   LADDERS={...DEFAULT_LADDERS}; SNAKES={...DEFAULT_SNAKES}; EVENTS=new Set();
   if(isChaos()){ EVENTS=pickEvents(); game.shakeIn=randInt(4,5); }
   $('#boardTag').textContent = isChaos() ? '🌪️ 난장판' : '';
+  $('#evHelp').classList.toggle('hidden', !isChaos());
   $('#overlay').style.opacity=1; $('.board-wrap').classList.remove('shake'); $('#eventCard').classList.remove('show'); $('#drone').style.display='none';
   buildBoard();
   const tk=$('#tokens'); tk.innerHTML='';
@@ -1049,7 +1074,7 @@ function renderRollBtns(){
   $$('#rollBtns button').forEach(b=> b.onclick=()=>takeTurn(b.dataset.k));
   updateRollLabels();
 }
-function pendingDice(p){ return p && p.pending && p.pending.type==='dice' ? p.pending.n : 0; }
+function pendingDice(p){ const x=p && p.queue && p.queue[0]; return x && x.type==='dice' ? x.n : 0; }
 function updateRollLabels(){
   const n=pendingDice(game.players.length ? cur() : null);
   $$('#rollBtns button').forEach(b=>{
@@ -1071,17 +1096,17 @@ function updateUI(){
   $('#turnChar').innerHTML=nbSVG(p.ch, 80);
   $('#turnName').innerHTML=`<span style="color:${p.ch===3?'#C9A400':col}">${p.name}</span>`;
   let st='';
-  if(p.pending && !game.over) st+=`<span class="st-chip pend">${p.pending.icon} ${p.pending.label}</span>`;
+  if(p.queue.length && !game.over) st+=`<span class="st-chip pend">${p.queue[0].icon} ${p.queue[0].label}${p.queue.length>1?` · 다음 ${p.queue.slice(1).map(x=>x.icon).join('')}`:''}</span>`;
   if(isChaos() && !game.over) st+= game.shakeIn<=1 ? `<span class="st-chip shk soon">🌪️ 이번 턴 끝나면 흔들!</span>` : `<span class="st-chip shk">🌪️ ${game.shakeIn}턴 뒤 흔들</span>`;
   $('#tcStatus').innerHTML=st;
   updateRollLabels();
   game.players.forEach(q=>{
     q.el.classList.toggle('active', q===p && !game.over);
-    q.el.querySelector('.tk-name').textContent = q.name + (q.pending && !q.done ? ' '+q.pending.icon : '');
+    q.el.querySelector('.tk-name').textContent = q.name + (q.queue.length && !q.done ? ' '+q.queue.map(x=>x.icon).join('') : '');
   });
   $('#plist').innerHTML=game.players.map(q=>{
     const c=nbColor(q.ch);
-    const right = (q.pending&&!q.done ? `<span class="pd">${q.pending.icon} ${q.pending.label}</span>` : '') + (q.done ? `<span class="rk">🏆 ${q.rank}등</span>` : `<span class="pp">${q.pos===0?'출발 전':q.pos+'칸'}</span>`);
+    const right = (q.queue.length&&!q.done ? `<span class="pd">${q.queue.map(x=>x.icon).join(' ')} ${q.queue[0].label}</span>` : '') + (q.done ? `<span class="rk">🏆 ${q.rank}등</span>` : `<span class="pp">${q.pos===0?'출발 전':q.pos+'칸'}</span>`);
     return `<div class="prow ${q===p&&!game.over?'now':''}" style="--pc:${c}"><div class="pc">${nbSVG(q.ch,46)}</div><div class="pn">${q.name}</div>${right}</div>`;
   }).join('');
 }
@@ -1179,9 +1204,9 @@ function showResultBlocks(v){
 async function takeTurn(kind){
   if(game.busy||game.over) return;
   ac(); game.busy=true; setBtns(false);
-  const gid=game.gid, p=cur(), pend=p.pending;
-  p.pending=null; updateUI();
-  const n = pendingDice({pending:pend}) || (kind==='math' ? 2 : 1);
+  const gid=game.gid, p=cur(), pend=p.queue.shift()||null; // 이번 차례에 쓸 효과 하나
+  updateUI();
+  const n = (pend && pend.type==='dice' ? pend.n : 0) || (kind==='math' ? 2 : 1);
   let v = (kind==='math' && n===2) ? await rollMath() : await rollMulti(kind==='math' ? 'd4' : kind, n);
   if(gid!==game.gid) return;
   if(pend && pend.type==='half'){
@@ -1224,12 +1249,13 @@ async function moveBack(p, steps){
   const target=Math.max(1, p.pos-steps);
   for(let i=p.pos-1;i>=target;i--) await hop(p, i);
 }
-// 남은 사람 중 꼴등. 내가 꼴등(공동 꼴등 포함)이면 나, 아니면 꼴등 중 랜덤
+// 남은 사람 중 꼴등. 출발 전(0칸)도 포함하고, 0칸에 여럿이면 순서가 늦은 사람
+// (판 위에서는 겹치면 +1칸이라 공동 꼴등이 없음)
 function lastPlace(p){
   const left=game.players.filter(q=>!q.done);
   const min=Math.min(...left.map(q=>q.pos));
-  if(p.pos===min) return p;
-  return pickOne(left.filter(q=>q.pos===min));
+  const c=left.filter(q=>q.pos===min);
+  return c[c.length-1];
 }
 
 async function moveSteps(p, steps){
@@ -1249,6 +1275,7 @@ async function moveSteps(p, steps){
 // 도착한 칸 처리: 뱀/사다리 → 겹침(+1칸) → 이벤트.
 // canEvent: 이번에 '움직여서' 이 칸에 왔는지 (제자리면 이벤트 없이 뱀/사다리만 적용)
 async function settle(p, canEvent=false){
+  let eventUsed=false; // 이번 이동에서 이벤트는 한 번만
   for(let guard=0; guard<60; guard++){
     if(!p.el.isConnected) return; // 새 게임이 시작됨
     if(p.pos===100){ await finish(p); return; }
@@ -1275,7 +1302,13 @@ async function settle(p, canEvent=false){
     }
     if(canEvent && isChaos() && EVENTS.has(p.pos)){
       canEvent=false;
-      if(await runEvent(p)){ canEvent=true; continue; } // 순간이동·드론으로 움직였으면 새 칸도 확인
+      if(eventUsed){
+        msg(`🎁 ${p.name}: 이벤트는 한 번이에요! 이번엔 그냥 지나가요`);
+        await eventCard('🎁','이벤트는 한 번이에요!','이번 🎁 칸은 그냥 지나가요','#9aa3ad',1500);
+      } else {
+        eventUsed=true;
+        if(await runEvent(p)){ canEvent=true; continue; } // 순간이동·드론으로 움직였으면 새 칸 확인
+      }
     }
     break;
   }
@@ -1304,20 +1337,20 @@ async function runEvent(p){
       3:['🎲🎲🎲','주사위 3개!','다음 번엔 주사위 3개를 굴려서 모두 더해요!','#5DC232'],
       5:['💥🎲×5','주사위 폭탄!','다음 번엔 주사위 5개를 굴려서 모두 더해요!','#FF3EA5'],
     }[n];
-    p.pending={type:'dice', n, icon:`🎲${n}`, label:`주사위 ${n}개`};
+    p.queue.push({type:'dice', n, icon:`🎲${n}`, label:`주사위 ${n}개`});
     await eventCard(...info);
   } else if(t==='back'){
-    p.pending={type:'back', icon:'⏪', label:'거꾸로'};
+    p.queue.push({type:'back', icon:'⏪', label:'거꾸로'});
     await eventCard('⏪','거꾸로 주사위!','다음 번 주사위 숫자만큼 뒤로 가요','#E8232A');
   } else if(t==='half'){
-    p.pending={type:'half', icon:'✂️', label:'반쪽'};
+    p.queue.push({type:'half', icon:'✂️', label:'반쪽'});
     await eventCard('✂️','반쪽 주사위!','다음 번 주사위 숫자를 반으로 나눠서 가요 (5 → 3칸)','#7D4CD6');
   } else if(t==='help'){
-    p.pending={type:'help', icon:'🤝', label:'꼴등 돕기'};
+    p.queue.push({type:'help', icon:'🤝', label:'꼴등 돕기'});
     await eventCard('🤝','꼴등 친구 돕기!','다음 번 주사위만큼 꼴등이 앞으로 가요 (내가 꼴등이 아니면 나는 제자리)','#F7931E');
   } else if(t==='warp'){
     const others=game.players.filter(q=>q!==p && !q.done && q.pos>0);
-    if(!others.length){ await eventCard('🌀','순간이동 실패!','판 위에 친구가 없어서 그대로 있어요','#9C4DCC'); updateUI(); return false; }
+    if(!others.length){ msg(`🌀 ${p.name}: 주변에 친구가 없어요!`); await eventCard('🌀','주변에 친구가 없어요!','순간이동 없이 이벤트가 끝나요','#9C4DCC'); updateUI(); return false; }
     const md=Math.min(...others.map(q=>Math.abs(q.pos-p.pos)));
     const q=pickOne(others.filter(q=>Math.abs(q.pos-p.pos)===md));
     await eventCard('🌀','친구에게 순간이동!',`가장 가까운 ${q.name}에게 슝~ (${p.pos} → ${q.pos})`,'#9C4DCC');
@@ -1333,10 +1366,42 @@ async function runEvent(p){
     await droneCarry(p, p.pos+k);
     return true;
   }
-  msg(`${p.pending.icon} ${p.name}: 다음 차례에 "${p.pending.label}" 효과가 있어요!`);
+  const last=p.queue[p.queue.length-1];
+  msg(p.queue.length>1
+    ? `${last.icon} ${p.name}: 효과가 ${p.queue.length}개! 내 차례마다 하나씩 써요`
+    : `${last.icon} ${p.name}: 다음 차례에 "${last.label}" 효과가 있어요!`);
   updateUI();
   return false;
 }
+
+// 이벤트 목록 창
+const EVENT_LIST = [
+  ['☝️🎲','주사위 하나만!','다음 차례에 주사위를 1개만 굴려요','#2BB5D8'],
+  ['🎲🎲🎲','주사위 3개!','다음 차례에 주사위 3개를 굴려서 모두 더해요','#5DC232'],
+  ['💥🎲×5','주사위 폭탄!','다음 차례에 주사위 5개를 굴려서 모두 더해요','#FF3EA5'],
+  ['⏪','거꾸로 주사위!','다음 차례 주사위 숫자만큼 뒤로 가요','#E8232A'],
+  ['✂️','반쪽 주사위!','다음 차례 주사위 숫자를 반으로 나눠서 가요 (5 → 3칸)','#7D4CD6'],
+  ['🤝','꼴등 친구 돕기!','다음 차례 주사위만큼 꼴등이 앞으로 가요. 내가 꼴등이 아니면 나는 제자리. 출발 전 친구가 여럿이면 순서가 늦은 친구가 가요','#F7931E'],
+  ['🌀','친구에게 순간이동!','바로 가장 가까운 친구에게 슝~ (겹치면 +1칸). 판 위에 친구가 없으면 그냥 끝나요','#9C4DCC'],
+  ['🚁','드론 도움!','바로 드론이 1칸 · 5칸 · 10칸 중 하나만큼 앞으로 옮겨줘요','#16708A'],
+];
+function openEventList(){
+  $('#evList').innerHTML =
+    `<div class="ev-sub">🎁 칸에 도착하면 아래 중 하나가 랜덤!</div>` +
+    EVENT_LIST.map(([ic,nm,ds,c])=>`<div class="ev-row" style="--c:${c}"><div class="ev-ic">${ic}</div><div><div class="ev-nm">${nm}</div><div class="ev-ds">${ds}</div></div></div>`).join('') +
+    `<ul class="ev-rules">
+      <li>이벤트는 한 번! 이벤트로 움직여서 또 🎁 칸에 가도 그냥 지나가요</li>
+      <li>"다음 차례" 효과가 여러 개면 내 차례마다 하나씩 써요</li>
+      <li>🌪️ 모두 4~5턴씩 하면 맵이 흔들려 뱀·사다리가 바뀌어요</li>
+      <li>바뀐 뱀·사다리 위에 서 있으면, 다음에 제자리일 때 적용돼요</li>
+      <li>🏁 100칸은 딱 맞게! 이벤트로 넘쳐도 제자리예요</li>
+    </ul>`;
+  $('#evModal').classList.remove('hidden');
+}
+$('#evHelp').onclick=openEventList;
+$('#evHelp2').onclick=openEventList;
+$('#evClose').onclick=()=>$('#evModal').classList.add('hidden');
+$('#evModal').onclick=e=>{ if(e.target.id==='evModal') $('#evModal').classList.add('hidden'); };
 
 function droneSVG(){
   return `<svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
