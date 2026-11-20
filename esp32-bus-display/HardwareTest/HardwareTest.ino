@@ -94,7 +94,8 @@ static void touchReadAll(int* x, int* y, int* z) {
   touchRead(0x90);  // 절전 + 터치 알림(T_IRQ) 다시 켜기
   digitalWrite(TOUCH_CS, HIGH);
   TSPI.endTransaction();
-  *z = z1 + 4095 - z2;
+  // 터치 칩이 대답하지 않으면 두 값이 똑같이 나옵니다 (선 빠짐, 핀 설정 다름).
+  *z = (z1 == z2) ? 0 : z1 + 4095 - z2;
 }
 
 // ----- 1단계: 색 확인 -----

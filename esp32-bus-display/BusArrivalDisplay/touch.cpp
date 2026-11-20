@@ -45,6 +45,9 @@ static int readPressure() {
   readValue(CMD_IDLE_IRQ_ON);
   digitalWrite(TOUCH_CS, HIGH);
   touchSpi.endTransaction();
+  // 터치 칩이 대답하지 않으면(선이 빠졌거나 핀 설정이 다름) 두 값이 똑같이 나옵니다.
+  // 이때는 "누름"으로 보지 않아야 화면이 한 번 넘어간 뒤 멈추지 않습니다.
+  if (z1 == z2) return 0;
   return z1 + 4095 - z2;
 }
 
