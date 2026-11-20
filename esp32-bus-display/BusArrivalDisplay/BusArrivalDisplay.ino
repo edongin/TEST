@@ -116,7 +116,7 @@ static void fetchBus(int index, uint32_t now) {
   if (!haveBus) {
     char title[96];
     stationTitle(index, title, sizeof(title));
-    displayMessage(title, busIncoming.error, "잠시 후 다시 시도합니다");
+    displayMessage(title, busIncoming.error, "터치하면 다음 화면");
   }
 }
 
@@ -131,7 +131,10 @@ static void showStation(int index, bool firstDraw, bool online, uint32_t now) {
     fetchBus(index, now);
     now = millis();
   }
-  if (!haveBus) return;
+  if (!haveBus) {
+    displayHeader(title);  // 오류 화면에서도 시계는 계속 바뀌게
+    return;
+  }
 
   uint32_t ageSec = (now - busFetchedAtMs) / 1000;
   uint32_t shownMin = (now - stationShownAtMs) / 60000UL;
@@ -210,11 +213,15 @@ static void showWeather(bool tomorrow, bool firstDraw, bool online, uint32_t now
       snprintf(weatherError, sizeof(weatherError), "날씨 갱신 실패: %s", weatherIncoming.error);
       if (!haveWeather) {
         weatherTitle(tomorrow, nullptr, title, sizeof(title));
-        displayMessage(title, weatherIncoming.error, "잠시 후 다시 시도합니다");
+        displayMessage(title, weatherIncoming.error, "터치하면 다음 화면");
       }
     }
   }
-  if (!haveWeather) return;
+  if (!haveWeather) {
+    weatherTitle(tomorrow, nullptr, title, sizeof(title));
+    displayHeader(title);  // 오류 화면에서도 시계는 계속 바뀌게
+    return;
+  }
 
   weatherTitle(tomorrow, &weatherData, title, sizeof(title));
   const char* warning = wifiLost ? "Wi-Fi 끊김, 다시 연결 중..." : weatherError;

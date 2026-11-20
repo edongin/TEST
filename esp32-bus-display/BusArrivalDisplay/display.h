@@ -29,6 +29,9 @@ void displayArrivals(const bus::Result& data, uint32_t ageSec, const char* stati
 void displayWeather(const WeatherData& w, const char* title, int nowHour, const char* footer,
                     const char* warning);
 
+// 맨 위 제목 줄(시계 포함)만 다시 그립니다. 바뀐 게 없으면 아무것도 안 함.
+void displayHeader(const char* title);
+
 // 화면을 비웁니다 (다른 종류의 화면으로 바꿀 때)
 void displayClear();
 

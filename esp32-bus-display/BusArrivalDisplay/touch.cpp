@@ -65,7 +65,9 @@ static bool rawPressed() {
 #if TOUCH_MODE == 2
   return readPressure() > PRESSURE_THRESHOLD;
 #else
-  return TOUCH_IRQ >= 0 && digitalRead(TOUCH_IRQ) == LOW;
+  // 화면·터치 테스트와 같은 방식: T_IRQ 신호 또는 누르는 힘 중 하나라도 감지되면 터치
+  if (TOUCH_IRQ >= 0 && digitalRead(TOUCH_IRQ) == LOW) return true;
+  return readPressure() > PRESSURE_THRESHOLD;
 #endif
 }
 

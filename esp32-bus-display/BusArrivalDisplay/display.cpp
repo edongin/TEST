@@ -186,15 +186,18 @@ void displayClear() {
   clearCaches();
 }
 
+static void drawHeader(const char* station);
+
 void displayMessage(const char* title, const char* line1, const char* line2) {
   tft.fillScreen(C_BG);
   clearCaches();
+  drawHeader(title);  // 제목 + 시계
   useFont(FONT_KOREAN);
-  tft.fillRect(0, 0, W, HEADER_H, C_HEADER);
-  drawClipped(8, 21, W - 16, title, C_TEXT);
   if (line1) drawCentered(H / 2 - 14, line1, C_TEXT);
   if (line2) drawCentered(H / 2 + 14, line2, C_DIM);
 }
+
+void displayHeader(const char* title) { drawHeader(title); }
 
 // ---------------------------------------------------------------------------
 
