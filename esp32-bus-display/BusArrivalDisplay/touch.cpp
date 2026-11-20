@@ -15,6 +15,9 @@ static const int PRESSURE_THRESHOLD = 400;    // 이보다 세게 누르면 터�
 #if TOUCH_SHARED_SPI
 // Pico: 화면과 같은 SPI 통로 (display.cpp 가 이미 시작해 둠)
 #define touchSpi SPI
+#elif defined(ARDUINO_ARCH_RP2040)
+// Pico: 터치는 두 번째 SPI 통로(SPI1)에 따로
+#define touchSpi SPI1
 #else
 // ESP32: 화면이 안 쓰는 다른 SPI 통로
 #if TFT_USE_HSPI || !defined(HSPI)
@@ -49,7 +52,12 @@ void touchBegin() {
   pinMode(TOUCH_CS, OUTPUT);
   digitalWrite(TOUCH_CS, HIGH);
   if (TOUCH_IRQ >= 0) pinMode(TOUCH_IRQ, INPUT_PULLUP);
-#if !TOUCH_SHARED_SPI
+#if !TOUCH_SHARED_SPI && defined(ARDUINO_ARCH_RP2040)
+  touchSpi.setSCK(TOUCH_SCLK);
+  touchSpi.setTX(TOUCH_MOSI);
+  touchSpi.setRX(TOUCH_MISO);
+  touchSpi.begin();
+#elif !TOUCH_SHARED_SPI
   touchSpi.begin(TOUCH_SCLK, TOUCH_MISO, TOUCH_MOSI, TOUCH_CS);
 #endif
   // 터치 칩을 "절전 + 터치하면 T_IRQ 알림" 상태로 맞춰 둡니다.

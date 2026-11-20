@@ -29,13 +29,24 @@
 // ----- 배선 (README 의 Pico WH 배선표와 같음) -----
 #define TFT_SCLK  2   // SCK, T_CLK
 #define TFT_MOSI  3   // SDI, T_DIN
-#define TFT_MISO  0   // T_DO
 #define TFT_CS    1
 #define TFT_DC    21
 #define TFT_RST   20
 #define TFT_BL    22  // LED
 #define TOUCH_CS  15  // T_CS
 #define TOUCH_IRQ 28  // T_IRQ
+
+// 터치 연결 방식 (버스 알림판 config.h 의 TOUCH_SEPARATE_PINS 와 같은 값으로)
+//   0 = 브레드보드: T_CLK 는 GP2, T_DIN 은 GP3 (화면과 같은 핀), T_DO 는 GP0
+//   1 = F/F 선 1:1 연결: T_CLK -> GP10, T_DIN -> GP11, T_DO -> GP12
+#define TOUCH_SEPARATE_PINS 0
+
+#if TOUCH_SEPARATE_PINS
+#define TSPI SPI1  // 터치는 두 번째 SPI 통로
+#else
+#define TSPI SPI   // 터치가 화면과 같은 SPI 통로
+#define TFT_MISO 0 // T_DO
+#endif
 
 // 1단계에서 색이 반대로 보이면 true ↔ false 를 바꾸세요. (3.2인치 IPS 모듈은 true 가 맞음)
 // 여기서 맞는 값을 버스 알림판 config.h 의 TFT_INVERT_COLORS 에도 똑같이 넣으면 됩니다.
@@ -67,14 +78,14 @@ static void header(const char* title) {
 static const SPISettings TOUCH_SPI(2000000, MSBFIRST, SPI_MODE0);
 
 static uint16_t touchRead(uint8_t cmd) {
-  SPI.transfer(cmd);
-  uint16_t hi = SPI.transfer(0), lo = SPI.transfer(0);
+  TSPI.transfer(cmd);
+  uint16_t hi = TSPI.transfer(0), lo = TSPI.transfer(0);
   return (uint16_t)(((hi << 8) | lo) >> 3);
 }
 
 // 누르는 힘(z)과 위치(x, y) 원래 값
 static void touchReadAll(int* x, int* y, int* z) {
-  SPI.beginTransaction(TOUCH_SPI);
+  TSPI.beginTransaction(TOUCH_SPI);
   digitalWrite(TOUCH_CS, LOW);
   int z1 = touchRead(0xB1);
   int z2 = touchRead(0xC1);
@@ -82,7 +93,7 @@ static void touchReadAll(int* x, int* y, int* z) {
   *y = touchRead(0x91);
   touchRead(0x90);  // 절전 + 터치 알림(T_IRQ) 다시 켜기
   digitalWrite(TOUCH_CS, HIGH);
-  SPI.endTransaction();
+  TSPI.endTransaction();
   *z = z1 + 4095 - z2;
 }
 
@@ -184,7 +195,14 @@ void setup() {
   Serial.println("[3] 화면 초기화");
   SPI.setSCK(TFT_SCLK);
   SPI.setTX(TFT_MOSI);
+#if TOUCH_SEPARATE_PINS
+  SPI1.setSCK(10);  // T_CLK
+  SPI1.setTX(11);   // T_DIN
+  SPI1.setRX(12);   // T_DO
+  SPI1.begin();
+#else
   SPI.setRX(TFT_MISO);
+#endif
 #if DISPLAY_DRIVER == 2
   Serial.println("    화면 칩: ST7789");
   tft.init(240, 320);

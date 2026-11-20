@@ -86,9 +86,14 @@ static const StationConfig STATIONS[] = {
 #if defined(ARDUINO_ARCH_RP2040)
 // [A] Raspberry Pi Pico WH (또는 Pico W, Pico 2 W) + ILI9341 3.2인치 SPI 모듈
 //     README 의 "Pico WH 배선표" 대로 연결하세요.
-#define TFT_SCLK 2    // 화면 SCK   (터치 T_CLK 도 같은 핀에)
-#define TFT_MOSI 3    // 화면 SDI   (터치 T_DIN 도 같은 핀에)
-#define TFT_MISO 0    // 터치 T_DO  (화면의 SDO 는 연결하지 않음)
+// 터치 연결 방식
+//   0 = 브레드보드: 터치가 화면과 SPI 선을 같이 씀 (GP2, GP3 에 선이 2개씩)
+//   1 = F/F 선으로 1:1 연결: 터치를 다른 핀(SPI1)에 따로 연결
+//       T_CLK -> GP10, T_DIN -> GP11, T_DO -> GP12 (나머지는 같음)
+#define TOUCH_SEPARATE_PINS 0
+
+#define TFT_SCLK 2    // 화면 SCK
+#define TFT_MOSI 3    // 화면 SDI
 #define TFT_CS   1    // 화면 CS
 #define TFT_DC   21   // 화면 D/C
 #define TFT_RST  20   // 화면 RESET
@@ -96,7 +101,17 @@ static const StationConfig STATIONS[] = {
 
 #define TOUCH_CS  15  // 터치 T_CS
 #define TOUCH_IRQ 28  // 터치 T_IRQ
-#define TOUCH_SHARED_SPI 1  // 터치가 화면과 같은 SPI 선(GP0, GP2, GP3)을 같이 씀
+
+#if TOUCH_SEPARATE_PINS
+#define TFT_MISO   -1  // 화면의 SDO 는 연결하지 않음
+#define TOUCH_SCLK 10  // 터치 T_CLK
+#define TOUCH_MOSI 11  // 터치 T_DIN
+#define TOUCH_MISO 12  // 터치 T_DO
+#define TOUCH_SHARED_SPI 0
+#else
+#define TFT_MISO 0     // 터치 T_DO (화면의 SDO 는 연결하지 않음). T_CLK 는 GP2, T_DIN 은 GP3 에 같이
+#define TOUCH_SHARED_SPI 1
+#endif
 
 // 터치 대신 쓸 수 있는 버튼: Pico 위의 흰색 BOOTSEL 버튼. 버튼을 따로 달았다면 그 핀 번호.
 #define NEXT_BUTTON_PIN -1
