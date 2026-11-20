@@ -645,7 +645,7 @@ static void drawAmPmTable(weather::Condition am, weather::Condition pm, int popA
     useFont(FONT_KOREAN);
     drawBoldCenteredAt(TABLE_COL_X[i], TABLE_COND_Y, weather::conditionName(cond[i]),
                        conditionColor(cond[i]));
-    char buf[8];
+    char buf[12];
     if (pop[i] >= 0) {
       snprintf(buf, sizeof(buf), "%d%%", pop[i]);
     } else {
