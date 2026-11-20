@@ -4,7 +4,7 @@
 
 ARDUINOJSON_DIR ?= .deps/ArduinoJson
 SKETCH_DIR := ../BusArrivalDisplay
-CXXFLAGS := -std=c++17 -Wall -Wextra -Werror -g -fsanitize=address,undefined \
+CXXFLAGS := -std=c++17 -Wall -Wextra -Werror -g -fsanitize=address,undefined -include arduino_names.h \
             -I$(SKETCH_DIR) -I$(ARDUINOJSON_DIR)/src
 
 .PHONY: test clean

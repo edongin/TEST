@@ -30,24 +30,24 @@ const char* conditionName(Condition c) {
 void latLonToGrid(double lat, double lon, int* nx, int* ny) {
   const double RE = 6371.00877, GRID = 5.0, SLAT1 = 30.0, SLAT2 = 60.0;
   const double OLON = 126.0, OLAT = 38.0, XO = 43, YO = 136;
-  const double PI = 3.14159265358979323846, DEGRAD = PI / 180.0;
+  const double kPi = 3.14159265358979323846, DEGRAD = kPi / 180.0;
 
   double re = RE / GRID;
   double slat1 = SLAT1 * DEGRAD, slat2 = SLAT2 * DEGRAD;
   double olon = OLON * DEGRAD, olat = OLAT * DEGRAD;
 
-  double sn = tan(PI * 0.25 + slat2 * 0.5) / tan(PI * 0.25 + slat1 * 0.5);
+  double sn = tan(kPi * 0.25 + slat2 * 0.5) / tan(kPi * 0.25 + slat1 * 0.5);
   sn = log(cos(slat1) / cos(slat2)) / log(sn);
-  double sf = tan(PI * 0.25 + slat1 * 0.5);
+  double sf = tan(kPi * 0.25 + slat1 * 0.5);
   sf = pow(sf, sn) * cos(slat1) / sn;
-  double ro = tan(PI * 0.25 + olat * 0.5);
+  double ro = tan(kPi * 0.25 + olat * 0.5);
   ro = re * sf / pow(ro, sn);
 
-  double ra = tan(PI * 0.25 + lat * DEGRAD * 0.5);
+  double ra = tan(kPi * 0.25 + lat * DEGRAD * 0.5);
   ra = re * sf / pow(ra, sn);
   double theta = lon * DEGRAD - olon;
-  if (theta > PI) theta -= 2.0 * PI;
-  if (theta < -PI) theta += 2.0 * PI;
+  if (theta > kPi) theta -= 2.0 * kPi;
+  if (theta < -kPi) theta += 2.0 * kPi;
   theta *= sn;
 
   *nx = (int)floor(ra * sin(theta) + XO + 0.5);
