@@ -407,7 +407,7 @@ static void drawEmpty() {
   drawCentered(HEADER_H + (H - HEADER_H - FOOTER_H) / 2, "지금 도착 예정인 버스가 없어요", C_TEXT2);
 }
 
-// 맨 아래 줄: 왼쪽에 안내(또는 빨간 경고), 오른쪽에 짧은 글 (페이지 번호 등)
+// 맨 아래 줄: 왼쪽에 안내(또는 빨간 경고), 오른쪽에 짧은 글 (페이지 번호, 터치 안내)
 static void drawFooter(const char* footer, const char* warning, const char* pageText) {
   bool warn = warning && warning[0];
 
@@ -425,7 +425,8 @@ static void drawFooter(const char* footer, const char* warning, const char* page
 }
 
 void displayArrivals(const bus::Result& data, uint32_t ageSec, const char* station,
-                     const char* footer, const char* warning, int page) {
+                     const char* footer, const char* warning, int page,
+                     const char* touchHint) {
   static int lastRows = -1;
   const RowLayout lay = layoutFor(data.count);
   int pages = (data.count + lay.rows - 1) / lay.rows;
@@ -448,9 +449,14 @@ void displayArrivals(const bus::Result& data, uint32_t ageSec, const char* stati
       drawRow(i, lay, idx < data.count ? &data.routes[idx] : nullptr, ageSec);
     }
   }
-  char pageText[12] = "";
-  if (pages > 1) snprintf(pageText, sizeof(pageText), "%d/%d", page + 1, pages);
-  drawFooter(footer, warning, pageText);
+  // 오른쪽: "1/2  터치: 아파트 정문" (페이지가 하나면 터치 안내만)
+  char rightText[96] = "";
+  if (pages > 1) {
+    snprintf(rightText, sizeof(rightText), "%d/%d  %s", page + 1, pages, touchHint ? touchHint : "");
+  } else {
+    snprintf(rightText, sizeof(rightText), "%s", touchHint ? touchHint : "");
+  }
+  drawFooter(footer, warning, rightText);
 }
 
 // ===========================================================================
@@ -569,68 +575,123 @@ static int16_t drawBigTemp(int16_t x, int16_t baseline, int temp, uint16_t color
   return w + 14;
 }
 
-// "최저 / 최고" 를 maxW 안에 들어가는 가장 큰 글꼴로 (파랑 / 빨강)
-static void drawMinMax(int16_t x, int16_t baseline, int16_t maxW, int tmin, int tmax) {
+// 최저 / 최고 숫자를 maxW 안에 들어가는 가장 큰 글꼴로 고릅니다.
+static const uint8_t* minMaxFont(int16_t maxW, int tmin, int tmax, int16_t* outW) {
   const uint8_t* fonts[] = {u8g2_font_logisoso42_tr, u8g2_font_logisoso32_tr,
                             u8g2_font_logisoso28_tr, u8g2_font_logisoso24_tr};
-  const uint8_t* font = fonts[3];
   for (const uint8_t* f : fonts) {
     useFont(f);
-    int16_t slashW = u8f.getUTF8Width("/") + 12;
-    if (bigTempWidth(tmin, f) + slashW + bigTempWidth(tmax, f) <= maxW) {
-      font = f;
-      break;
-    }
+    int16_t w = bigTempWidth(tmin, f) + u8f.getUTF8Width("/") + 12 + bigTempWidth(tmax, f);
+    *outW = w;
+    if (w <= maxW) return f;
   }
-  x += drawBigTemp(x, baseline, tmin, C_COLD, font);
-  useFont(font);
-  drawText(x + 2, baseline, "/", C_TEXT);
-  x += u8f.getUTF8Width("/") + 12;
-  drawBigTemp(x, baseline, tmax, C_HOT, font);
+  return fonts[3];
 }
 
-// 오전/오후 줄은 크게 쓰려고 짧은 이름을 씁니다 ("구름많음" -> "구름")
+// "최저 / 최고" 글자와 그 아래 숫자(파랑 / 빨강)를 [x0, x1] 칸의 가운데에 맞춰 그립니다.
+static void drawMinMax(int16_t x0, int16_t x1, int16_t labelBase, int16_t numBase, bool have,
+                       int tmin, int tmax) {
+  const int16_t cx = (x0 + x1) / 2;
+  useFont(FONT_KOREAN);
+  drawCenteredAt(cx, labelBase, "최저 / 최고", C_TEXT2);
+  if (!have) return;
+  int16_t blockW;
+  const uint8_t* font = minMaxFont(x1 - x0, tmin, tmax, &blockW);
+  int16_t x = cx - blockW / 2;
+  x += drawBigTemp(x, numBase, tmin, C_COLD, font);
+  useFont(font);
+  drawText(x + 2, numBase, "/", C_TEXT);
+  x += u8f.getUTF8Width("/") + 12;
+  drawBigTemp(x, numBase, tmax, C_HOT, font);
+}
+
+// 표에는 크게 쓰려고 짧은 이름을 씁니다 ("구름많음" -> "구름")
 static const char* shortConditionName(weather::Condition c) {
   return c == weather::COND_PARTLY ? "구름" : weather::conditionName(c);
 }
 
-// "오전 맑음 / 오후 비" 를 가운데에. 들어가면 2배 크기, 안 들어가면 보통 크기.
-static void drawAmPm(int16_t baseline2x, weather::Condition am, weather::Condition pm) {
-  char line[64];
-  snprintf(line, sizeof(line), "오전 %s / 오후 %s", shortConditionName(am), shortConditionName(pm));
-  int16_t w2 = bigWidth(line);
-  if (w2 <= W - 12) {
-    drawBig((W - w2) / 2, baseline2x, line, C_TEXT);
-  } else {
-    useFont(FONT_KOREAN);
-    drawCentered(baseline2x - 12, line, C_TEXT);
+// 날씨 글자 색: 맑음 노랑, 비 파랑, 눈 흰색, 구름 회색
+static uint16_t conditionColor(weather::Condition c) {
+  using namespace weather;
+  switch (c) {
+    case COND_CLEAR: return C_SUN;
+    case COND_PARTLY: return C_CLOUD;
+    case COND_CLOUDY: return tft.color565(175, 180, 190);
+    case COND_RAIN:
+    case COND_SHOWER: return C_RAIN;
+    case COND_SNOW: return C_SNOW;
+    case COND_RAIN_SNOW: return tft.color565(120, 220, 255);
+    default: return C_DIM;
   }
 }
 
-static void popText(char* out, size_t size, int am, int pm) {
-  char a[8] = "-", p[8] = "-";
-  if (am >= 0) snprintf(a, sizeof(a), "%d%%", am);
-  if (pm >= 0) snprintf(p, sizeof(p), "%d%%", pm);
-  snprintf(out, size, "강수확률  오전 %s   오후 %s", a, p);
+// ----- 오전 / 오후 표 -----
+//            오전        오후
+//   날씨     맑음        비        (2배 크기, 색깔)
+//   강수확률  0%         70%       (큰 숫자)
+static const int16_t TABLE_LABEL_X = 10;
+static const int16_t TABLE_COL_X[2] = {148, 256};  // 오전, 오후 칸의 가운데
+static const int16_t TABLE_HEAD_Y = 113;            // "오전 / 오후" 바닥선
+static const int16_t TABLE_COND_Y = 147;            // 날씨(2배 글자) 바닥선
+static const int16_t TABLE_POP_Y = 181;             // 강수확률 숫자 바닥선
+static const int16_t TABLE_COL_MAX_W = 104;
+
+static void drawConditionCell(int16_t cx, weather::Condition c) {
+  const char* name = shortConditionName(c);
+  uint16_t color = conditionColor(c);
+  int16_t w2 = bigWidth(name);
+  if (w2 <= TABLE_COL_MAX_W) {
+    drawBig(cx - w2 / 2, TABLE_COND_Y, name, color);
+  } else {
+    useFont(FONT_KOREAN);
+    drawCenteredAt(cx, TABLE_COND_Y - 8, name, color);
+  }
 }
 
-// 시간별 예보 한 칸 (5칸 중 col 번째)
+static void drawPopCell(int16_t cx, int pop) {
+  char buf[8];
+  if (pop >= 0) {
+    snprintf(buf, sizeof(buf), "%d%%", pop);
+  } else {
+    snprintf(buf, sizeof(buf), "-");
+  }
+  useFont(u8g2_font_logisoso28_tr);
+  drawCenteredAt(cx, TABLE_POP_Y, buf, C_TEXT);
+}
+
+static void drawAmPmTable(weather::Condition am, weather::Condition pm, int popAm, int popPm) {
+  useFont(FONT_KOREAN);
+  drawCenteredAt(TABLE_COL_X[0], TABLE_HEAD_Y, "오전", C_TEXT2);
+  drawCenteredAt(TABLE_COL_X[1], TABLE_HEAD_Y, "오후", C_TEXT2);
+  // 이름표는 각 줄 글자의 세로 가운데에 맞춥니다.
+  drawText(TABLE_LABEL_X, TABLE_COND_Y - 9, "날씨", C_TEXT2);
+  drawText(TABLE_LABEL_X, TABLE_POP_Y - 7, "강수확률", C_TEXT2);
+
+  drawConditionCell(TABLE_COL_X[0], am);
+  drawConditionCell(TABLE_COL_X[1], pm);
+  drawPopCell(TABLE_COL_X[0], popAm);
+  drawPopCell(TABLE_COL_X[1], popPm);
+}
+
+// 시간별 예보 한 칸 (5칸 중 col 번째): 윗줄 "08시 (그림)", 아랫줄 "3도"
 static void drawHourSlot(int col, int hour, const weather::Hour* h) {
   const int16_t colW = W / 5, cx = col * colW + colW / 2;
-  const int16_t y0 = 164;
   if (!h) return;
   char buf[16];
   useFont(FONT_KOREAN);
   snprintf(buf, sizeof(buf), "%02d시", hour);
-  drawCenteredAt(cx, y0 + 13, buf, C_TEXT2);
-  drawWeatherIcon(cx, y0 + 29, 24, weather::hourCondition(*h));
+  int16_t tw = u8f.getUTF8Width(buf);
+  const int16_t iconS = 20, gap = 7;
+  int16_t x = cx - (tw + gap + iconS) / 2;
+  drawText(x, 201, buf, C_TEXT2);
+  drawWeatherIcon(x + tw + gap + iconS / 2, 195, iconS, weather::hourCondition(*h));
   if (h->temp != weather::UNKNOWN) {
     snprintf(buf, sizeof(buf), "%d도", h->temp);
   } else {
     snprintf(buf, sizeof(buf), "-");
   }
   useFont(FONT_KOREAN);
-  drawCenteredAt(cx, y0 + 53, buf, C_TEXT);
+  drawCenteredAt(cx, 217, buf, C_TEXT);
 }
 
 static void drawWeatherBody(const WeatherData& w, int nowHour) {
@@ -642,15 +703,15 @@ static void drawWeatherBody(const WeatherData& w, int nowHour) {
   Condition am = summarize(day, 6, 12, &popAm);
   Condition pm = summarize(day, 12, 19, &popPm);
   const bool haveMinMax = day.tmin10 != UNKNOWN10 && day.tmax10 != UNKNOWN10;
-  char line[96];
+  const int tmin = haveMinMax ? roundTemp(day.tmin10) : 0;
+  const int tmax = haveMinMax ? roundTemp(day.tmax10) : 0;
 
   // ----- 윗줄: 날씨 그림 / (오늘) 지금 기온 / 최저·최고 -----
+  const int16_t numBase = 92, labelBase = 47, iconX = 38, iconY = 66, iconS = 56;
   if (w.tomorrow) {
     int dummy;
-    drawWeatherIcon(40, 70, 58, summarize(day, 6, 19, &dummy));
-    useFont(FONT_KOREAN);
-    drawText(92, 50, "최저 / 최고", C_TEXT);
-    if (haveMinMax) drawMinMax(92, 101, W - 92 - 6, roundTemp(day.tmin10), roundTemp(day.tmax10));
+    drawWeatherIcon(iconX, iconY, iconS, summarize(day, 6, 19, &dummy));
+    drawMinMax(80, W - 6, labelBase, numBase, haveMinMax, tmin, tmax);
   } else {
     int8_t sky = (nowHour >= 0 && nowHour < 24) ? day.hours[nowHour].sky : UNKNOWN;
     Condition current;
@@ -661,32 +722,21 @@ static void drawWeatherBody(const WeatherData& w, int nowHour) {
       current = summarize(day, nowHour, nowHour + 3, &dummy);
     }
     if (current == COND_UNKNOWN) current = am != COND_UNKNOWN ? am : pm;
-    drawWeatherIcon(40, 70, 58, current);
+    drawWeatherIcon(iconX, iconY, iconS, current);
 
-    // 지금 기온
-    useFont(FONT_KOREAN);
-    drawText(80, 50, "지금", C_TEXT);
+    // 지금 기온 (그림 옆에 크게)
     if (w.now.ok) {
-      drawBigTemp(80, 101, roundTemp(w.now.temp10), C_TEXT, u8g2_font_logisoso42_tr);
+      drawBigTemp(76, numBase, roundTemp(w.now.temp10), C_TEXT, u8g2_font_logisoso42_tr);
     } else if (nowHour >= 0 && nowHour < 24 && day.hours[nowHour].temp != UNKNOWN) {
-      drawBigTemp(80, 101, day.hours[nowHour].temp, C_TEXT, u8g2_font_logisoso42_tr);
+      drawBigTemp(76, numBase, day.hours[nowHour].temp, C_TEXT, u8g2_font_logisoso42_tr);
     }
-
-    // 최저 / 최고
-    const int16_t mx = 182;
-    useFont(FONT_KOREAN);
-    drawText(mx, 50, "최저 / 최고", C_TEXT);
-    if (haveMinMax) drawMinMax(mx, 101, W - mx - 4, roundTemp(day.tmin10), roundTemp(day.tmax10));
+    drawMinMax(172, W - 4, labelBase, numBase, haveMinMax, tmin, tmax);
   }
+  tft.drawFastHLine(8, 98, W - 16, C_ROW_ALT);
 
-  // ----- 가운데: 오전 / 오후 날씨 (크게) -----
-  drawAmPm(134, am, pm);
-
-  // ----- 강수확률 -----
-  useFont(FONT_KOREAN);
-  popText(line, sizeof(line), popAm, popPm);
-  drawCentered(150, line, C_TEXT);
-  tft.drawFastHLine(8, 162, W - 16, C_ROW_ALT);
+  // ----- 가운데: 오전 / 오후 표 -----
+  drawAmPmTable(am, pm, popAm, popPm);
+  tft.drawFastHLine(8, 185, W - 16, C_ROW_ALT);
 
   // ----- 시간별 예보 5칸 (3시간 간격). 오늘은 다음 시각부터, 내일은 06시부터 -----
   int first = w.tomorrow ? 6 : nowHour + 1;
@@ -702,7 +752,7 @@ static void drawWeatherBody(const WeatherData& w, int nowHour) {
 }
 
 void displayWeather(const WeatherData& w, const char* title, int nowHour, const char* footer,
-                    const char* warning) {
+                    const char* warning, const char* touchHint) {
   drawHeader(title);
 
   char key[sizeof(bodyCache)];
@@ -713,5 +763,5 @@ void displayWeather(const WeatherData& w, const char* title, int nowHour, const 
     for (auto& row : rowCache) row[0] = '\0';  // 버스 화면 기억은 지움
     drawWeatherBody(w, nowHour);
   }
-  drawFooter(footer, warning, "터치: 버스");
+  drawFooter(footer, warning, touchHint ? touchHint : "");
 }

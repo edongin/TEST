@@ -63,6 +63,52 @@ static void stationTitle(int index, char* out, size_t size) {
   snprintf(out, size, "%d/%d  %s", index + 1, STATION_COUNT, name);
 }
 
+// 정류장의 짧은 이름: "안양대(안양역 방향)" -> "안양대"
+// 짧게 줄인 이름이 다른 정류장과 겹치면 원래 이름을 그대로 씁니다.
+static void shortStationName(int index, char* out, size_t size) {
+  const StationConfig& st = STATIONS[index];
+  if (!st.label[0]) {
+    snprintf(out, size, "정류장 %d", index + 1);
+    return;
+  }
+  auto shorten = [](const char* label, char* buf, size_t n) {
+    size_t len = strcspn(label, "(");
+    while (len > 0 && label[len - 1] == ' ') len--;
+    if (len == 0) len = strlen(label);
+    if (len >= n) len = n - 1;
+    memcpy(buf, label, len);
+    buf[len] = '\0';
+  };
+  shorten(st.label, out, size);
+  for (int i = 0; i < STATION_COUNT; i++) {
+    if (i == index || !STATIONS[i].label[0]) continue;
+    char other[64];
+    shorten(STATIONS[i].label, other, sizeof(other));
+    if (strcmp(other, out) == 0) {
+      snprintf(out, size, "%s", st.label);
+      return;
+    }
+  }
+}
+
+// 맨 아래 오른쪽 안내: 터치하면 나올 화면 이름 (예: "터치: 안양대", "터치: 오늘 날씨")
+static void touchHintFor(int current, char* out, size_t size) {
+  int next = app::nextScreen(current, STATION_COUNT);
+  if (next >= 0) {
+    char name[64];
+    shortStationName(next, name, sizeof(name));
+    snprintf(out, size, "터치: %s", name);
+    return;
+  }
+  struct tm t;
+  bool timeKnown = platformLocalTime(&t);
+  switch (app::homeModeAt(SCHEDULE, timeKnown ? t.tm_hour : 0, timeKnown)) {
+    case app::HOME_TODAY: snprintf(out, size, "터치: 오늘 날씨"); break;
+    case app::HOME_TOMORROW: snprintf(out, size, "터치: 내일 날씨"); break;
+    default: snprintf(out, size, "터치: 화면 끄기"); break;
+  }
+}
+
 static void clockText(const char* format, char* out, size_t size) {
   struct tm now;
   if (platformLocalTime(&now)) {
@@ -137,12 +183,8 @@ static void showStation(int index, bool firstDraw, bool online, uint32_t now) {
   }
 
   uint32_t ageSec = (now - busFetchedAtMs) / 1000;
-  uint32_t shownMin = (now - stationShownAtMs) / 60000UL;
-  const uint32_t limitMin = (uint32_t)STATION_SHOW_MIN;
-  uint32_t leftMin = shownMin < limitMin ? limitMin - shownMin : 0;
-
-  char footer[64];
-  snprintf(footer, sizeof(footer), "%s  (%lu분 더 표시)", busFooterTime, (unsigned long)leftMin);
+  char hint[96];
+  touchHintFor(index, hint, sizeof(hint));
 
   char warning[112] = "";
   if (wifiLost) {
@@ -152,7 +194,7 @@ static void showStation(int index, bool firstDraw, bool online, uint32_t now) {
   }
 
   int page = (int)((now / 1000) / PAGE_INTERVAL_SEC);
-  displayArrivals(busData, ageSec, title, footer, warning, page);
+  displayArrivals(busData, ageSec, title, busFooterTime, warning, page, hint);
 }
 
 // ---------------------------------------------------------------------------
@@ -225,7 +267,9 @@ static void showWeather(bool tomorrow, bool firstDraw, bool online, uint32_t now
 
   weatherTitle(tomorrow, &weatherData, title, sizeof(title));
   const char* warning = wifiLost ? "Wi-Fi 끊김, 다시 연결 중..." : weatherError;
-  displayWeather(weatherData, title, timeKnown ? t.tm_hour : 12, weatherFooter, warning);
+  char hint[96];
+  touchHintFor(-1, hint, sizeof(hint));
+  displayWeather(weatherData, title, timeKnown ? t.tm_hour : 12, weatherFooter, warning, hint);
 }
 
 // ---------------------------------------------------------------------------

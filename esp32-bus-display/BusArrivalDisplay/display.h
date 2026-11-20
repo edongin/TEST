@@ -20,14 +20,16 @@ void displayMessage(const char* title, const char* line1, const char* line2 = nu
 //   warning   : 비어 있지 않으면 footer 대신 빨간 글씨로 보여줍니다.
 //   page      : 노선이 많을 때 몇 번째 페이지인지 (0부터)
 void displayArrivals(const bus::Result& data, uint32_t ageSec, const char* station,
-                     const char* footer, const char* warning, int page);
+                     const char* footer, const char* warning, int page,
+                     const char* touchHint);
 
 // 날씨 화면. 바뀐 부분만 다시 그립니다.
 //   title     : 맨 위 제목 (예: "오늘 날씨 11/17(화)")
 //   nowHour   : 지금 시각(시). 오늘 날씨에서 시간별 예보를 어디서부터 보여줄지 정함
-//   footer    : 맨 아래 안내, warning: 빨간 경고 (비어 있으면 안 보임)
+//   footer    : 맨 아래 왼쪽 안내, warning: 빨간 경고 (비어 있으면 안 보임)
+//   touchHint : 맨 아래 오른쪽 안내 (예: "터치: 안양대")
 void displayWeather(const WeatherData& w, const char* title, int nowHour, const char* footer,
-                    const char* warning);
+                    const char* warning, const char* touchHint);
 
 // 맨 위 제목 줄(시계 포함)만 다시 그립니다. 바뀐 게 없으면 아무것도 안 함.
 void displayHeader(const char* title);
