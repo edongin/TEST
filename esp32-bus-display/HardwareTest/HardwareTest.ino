@@ -7,6 +7,10 @@
 //  1단계: 색 확인   - 칸마다 적힌 색 이름과 실제 색이 맞는지 봅니다. (6초 또는 터치하면 다음)
 //  2단계: 터치 확인 - 화면을 누르면 숫자가 바뀌고 점이 찍힙니다.
 //  BOOTSEL 버튼   - 누를 때마다 백라이트 끄기/켜기 (LED 선 확인)
+//
+//  화면이 안 나올 때 보는 신호
+//   - Pico 위의 작은 초록 LED: 켜지면 프로그램 시작, 0.5초마다 깜빡이면 정상으로 도는 중
+//   - 시작할 때 화면 불빛이 3번 깜빡이면 화면 전원(VCC, GND)과 LED 선은 정상
 // =============================================================================
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
@@ -138,15 +142,30 @@ static void showStatus(bool irq, bool pressed, int x, int y, int z) {
 
 void setup() {
   Serial.begin(115200);
-  delay(500);
-  Serial.println("\n=== 화면·터치 테스트 ===");
 
-  pinMode(TFT_BL, OUTPUT);
-  digitalWrite(TFT_BL, HIGH);
+  // [신호 1] Pico 위의 작은 초록 LED: 켜지면 프로그램이 시작된 것
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(1500);  // 시리얼 모니터를 열 시간
+  Serial.println("\n=== 화면·터치 테스트 ===");
+  Serial.println("[1] 프로그램 시작 (Pico LED 켜짐)");
+
   pinMode(TOUCH_CS, OUTPUT);
   digitalWrite(TOUCH_CS, HIGH);
   pinMode(TOUCH_IRQ, INPUT_PULLUP);
 
+  // [신호 2] 화면 불빛 3번 깜빡이기: 화면 전원(VCC, GND)과 LED 선 확인
+  Serial.println("[2] 화면 불빛 3번 깜빡이기");
+  pinMode(TFT_BL, OUTPUT);
+  for (int i = 0; i < 3; i++) {
+    digitalWrite(TFT_BL, HIGH);
+    delay(400);
+    digitalWrite(TFT_BL, LOW);
+    delay(400);
+  }
+  digitalWrite(TFT_BL, HIGH);
+
+  Serial.println("[3] 화면 초기화");
   SPI.setSCK(TFT_SCLK);
   SPI.setTX(TFT_MOSI);
   SPI.setRX(TFT_MISO);
@@ -155,13 +174,21 @@ void setup() {
   tft.invertDisplay(INVERT_COLORS);
   u8f.begin(tft);
 
+  Serial.println("[4] 1단계 색 화면 그리기");
   colorTest();
   touchScreen();
-  Serial.println("[2단계] 화면을 눌러 보세요");
+  Serial.println("[5] 2단계: 화면을 눌러 보세요");
 }
 
 void loop() {
   static uint32_t lastShow = 0;
+  static uint32_t lastBlink = 0;
+
+  // Pico 위의 작은 LED 를 0.5초마다 깜빡임: 깜빡이면 프로그램이 멈추지 않고 도는 중
+  if (millis() - lastBlink > 500) {
+    lastBlink = millis();
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+  }
 
   // BOOTSEL 로 백라이트 끄기/켜기
   bool bootsel = BOOTSEL;
