@@ -98,27 +98,42 @@ static void colorTest() {
 
 // ----- 2단계: 터치 확인 -----
 static int tapCount = 0;
+static char shown[4][64];  // 화면에 지금 쓰여 있는 상태 글자
 static bool lastPressed = false;
 static bool backlightOn = true;
 static bool lastBootsel = false;
 
 static void touchScreen() {
   tft.fillScreen(ILI9341_BLACK);
+  memset(shown, 0, sizeof(shown));
   header("2단계: 터치 확인");
   text(8, 228, "BOOTSEL: 백라이트 끄기/켜기", tft.color565(150, 150, 150));
 }
 
-static void showStatus(bool irq, int x, int y, int z) {
+// 바뀐 줄만 다시 그립니다 (매번 전부 지우면 화면이 깜빡여 보임)
+
+static void showLine(int i, const char* line, uint16_t color) {
+  if (strcmp(shown[i], line) == 0) return;
+  strncpy(shown[i], line, sizeof(shown[i]) - 1);
+  int16_t baseline = 52 + i * 20;
+  tft.fillRect(0, baseline - 16, 320, 20, ILI9341_BLACK);
+  text(8, baseline, line, color);
+}
+
+static void showStatus(bool irq, bool pressed, int x, int y, int z) {
   char line[64];
-  tft.fillRect(0, 32, 320, 84, ILI9341_BLACK);
   snprintf(line, sizeof(line), "T_IRQ 신호 : %s", irq ? "눌림" : "안 눌림");
-  text(8, 52, line, irq ? ILI9341_GREEN : ILI9341_WHITE);
-  snprintf(line, sizeof(line), "누르는 힘  : %d", z);
-  text(8, 72, line, ILI9341_WHITE);
-  snprintf(line, sizeof(line), "위치 (원래값): %d, %d", x, y);
-  text(8, 92, line, ILI9341_WHITE);
+  showLine(0, line, irq ? ILI9341_GREEN : ILI9341_WHITE);
+  snprintf(line, sizeof(line), "누르는 힘  : %d", pressed ? z : 0);
+  showLine(1, line, ILI9341_WHITE);
+  if (pressed) {
+    snprintf(line, sizeof(line), "위치 (원래값): %d, %d", x, y);
+  } else {
+    snprintf(line, sizeof(line), "위치 (원래값): -");
+  }
+  showLine(2, line, ILI9341_WHITE);
   snprintf(line, sizeof(line), "터치 횟수  : %d", tapCount);
-  text(8, 112, line, ILI9341_YELLOW);
+  showLine(3, line, ILI9341_YELLOW);
 }
 
 void setup() {
@@ -176,9 +191,9 @@ void loop() {
     tft.fillCircle(sx, sy, 3, ILI9341_CYAN);
   }
 
-  if (millis() - lastShow > 200) {
+  if (millis() - lastShow > 150) {
     lastShow = millis();
-    showStatus(irq, x, y, z);
+    showStatus(irq, pressed, x, y, z);
   }
   delay(20);
 }
