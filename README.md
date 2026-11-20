@@ -64,3 +64,9 @@ NTFY_TOPIC=내주제 python3 hotdeal_alert.py
 ```bash
 python3 -m unittest discover -s tests
 ```
+
+---
+
+## 다른 프로젝트
+
+- [버스·날씨 알림판 (Pico WH / ESP32)](esp32-bus-display/README.md): 평소에는 기상청 날씨를, 화면을 터치하면 정류장 3곳의 버스 도착 시간을 ILI9341 터치 화면에 보여줍니다.
