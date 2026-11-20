@@ -4,3 +4,7 @@ BusArrivalDisplay/config.h
 test_native/.deps/
 test_native/test_parse
 test_native/test_weather
+preview/.deps/
+preview/preview
+preview/preview.exe
+preview/out/

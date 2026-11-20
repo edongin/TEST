@@ -359,9 +359,22 @@ pio device monitor
 | `BusArrivalDisplay/config.example.h` | 설정 예시 |
 | `HardwareTest/HardwareTest.ino` | 배선 확인용 화면·터치·백라이트 테스트 |
 | `test_native/` | PC에서 응답 해석과 화면 전환 규칙을 확인하는 테스트 |
+| `preview/` | PC에서 화면 모양을 PNG 그림으로 미리 보기 (보드 없이) |
 
 ### PC에서 테스트 실행
 API 응답 해석, 날씨 계산, 화면 전환 규칙은 보드 없이 PC에서 확인할 수 있습니다.
 ```bash
 cd test_native && make
 ```
+
+### PC에서 화면 미리보기 (보드 없이)
+`display.cpp` 를 고친 뒤 매번 Pico 에 올리지 않아도, **똑같은 그리기 코드**를 PC에서 돌려 화면을 PNG 그림으로 볼 수 있습니다.
+글꼴·색·위치가 실제 화면(320x240)과 픽셀 단위로 같습니다. Wi‑Fi·인증키도 필요 없습니다.
+```bash
+cd preview && make
+```
+- `preview/out/all.png` 에 모든 화면이 한 장으로, `preview/out/<화면이름>.png` 에 화면별로 저장됩니다 (2배 크기).
+- `./preview --list` 로 화면 목록, `./preview bus_many` 처럼 하나만, `./preview --scale 1` 로 실제 크기.
+- 버스 노선·도착 시간·날씨·시각 같은 예시 내용은 `preview/preview.cpp` 의 "화면 목록"에서 바꿉니다.
+- `BusArrivalDisplay/config.h` 가 있으면 그 설정을, 없으면 `config.example.h` 를 씁니다.
+- 필요한 것: `g++`, `make`, `git` (Windows 는 WSL 추천. 라이브러리는 처음 한 번 자동으로 받습니다).
