@@ -10,7 +10,21 @@
 static const uint8_t CMD_Z1 = 0xB1;           // 누르는 힘 1 (측정 중 켜 둠)
 static const uint8_t CMD_Z2 = 0xC1;           // 누르는 힘 2
 static const uint8_t CMD_IDLE_IRQ_ON = 0x90;  // 측정 후 절전 + 터치 알림(T_IRQ) 켜기
-static const int PRESSURE_THRESHOLD = 400;    // 이보다 세게 누르면 터치로 봄
+// 이보다 세게 누르면 터치로 봄 (config.h 의 TOUCH_PRESSURE_MIN. 작을수록 가볍게 눌러도 인식)
+#ifndef TOUCH_PRESSURE_MIN
+#define TOUCH_PRESSURE_MIN 250
+#endif
+static const int PRESSURE_THRESHOLD = TOUCH_PRESSURE_MIN;
+
+// 인터넷으로 정보를 받는 1~2초 동안은 터치를 확인할 수 없어서,
+// T_IRQ 신호가 떨어지는 순간을 따로 기억해 두었다가 나중에 처리합니다.
+static volatile bool irqLatched = false;
+static volatile uint32_t ignoreIrqUntil = 0;  // 우리가 터치 칩을 읽는 동안 생기는 신호는 무시
+
+static void onTouchIrq() {
+  if ((int32_t)(millis() - ignoreIrqUntil) < 0) return;
+  irqLatched = true;
+}
 
 #if TOUCH_SHARED_SPI
 // Pico: 화면과 같은 SPI 통로 (display.cpp 가 이미 시작해 둠)
@@ -38,6 +52,7 @@ static uint16_t readValue(uint8_t command) {
 
 // 누르는 힘을 직접 읽습니다 (TOUCH_MODE 2).
 static int readPressure() {
+  ignoreIrqUntil = millis() + 5;
   touchSpi.beginTransaction(TOUCH_SPI_SETTINGS);
   digitalWrite(TOUCH_CS, LOW);
   int z1 = readValue(CMD_Z1);
@@ -45,6 +60,7 @@ static int readPressure() {
   readValue(CMD_IDLE_IRQ_ON);
   digitalWrite(TOUCH_CS, HIGH);
   touchSpi.endTransaction();
+  ignoreIrqUntil = millis() + 5;
   // 터치 칩이 대답하지 않으면(선이 빠졌거나 핀 설정이 다름) 두 값이 똑같이 나옵니다.
   // 이때는 "누름"으로 보지 않아야 화면이 한 번 넘어간 뒤 멈추지 않습니다.
   if (z1 == z2) return 0;
@@ -69,6 +85,10 @@ void touchBegin() {
   readValue(CMD_IDLE_IRQ_ON);
   digitalWrite(TOUCH_CS, HIGH);
   touchSpi.endTransaction();
+
+#if TOUCH_MODE != 2
+  if (TOUCH_IRQ >= 0) attachInterrupt(digitalPinToInterrupt(TOUCH_IRQ), onTouchIrq, FALLING);
+#endif
 }
 
 static bool rawPressed() {
@@ -82,43 +102,50 @@ static bool rawPressed() {
 #endif
 }
 
-// 잡음으로 잘못 눌리지 않게 40ms 동안 계속 눌려 있어야 터치로 봅니다.
-// 한 번 터치한 뒤에는 손을 150ms 이상 뗐다가 다시 눌러야 다음 터치가 됩니다.
+// 15ms 마다 확인해서 두 번 연속 눌려 있으면 터치로 봅니다 (잡음 걸러내기).
+// 한 번 터치한 뒤에는 손을 잠깐(80ms) 뗐다가 다시 눌러야 다음 터치가 됩니다.
 bool touchTapped() {
-  static uint32_t pressStart = 0;
+  static uint8_t pressCount = 0;
   static uint32_t releaseStart = 0;
   static bool waitRelease = false;
   static uint32_t lastPoll = 0;
+  static uint32_t lastTap = 0;
 
   uint32_t now = millis();
-  if (now - lastPoll < 25) return false;  // 25ms 마다 확인
+  if (now - lastPoll < 15) return false;
   lastPoll = now;
 
   bool pressed = rawPressed();
+  bool latched = irqLatched;
+  irqLatched = false;
 
   if (waitRelease) {
     if (pressed) {
       releaseStart = 0;
     } else if (releaseStart == 0) {
       releaseStart = now;
-    } else if (now - releaseStart >= 150) {
+    } else if (now - releaseStart >= 80) {
       waitRelease = false;
-      pressStart = 0;
+      pressCount = 0;
     }
     return false;
   }
 
+  // 다른 일(인터넷으로 정보 받기)을 하는 사이에 눌렀다 뗀 터치
+  if (latched && !pressed && now - lastTap > 300) {
+    lastTap = now;
+    return true;
+  }
+
   if (!pressed) {
-    pressStart = 0;
+    pressCount = 0;
     return false;
   }
-  if (pressStart == 0) {
-    pressStart = now;
-    return false;
-  }
-  if (now - pressStart >= 40) {
+  if (++pressCount >= 2 && now - lastTap > 200) {
     waitRelease = true;
     releaseStart = 0;
+    pressCount = 0;
+    lastTap = now;
     return true;
   }
   return false;

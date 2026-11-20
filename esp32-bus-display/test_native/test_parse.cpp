@@ -277,6 +277,21 @@ static void testArrivalText() {
   CHECK(formatFirst(make(-1, -1, -1, "운행종료"), 0, buf, sizeof(buf)) == URGENCY_NONE);
   CHECK_STR(buf, "운행종료");
 
+  CHECK(formatMain(make(412, 4, 23), 0, buf, sizeof(buf)) == URGENCY_NORMAL);
+  CHECK_STR(buf, "6분");
+  CHECK(formatMain(make(50), 0, buf, sizeof(buf)) == URGENCY_SOON);
+  CHECK_STR(buf, "곧 도착");
+  CHECK(formatMain(make(-1, -1, -1, "운행종료"), 0, buf, sizeof(buf)) == URGENCY_NONE);
+  CHECK_STR(buf, "운행종료");
+  formatDetail(make(412, 4, 23), buf, sizeof(buf));
+  CHECK_STR(buf, "4정거장 전  23석");
+  formatDetail(make(412, 4), buf, sizeof(buf));
+  CHECK_STR(buf, "4정거장 전");
+  formatDetail(make(412, -1, 5), buf, sizeof(buf));
+  CHECK_STR(buf, "5석");
+  formatDetail(make(-1, 3, 5), buf, sizeof(buf));
+  CHECK_STR(buf, "");
+
   formatSecond(make(1260, 12), 0, buf, sizeof(buf));
   CHECK_STR(buf, "다음 21분");
   formatSecond(make(-1, -1, -1, "출발대기"), 0, buf, sizeof(buf));

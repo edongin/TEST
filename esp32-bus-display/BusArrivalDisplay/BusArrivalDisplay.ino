@@ -265,7 +265,9 @@ void loop() {
       stationShownAtMs = now;
       haveBus = false;
       busError[0] = '\0';
-      nextBusFetchMs = now;
+      // 바로 받으면 받는 1~2초 동안 다음 터치를 못 읽어서, 잠깐 기다렸다가 받습니다.
+      // (정류장을 빠르게 넘길 때 터치가 씹히지 않게)
+      nextBusFetchMs = now + 800;
       Serial.printf("[터치] 정류장 %d: %s\n", screen + 1, STATIONS[screen].label);
     } else {
       Serial.println("[터치] 기본 화면");

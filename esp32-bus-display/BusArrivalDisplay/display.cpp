@@ -16,7 +16,6 @@ static const int16_t W = 320;
 static const int16_t H = 240;
 static const int16_t HEADER_H = 30;
 static const int16_t FOOTER_H = 20;
-static const int16_t ROW_H = (H - HEADER_H - FOOTER_H) / ROWS_PER_PAGE;  // 38
 static const int16_t ROUTE_W = 96;  // 왼쪽 노선 번호 칸 너비
 static const int16_t TEXT_X = ROUTE_W + 6;
 static const int16_t TEXT_W = W - TEXT_X - 6;
@@ -40,6 +39,8 @@ static SPIClass tftSpi(FSPI);
 #endif
 static Adafruit_ILI9341 tft(&tftSpi, TFT_DC, TFT_CS, TFT_RST);
 static U8G2_FOR_ADAFRUIT_GFX u8f;
+static GFXcanvas1 bigCanvas(160, 16);  // 한글 2배 글자용 그림판 (1배 160픽셀 = 화면 320픽셀)
+static U8G2_FOR_ADAFRUIT_GFX u8big;
 
 // 글꼴 바꾸기. 이 라이브러리는 글꼴을 바꿀 때마다 "글자 배경 칠하기"로 되돌아가서
 // 매번 투명 모드(1)를 다시 켜 줍니다. (안 하면 글자 뒤에 검은 상자가 생김)
@@ -50,6 +51,7 @@ static void useFont(const uint8_t* font) {
 
 static uint16_t C_BG, C_ROW_ALT, C_HEADER, C_TEXT, C_DIM, C_ROUTE, C_SOON, C_WARN;
 static uint16_t C_SUN, C_CLOUD, C_DARK_CLOUD, C_RAIN, C_SNOW, C_COLD, C_HOT;
+static uint16_t C_TEXT2;  // 조금 덜 밝은 흰색 (정거장 수 등)
 
 // 마지막으로 그린 내용을 기억해서, 바뀐 곳만 다시 그립니다.
 static char headerCache[96];
@@ -136,13 +138,15 @@ void displayBegin() {
   tft.invertDisplay(TFT_INVERT_COLORS);
 
   u8f.begin(tft);
+  u8big.begin(bigCanvas);
   u8f.setFontDirection(0);
 
   C_BG = ILI9341_BLACK;
   C_ROW_ALT = tft.color565(18, 22, 30);
   C_HEADER = tft.color565(20, 60, 140);
   C_TEXT = ILI9341_WHITE;
-  C_DIM = tft.color565(150, 150, 150);
+  C_DIM = tft.color565(160, 160, 160);
+  C_TEXT2 = tft.color565(215, 215, 215);
   C_ROUTE = tft.color565(90, 210, 255);
   C_SOON = tft.color565(255, 150, 0);
   C_WARN = tft.color565(255, 80, 80);
@@ -217,52 +221,182 @@ static void drawHeader(const char* station) {
   if (clock[0]) drawText(W - 8 - clockW, 21, clock, C_TEXT);
 }
 
-static void drawRouteName(int16_t y0, const char* name) {
-  // 영문/숫자로만 된 노선 번호는 큰 글꼴, 한글이 있으면 (예: "종로09") 한글 글꼴
-  if (isAscii(name)) {
-    useFont(FONT_ROUTE_BIG);
-    if (u8f.getUTF8Width(name) > ROUTE_W - 8) useFont(FONT_ROUTE_MID);
-  } else {
-    useFont(FONT_KOREAN);
-  }
-  int16_t baseline = y0 + (ROW_H + u8f.getFontAscent()) / 2;
-  drawClipped(8, baseline, ROUTE_W - 8, name, C_ROUTE);
+// ---------------------------------------------------------------------------
+// 한글 2배 크기 글자
+// 한글 글꼴은 16픽셀 하나뿐이라, 작은 흑백 그림판에 먼저 그린 뒤 2배로 키워서 옮깁니다.
+// ---------------------------------------------------------------------------
+
+static void useBigFont() {
+  u8big.setFont(FONT_KOREAN);
+  u8big.setFontMode(1);
 }
 
-static void drawRow(int index, const bus::Route* route, uint32_t ageSec) {
-  char first[64] = "", second[64] = "";
+static int16_t bigWidth(const char* text) {
+  useBigFont();
+  return u8big.getUTF8Width(text) * 2;
+}
+
+static int16_t bigAscent() {
+  useBigFont();
+  return u8big.getFontAscent() * 2;
+}
+
+// baseline: 2배 글자의 바닥선 위치
+static void drawBig(int16_t x, int16_t baseline, const char* text, uint16_t color) {
+  useBigFont();
+  u8big.setForegroundColor(1);
+  bigCanvas.fillScreen(0);
+  const int16_t asc = u8big.getFontAscent();
+  u8big.drawUTF8(0, asc, text);
+  int16_t w = u8big.getUTF8Width(text);
+  if (w > bigCanvas.width()) w = bigCanvas.width();
+  const int16_t top = baseline - asc * 2;
+  // 가로로 이어진 점들을 한 번에 칠해서 빠르게 그립니다.
+  for (int16_t y = 0; y < bigCanvas.height(); y++) {
+    int16_t run = -1;
+    for (int16_t px = 0; px <= w; px++) {
+      bool on = px < w && bigCanvas.getPixel(px, y);
+      if (on && run < 0) {
+        run = px;
+      } else if (!on && run >= 0) {
+        tft.fillRect(x + run * 2, top + y * 2, (px - run) * 2, 2, color);
+        run = -1;
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 정류장 화면
+// 버스가 적으면 줄을 크게: 1대 = 화면 전체, 2대 = 2줄, 3대 = 3줄, 4대 이상 = 5줄
+// ---------------------------------------------------------------------------
+
+#define FONT_ROUTE_HUGE  u8g2_font_logisoso42_tr  // 2줄일 때 노선 번호
+#define FONT_ROUTE_LARGE u8g2_font_logisoso32_tr  // 3줄일 때 노선 번호
+#define FONT_ROUTE_24    u8g2_font_helvB24_tf
+
+struct RowLayout {
+  int rows;   // 한 화면에 보일 줄 수
+  int16_t h;  // 한 줄 높이
+  bool big;   // 큰 글씨 배치인지
+};
+
+static RowLayout layoutFor(int count) {
+  const int16_t body = H - HEADER_H - FOOTER_H;  // 190
+  if (count >= 4) return {ROWS_PER_PAGE, (int16_t)(body / ROWS_PER_PAGE), false};
+  if (count == 3) return {3, (int16_t)(body / 3), true};
+  if (count == 2) return {2, (int16_t)(body / 2), true};
+  return {1, body, true};  // 1대면 화면 전체를 한 줄로
+}
+
+static const int16_t BIG_ROUTE_W = 118;  // 큰 배치에서 왼쪽 노선 번호 칸
+static const int16_t BIG_TEXT_X = BIG_ROUTE_W + 8;
+static const int16_t BIG_TEXT_W = W - BIG_TEXT_X - 6;
+
+static void drawRouteName(int16_t y0, int16_t h, bool big, const char* name) {
+  const int16_t colW = big ? BIG_ROUTE_W : ROUTE_W;
+  if (!isAscii(name)) {
+    // 한글이 들어간 노선 번호 (예: "마을02")
+    if (big && bigWidth(name) <= colW - 8) {
+      drawBig(8, y0 + (h + bigAscent()) / 2, name, C_ROUTE);
+    } else {
+      useFont(FONT_KOREAN);
+      drawClipped(8, y0 + (h + u8f.getFontAscent()) / 2, colW - 8, name, C_ROUTE);
+    }
+    return;
+  }
+  // 영문/숫자 노선 번호: 칸에 들어가는 가장 큰 글꼴
+  // 큰 글꼴부터 한 단계씩 줄여 가며 칸에 맞는 것을 고릅니다.
+  const uint8_t* fonts[] = {FONT_ROUTE_HUGE, FONT_ROUTE_LARGE, FONT_ROUTE_24, FONT_ROUTE_BIG,
+                            FONT_ROUTE_MID};
+  const int count = sizeof(fonts) / sizeof(fonts[0]);
+  int first = !big ? 3 : (h >= 90 ? 0 : 1);
+  for (int i = first; i < count; i++) {
+    useFont(fonts[i]);
+    if (u8f.getUTF8Width(name) <= colW - 8 || i == count - 1) break;
+  }
+  int16_t baseline = y0 + (h + u8f.getFontAscent()) / 2;
+  drawClipped(8, baseline, colW - 8, name, C_ROUTE);
+}
+
+// "다음 15분" 은 흰색, " / 범계역 방면" 은 회색으로 이어서 씁니다.
+static void drawNextLine(int16_t x, int16_t baseline, int16_t maxW, const char* second,
+                         const char* dest) {
+  useFont(FONT_KOREAN);
+  int16_t used = 0;
+  if (second[0]) {
+    drawClipped(x, baseline, maxW, second, C_TEXT);
+    used = u8f.getUTF8Width(second);
+  }
+  if (dest[0] && used < maxW - 24) {
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%s%s", second[0] ? " / " : "", dest);
+    drawClipped(x + used, baseline, maxW - used, buf, C_DIM);
+  }
+}
+
+static void drawRow(int index, const RowLayout& lay, const bus::Route* route, uint32_t ageSec) {
+  char mainText[48] = "", detail[48] = "", second[48] = "", first[64] = "";
   bus::Urgency urgency = bus::URGENCY_NONE;
   if (route) {
-    urgency = bus::formatFirst(route->next[0], ageSec, first, sizeof(first));
+    if (lay.big) {
+      urgency = bus::formatMain(route->next[0], ageSec, mainText, sizeof(mainText));
+      bus::formatDetail(route->next[0], detail, sizeof(detail));
+    } else {
+      urgency = bus::formatFirst(route->next[0], ageSec, first, sizeof(first));
+    }
     bus::formatSecond(route->next[1], ageSec, second, sizeof(second));
   }
 
-  // 두 번째 줄: "다음 15분 / 범계역 방면" (글꼴에 없는 기호는 피하고 ASCII 만 씀)
-  char line2[128] = "";
-  if (route) {
-    if (second[0] && route->dest[0]) {
-      snprintf(line2, sizeof(line2), "%s / %s", second, route->dest);
-    } else {
-      snprintf(line2, sizeof(line2), "%s", second[0] ? second : route->dest);
-    }
-  }
-
   char key[sizeof(rowCache[0])];
-  snprintf(key, sizeof(key), "%s|%s|%s|%d", route ? route->name : "", first, line2, urgency);
+  snprintf(key, sizeof(key), "%d|%s|%s%s|%s|%s|%d", lay.rows, route ? route->name : "", mainText,
+           first, detail, second, urgency);
   if (!changed(rowCache[index], sizeof(rowCache[index]), key)) return;
 
-  int16_t y0 = HEADER_H + index * ROW_H;
-  tft.fillRect(0, y0, W, ROW_H, (index % 2) ? C_ROW_ALT : C_BG);
+  const int16_t y0 = HEADER_H + index * lay.h;
+  tft.fillRect(0, y0, W, lay.h, (index % 2) ? C_ROW_ALT : C_BG);
   if (!route) return;
 
-  drawRouteName(y0, route->name);
+  drawRouteName(y0, lay.h, lay.big, route->name);
+  // 도착 시간은 흰색. 정보가 없을 때만 회색.
+  const uint16_t timeColor = urgency == bus::URGENCY_NONE ? C_DIM : C_TEXT;
 
-  uint16_t color = urgency == bus::URGENCY_SOON   ? C_SOON
-                   : urgency == bus::URGENCY_NONE ? C_DIM
-                                                  : C_TEXT;
+  if (!lay.big) {
+    // 4대 이상: 한 줄에 작게
+    useFont(FONT_KOREAN);
+    drawClipped(TEXT_X, y0 + 17, TEXT_W, first, timeColor);
+    drawNextLine(TEXT_X, y0 + 34, TEXT_W, second, route->dest);
+    return;
+  }
+
+  // 큰 배치: 도착 시간을 2배 크기로. 줄이 아주 높으면(1대) 글자 묶음을 가운데로.
+  const int16_t cy = lay.h > 95 ? y0 + (lay.h - 95) / 2 : y0;
+  const int16_t mainBase = lay.h >= 90 ? cy + 42 : y0 + 37;
+  int16_t mainW = bigWidth(mainText);
+  if (mainW <= BIG_TEXT_W) {
+    drawBig(BIG_TEXT_X, mainBase, mainText, timeColor);
+  } else {
+    useFont(FONT_KOREAN);
+    mainW = u8f.getUTF8Width(mainText);
+    drawClipped(BIG_TEXT_X, mainBase, BIG_TEXT_W, mainText, timeColor);
+  }
+
   useFont(FONT_KOREAN);
-  drawClipped(TEXT_X, y0 + 17, TEXT_W, first, color);
-  drawClipped(TEXT_X, y0 + 34, TEXT_W, line2, C_DIM);
+  const int16_t detailW = detail[0] ? u8f.getUTF8Width(detail) : 0;
+  if (lay.h >= 90) {
+    // 2줄 배치: 시간 / 정거장 수 / 다음 버스와 방면
+    if (detail[0]) drawClipped(BIG_TEXT_X, cy + 64, BIG_TEXT_W, detail, C_TEXT2);
+    drawNextLine(BIG_TEXT_X, cy + 86, BIG_TEXT_W, second, route->dest);
+  } else if (detail[0] && BIG_TEXT_X + mainW + 10 + detailW <= W - 6) {
+    // 3줄 배치: 시간 옆에 정거장 수, 아래에 다음 버스와 방면
+    drawText(BIG_TEXT_X + mainW + 10, mainBase, detail, C_TEXT2);
+    drawNextLine(BIG_TEXT_X, y0 + 57, BIG_TEXT_W, second, route->dest);
+  } else {
+    // 3줄 배치인데 옆에 자리가 없으면: 정거장 수와 다음 버스를 아래 줄에
+    char line[96];
+    snprintf(line, sizeof(line), "%s%s%s", detail, detail[0] && second[0] ? "  " : "", second);
+    drawClipped(BIG_TEXT_X, y0 + 57, BIG_TEXT_W, line, C_TEXT2);
+  }
 }
 
 static void drawEmpty() {
@@ -293,18 +427,26 @@ static void drawFooter(const char* footer, const char* warning, const char* page
 
 void displayArrivals(const bus::Result& data, uint32_t ageSec, const char* station,
                      const char* footer, const char* warning, int page) {
-  int pages = (data.count + ROWS_PER_PAGE - 1) / ROWS_PER_PAGE;
+  static int lastRows = -1;
+  const RowLayout lay = layoutFor(data.count);
+  int pages = (data.count + lay.rows - 1) / lay.rows;
   if (pages < 1) pages = 1;
   page %= pages;
 
   drawHeader(station);
   if (data.count == 0) {
     drawEmpty();
+    lastRows = -1;
   } else {
-    if (strcmp(rowCache[0], "<empty>") == 0) rowCache[0][0] = '\0';
-    for (int i = 0; i < ROWS_PER_PAGE; i++) {
-      int idx = page * ROWS_PER_PAGE + i;
-      drawRow(i, idx < data.count ? &data.routes[idx] : nullptr, ageSec);
+    if (lay.rows != lastRows || strcmp(rowCache[0], "<empty>") == 0) {
+      // 줄 수가 바뀌면 본문을 지우고 처음부터 다시 그림
+      tft.fillRect(0, HEADER_H, W, H - HEADER_H - FOOTER_H, C_BG);
+      for (auto& row : rowCache) row[0] = '\0';
+      lastRows = lay.rows;
+    }
+    for (int i = 0; i < lay.rows; i++) {
+      int idx = page * lay.rows + i;
+      drawRow(i, lay, idx < data.count ? &data.routes[idx] : nullptr, ageSec);
     }
   }
   char pageText[12] = "";

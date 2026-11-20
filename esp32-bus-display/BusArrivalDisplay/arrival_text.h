@@ -20,6 +20,12 @@ int32_t remainingSec(const Arrival& a, uint32_t ageSec);
 // 첫 번째 버스: "3분 (2정거장 전) 23석", "곧 도착", "운행종료", "도착 정보 없음"
 Urgency formatFirst(const Arrival& a, uint32_t ageSec, char* out, size_t outSize);
 
+// 큰 화면용으로 나눈 첫 번째 버스 문구
+//   formatMain  : "3분", "곧 도착", "운행종료", "도착 정보 없음" (크게 쓰는 부분)
+//   formatDetail: "2정거장 전  23석" (작게 쓰는 부분, 없으면 빈 문자열)
+Urgency formatMain(const Arrival& a, uint32_t ageSec, char* out, size_t outSize);
+void formatDetail(const Arrival& a, char* out, size_t outSize);
+
 // 두 번째 버스: "다음 15분", "다음 운행종료", 정보 없으면 빈 문자열
 void formatSecond(const Arrival& a, uint32_t ageSec, char* out, size_t outSize);
 

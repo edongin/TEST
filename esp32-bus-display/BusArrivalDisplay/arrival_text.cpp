@@ -43,6 +43,28 @@ Urgency formatFirst(const Arrival& a, uint32_t ageSec, char* out, size_t outSize
   return remain <= SOON_SEC ? URGENCY_SOON : URGENCY_NORMAL;
 }
 
+Urgency formatMain(const Arrival& a, uint32_t ageSec, char* out, size_t outSize) {
+  int32_t remain = remainingSec(a, ageSec);
+  if (remain < 0) {
+    copyUtf8(out, outSize, a.note[0] ? a.note : "도착 정보 없음");
+    return URGENCY_NONE;
+  }
+  char time[24];
+  formatTime(remain, time, sizeof(time));
+  copyUtf8(out, outSize, time);
+  return remain <= SOON_SEC ? URGENCY_SOON : URGENCY_NORMAL;
+}
+
+void formatDetail(const Arrival& a, char* out, size_t outSize) {
+  char buf[64] = "";
+  int n = 0;
+  if (a.sec >= 0 && a.stops > 0) n = snprintf(buf, sizeof(buf), "%d정거장 전", a.stops);
+  if (a.sec >= 0 && a.seats >= 0 && n >= 0 && (size_t)n < sizeof(buf)) {
+    snprintf(buf + n, sizeof(buf) - n, "%s%d석", n > 0 ? "  " : "", a.seats);
+  }
+  copyUtf8(out, outSize, buf);
+}
+
 void formatSecond(const Arrival& a, uint32_t ageSec, char* out, size_t outSize) {
   int32_t remain = remainingSec(a, ageSec);
   char buf[64];
