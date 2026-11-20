@@ -616,65 +616,65 @@ static uint16_t conditionColor(weather::Condition c) {
 }
 
 // ----- 오전 / 오후 표 -----
-//            오전        오후
-//   날씨     맑음        비        (이름표와 같은 크기, 굵게, 색깔)
-//   강수확률  0%         70%
-static const int16_t TABLE_LABEL_X = 12;
-static const int16_t TABLE_COL_X[2] = {152, 256};  // 오전, 오후 칸의 가운데
-static const int16_t TABLE_HEAD_Y = 124;            // "오전 / 오후" 바닥선
-static const int16_t TABLE_COND_Y = 148;            // 날씨 줄 바닥선
-static const int16_t TABLE_POP_Y = 172;             // 강수확률 줄 바닥선
+//                    오전          오후
+//   날씨(강수확률)    맑음(0%)      비(90%)
+// 날씨 이름은 굵게, 색깔(맑음 노랑, 비 파랑 ...), 괄호 안 강수확률은 흰색
+static const int16_t TABLE_LABEL_X = 10;
+static const int16_t TABLE_COL_X[2] = {176, 268};  // 오전, 오후 칸의 가운데
+static const int16_t TABLE_COL_W = 90;
+static const int16_t TABLE_HEAD_Y = 123;            // "오전 / 오후" 바닥선
+static const int16_t TABLE_ROW_Y = 145;             // "맑음(0%)" 줄 바닥선
 
 // 한글 글꼴은 16픽셀 하나뿐이라, 1픽셀 옆에 한 번 더 그려서 굵게 보이게 합니다.
-static void drawBoldCenteredAt(int16_t cx, int16_t baseline, const char* text, uint16_t color) {
-  int16_t x = cx - (u8f.getUTF8Width(text) + 1) / 2;
+static void drawBold(int16_t x, int16_t baseline, const char* text, uint16_t color) {
   drawText(x, baseline, text, color);
   drawText(x + 1, baseline, text, color);
+}
+
+// "맑음(0%)" 한 칸. 칸보다 길면 "구름많음" -> "구름" 처럼 짧은 이름으로.
+static void drawConditionCell(int16_t cx, weather::Condition c, int pop) {
+  char popText[16];
+  if (pop >= 0) {
+    snprintf(popText, sizeof(popText), "(%d%%)", pop);
+  } else {
+    snprintf(popText, sizeof(popText), "(-)");
+  }
+  useFont(FONT_KOREAN);
+  const char* name = weather::conditionName(c);
+  int16_t popW = u8f.getUTF8Width(popText);
+  if (u8f.getUTF8Width(name) + 1 + popW > TABLE_COL_W && c == weather::COND_PARTLY) name = "구름";
+  int16_t nameW = u8f.getUTF8Width(name) + 1;
+  int16_t x = cx - (nameW + popW) / 2;
+  drawBold(x, TABLE_ROW_Y, name, conditionColor(c));
+  drawText(x + nameW, TABLE_ROW_Y, popText, C_TEXT);
 }
 
 static void drawAmPmTable(weather::Condition am, weather::Condition pm, int popAm, int popPm) {
   useFont(FONT_KOREAN);
   drawCenteredAt(TABLE_COL_X[0], TABLE_HEAD_Y, "오전", C_TEXT2);
   drawCenteredAt(TABLE_COL_X[1], TABLE_HEAD_Y, "오후", C_TEXT2);
-  drawText(TABLE_LABEL_X, TABLE_COND_Y, "날씨", C_TEXT2);
-  drawText(TABLE_LABEL_X, TABLE_POP_Y, "강수확률", C_TEXT2);
-
-  const weather::Condition cond[2] = {am, pm};
-  const int pop[2] = {popAm, popPm};
-  for (int i = 0; i < 2; i++) {
-    useFont(FONT_KOREAN);
-    drawBoldCenteredAt(TABLE_COL_X[i], TABLE_COND_Y, weather::conditionName(cond[i]),
-                       conditionColor(cond[i]));
-    char buf[12];
-    if (pop[i] >= 0) {
-      snprintf(buf, sizeof(buf), "%d%%", pop[i]);
-    } else {
-      snprintf(buf, sizeof(buf), "-");
-    }
-    useFont(u8g2_font_helvB14_tf);  // 한글 16픽셀 글자와 비슷한 높이의 굵은 숫자
-    drawCenteredAt(TABLE_COL_X[i], TABLE_POP_Y - 1, buf, C_TEXT);
-  }
+  drawText(TABLE_LABEL_X, TABLE_ROW_Y, "날씨(강수확률)", C_TEXT2);
+  drawConditionCell(TABLE_COL_X[0], am, popAm);
+  drawConditionCell(TABLE_COL_X[1], pm, popPm);
 }
 
-// 시간별 예보 한 칸 (5칸 중 col 번째): 윗줄 "08시 (그림)", 아랫줄 "3도"
+// 시간별 예보 한 칸 (5칸 중 col 번째): "08시" / 날씨 그림 / "3도"
+static const int16_t HOURS_TOP = 154;
 static void drawHourSlot(int col, int hour, const weather::Hour* h) {
   const int16_t colW = W / 5, cx = col * colW + colW / 2;
   if (!h) return;
   char buf[16];
   useFont(FONT_KOREAN);
   snprintf(buf, sizeof(buf), "%02d시", hour);
-  int16_t tw = u8f.getUTF8Width(buf);
-  const int16_t iconS = 20, gap = 7;
-  int16_t x = cx - (tw + gap + iconS) / 2;
-  drawText(x, 198, buf, C_TEXT2);
-  drawWeatherIcon(x + tw + gap + iconS / 2, 192, iconS, weather::hourCondition(*h));
+  drawCenteredAt(cx, HOURS_TOP + 15, buf, C_TEXT2);
+  drawWeatherIcon(cx, HOURS_TOP + 33, 28, weather::hourCondition(*h));
   if (h->temp != weather::UNKNOWN) {
     snprintf(buf, sizeof(buf), "%d도", h->temp);
   } else {
     snprintf(buf, sizeof(buf), "-");
   }
   useFont(FONT_KOREAN);
-  drawCenteredAt(cx, 216, buf, C_TEXT);
+  drawCenteredAt(cx, HOURS_TOP + 62, buf, C_TEXT);
 }
 
 static void drawWeatherBody(const WeatherData& w, int nowHour) {
@@ -719,7 +719,7 @@ static void drawWeatherBody(const WeatherData& w, int nowHour) {
 
   // ----- 가운데: 오전 / 오후 표 -----
   drawAmPmTable(am, pm, popAm, popPm);
-  tft.drawFastHLine(8, 180, W - 16, C_ROW_ALT);
+  tft.drawFastHLine(8, HOURS_TOP - 3, W - 16, C_ROW_ALT);
 
   // ----- 시간별 예보 5칸 (3시간 간격). 오늘은 다음 시각부터, 내일은 06시부터 -----
   int first = w.tomorrow ? 6 : nowHour + 1;
