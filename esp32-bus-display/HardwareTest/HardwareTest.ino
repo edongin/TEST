@@ -37,9 +37,9 @@
 #define TOUCH_CS  15  // T_CS
 #define TOUCH_IRQ 28  // T_IRQ
 
-// 1단계에서 색이 반대로 보이면 (배경이 하얗고 "검정" 칸이 하얗다면) true 로 바꾸세요.
-// 여기서 true 가 맞았다면 버스 알림판 config.h 의 TFT_INVERT_COLORS 도 true 로 바꾸면 됩니다.
-#define INVERT_COLORS false
+// 1단계에서 색이 반대로 보이면 true ↔ false 를 바꾸세요. (3.2인치 IPS 모듈은 true 가 맞음)
+// 여기서 맞는 값을 버스 알림판 config.h 의 TFT_INVERT_COLORS 에도 똑같이 넣으면 됩니다.
+#define INVERT_COLORS true
 
 // 화면 통신 속도. 점퍼선 연결에서도 안정적이도록 낮게 잡았습니다 (10MHz).
 #define TFT_SPI_HZ 10000000

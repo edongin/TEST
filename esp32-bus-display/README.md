@@ -234,7 +234,7 @@ static const StationConfig STATIONS[] = {
 ## 6. 업로드하기
 
 > **처음에는 `HardwareTest/HardwareTest.ino`(화면·터치 테스트)부터 올리세요.** Wi‑Fi나 인증키 없이 배선만 확인합니다.
-> 1. 색 화면: 바탕이 검정이고 칸의 색 이름과 실제 색이 같으면 정상입니다. 반대로 보이면 파일 위쪽 `INVERT_COLORS`를 `true`로 바꿔 다시 올리고, 버스 알림판 `config.h`의 `TFT_INVERT_COLORS`도 `true`로 바꿉니다. (IPS 화면은 반대로 보이는 경우가 많습니다.)
+> 1. 색 화면: 바탕이 검정이고 칸의 색 이름과 실제 색이 같으면 정상입니다. 반대로 보이면 파일 위쪽 `INVERT_COLORS` 값을 반대로(`true` ↔ `false`) 바꿔 다시 올리고, 버스 알림판 `config.h`의 `TFT_INVERT_COLORS`도 같은 값으로 바꿉니다. (3.2인치 IPS 모듈은 `true`가 맞아서 기본값을 `true`로 해 두었습니다.)
 > 2. 터치 화면: 화면을 누르면 "T_IRQ 신호: 눌림"으로 바뀌고 터치 횟수가 늘어나면 정상입니다.
 > 3. BOOTSEL 버튼을 누를 때마다 백라이트가 꺼졌다 켜지면 LED 선도 정상입니다.
 >
@@ -301,7 +301,7 @@ pio device monitor
 | PC에 `RPI-RP2` 드라이브가 안 보임 | 데이터 전송이 되는 Micro USB 케이블로 바꾸기. BOOTSEL을 누른 채로 꽂았는지 확인 |
 | (Pico) 아예 켜지지 않음 | LED 선이 30번(RUN)이나 37번(3V3_EN)에 잘못 꽂혔는지 확인 |
 | 화면에 줄이 가거나 글자가 깨짐 | 점퍼선을 짧은 것으로 바꾸거나 `TFT_SPI_HZ`를 `20000000`으로 낮추기 |
-| 색이 반전되어 보임 | `TFT_INVERT_COLORS true` |
+| 색이 반전되어 보임 | `TFT_INVERT_COLORS` 값을 반대로 (`true` ↔ `false`). 3.2인치 IPS 모듈은 `true`가 맞음 |
 | 화면이 뒤집혀 보임 | `TFT_ROTATION`을 1 ↔ 3으로 변경 |
 | "Wi‑Fi 연결 실패" | 이름/비밀번호 확인. Pico W와 ESP32 모두 **2.4GHz만** 지원 (5GHz 안 됨) |
 | "인증키 미등록" | 승인 후 1~2시간 기다리기. 그 API(버스 또는 날씨)를 활용신청했는지 확인 |

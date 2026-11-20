@@ -150,4 +150,4 @@ static const StationConfig STATIONS[] = {
 #define TFT_SPI_HZ 27000000
 
 #define TFT_ROTATION 1     // 1 또는 3 = 가로 화면. 화면이 뒤집혀 보이면 1 <-> 3
-#define TFT_INVERT_COLORS false  // 색이 반전돼 보이면 true
+#define TFT_INVERT_COLORS true   // IPS 화면은 true. 색이 반대로 보이면 false 로 바꾸세요
