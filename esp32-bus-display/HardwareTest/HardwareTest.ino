@@ -1,5 +1,5 @@
 // =============================================================================
-//  화면·터치 테스트 (Raspberry Pi Pico WH + ILI9341 3.2인치 터치 모듈)
+//  화면·터치 테스트 (Raspberry Pi Pico WH + 3.2인치 SPI 터치 모듈, ILI9341 또는 ST7789)
 //
 //  버스 알림판을 올리기 전에 배선이 맞는지만 확인하는 프로그램입니다.
 //  Wi-Fi, 인증키 설정이 필요 없습니다.
@@ -12,10 +12,19 @@
 //   - Pico 위의 작은 초록 LED: 켜지면 프로그램 시작, 0.5초마다 깜빡이면 정상으로 도는 중
 //   - 시작할 때 화면 불빛이 3번 깜빡이면 화면 전원(VCC, GND)과 LED 선은 정상
 // =============================================================================
+// ----- 화면 칩 종류 -----
+//   1 = ILI9341 (기본)
+//   2 = ST7789  (ILI9341 로 아무것도 안 나오면 이걸로. IPS 화면에 많이 쓰임)
+//       2 를 쓰려면 라이브러리 매니저에서 "Adafruit ST7735 and ST7789 Library" 를 설치하세요.
+#define DISPLAY_DRIVER 1
+
 #include <Adafruit_GFX.h>
-#include <Adafruit_ILI9341.h>
+#include <Adafruit_ILI9341.h>  // 색 이름(ILI9341_RED 등)은 두 칩 모두 이걸 씀
 #include <SPI.h>
 #include <U8g2_for_Adafruit_GFX.h>
+#if DISPLAY_DRIVER == 2
+#include <Adafruit_ST7789.h>
+#endif
 
 // ----- 배선 (README 의 Pico WH 배선표와 같음) -----
 #define TFT_SCLK  2   // SCK, T_CLK
@@ -35,7 +44,11 @@
 // 화면 통신 속도. 점퍼선 연결에서도 안정적이도록 낮게 잡았습니다 (10MHz).
 #define TFT_SPI_HZ 10000000
 
+#if DISPLAY_DRIVER == 2
+Adafruit_ST7789 tft(&SPI, TFT_CS, TFT_DC, TFT_RST);  // ST7789 는 CS, DC 순서
+#else
 Adafruit_ILI9341 tft(&SPI, TFT_DC, TFT_CS, TFT_RST);
+#endif
 U8G2_FOR_ADAFRUIT_GFX u8f;
 
 static void text(int16_t x, int16_t y, const char* s, uint16_t color) {
@@ -172,9 +185,17 @@ void setup() {
   SPI.setSCK(TFT_SCLK);
   SPI.setTX(TFT_MOSI);
   SPI.setRX(TFT_MISO);
+#if DISPLAY_DRIVER == 2
+  Serial.println("    화면 칩: ST7789");
+  tft.init(240, 320);
+  tft.setSPISpeed(TFT_SPI_HZ);
+#else
+  Serial.println("    화면 칩: ILI9341");
   tft.begin(TFT_SPI_HZ);
+#endif
   tft.setRotation(1);
-  tft.invertDisplay(INVERT_COLORS);
+  // ST7789 라이브러리는 색 반전을 기본으로 켜 두므로 반대로 맞춥니다.
+  tft.invertDisplay(DISPLAY_DRIVER == 2 ? !INVERT_COLORS : INVERT_COLORS);
   u8f.begin(tft);
 
   Serial.println("[4] 1단계 색 화면 그리기");
