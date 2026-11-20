@@ -87,6 +87,25 @@ Pico 2 WH도 핀 배치가 같아서 그대로 쓸 수 있습니다. (Arduino ID
 
 GP2(4번)와 GP3(5번) 줄에는 선이 두 개씩 들어갑니다. 같은 줄의 빈 구멍에 나란히 꽂으면 됩니다.
 
+**브레드보드 줄 번호로 보기**
+Pico를 BOOTSEL 버튼이 보이는 면이 위로 오게, USB 단자가 1번 줄 바깥쪽(위)을 향하게 꽂으면 Pico의 1번 핀(GP0)이 **왼쪽 1번 줄**에 옵니다. 이 방향으로 봤을 때 왼쪽/오른쪽 기준으로 아래 줄에 꽂으면 됩니다.
+
+| 화면 핀 | 꽂을 곳 |
+|---|---|
+| T_DO | **왼쪽** 1번 줄 (GP0) |
+| CS | **왼쪽** 2번 줄 (GP1) |
+| SCK, T_CLK | **왼쪽** 4번 줄 (GP2), 선 2개 |
+| SDI, T_DIN | **왼쪽** 5번 줄 (GP3), 선 2개 |
+| T_CS | **왼쪽** 20번 줄 (GP15) |
+| VCC | **오른쪽** 1번 줄 (VBUS) |
+| GND | **오른쪽** 3번 줄 (GND) |
+| T_IRQ | **오른쪽** 7번 줄 (GP28) |
+| LED | **오른쪽** 12번 줄 (GP22) |
+| D/C | **오른쪽** 14번 줄 (GP21) |
+| RESET | **오른쪽** 15번 줄 (GP20) |
+
+Pico를 1번 줄이 아닌 곳부터 꽂았다면, Pico 1번 핀이 있는 줄을 1로 보고 세면 됩니다.
+
 > 화면이 아예 안 켜지면 LED 선을 GP22 대신 **36번 3V3(OUT)**에 꽂고 `config.h`의 `TFT_BL`을 `-1`로 바꿔 보세요. 이 경우 백라이트를 끌 수 없어서, 꺼진 시간에는 화면을 검게만 칠해 둡니다.
 
 ### 1‑3. 전원
@@ -214,6 +233,13 @@ static const StationConfig STATIONS[] = {
 
 ## 6. 업로드하기
 
+> **처음에는 `HardwareTest/HardwareTest.ino`(화면·터치 테스트)부터 올리세요.** Wi‑Fi나 인증키 없이 배선만 확인합니다.
+> 1. 색 화면: 바탕이 검정이고 칸의 색 이름과 실제 색이 같으면 정상입니다. 반대로 보이면 파일 위쪽 `INVERT_COLORS`를 `true`로 바꿔 다시 올리고, 버스 알림판 `config.h`의 `TFT_INVERT_COLORS`도 `true`로 바꿉니다. (IPS 화면은 반대로 보이는 경우가 많습니다.)
+> 2. 터치 화면: 화면을 누르면 "T_IRQ 신호: 눌림"으로 바뀌고 터치 횟수가 늘어나면 정상입니다.
+> 3. BOOTSEL 버튼을 누를 때마다 백라이트가 꺼졌다 켜지면 LED 선도 정상입니다.
+>
+> 올리는 방법은 아래와 같고, 3개 모두 정상이면 같은 방법으로 `BusArrivalDisplay.ino`를 올립니다.
+
 ### 방법 A. Arduino IDE (처음이라면 추천)
 1. [Arduino IDE](https://www.arduino.cc/en/software) 설치
 2. **파일 → 기본 설정 → 추가 보드 관리자 URL**에 아래 주소를 넣습니다.
@@ -306,6 +332,7 @@ pio device monitor
 | `BusArrivalDisplay/net_util.cpp` | 인터넷 연결 공통 코드 |
 | `BusArrivalDisplay/platform.cpp` | 보드마다 다른 부분 (Pico W / ESP32의 Wi‑Fi, 시계, 버튼) |
 | `BusArrivalDisplay/config.example.h` | 설정 예시 |
+| `HardwareTest/HardwareTest.ino` | 배선 확인용 화면·터치·백라이트 테스트 |
 | `test_native/` | PC에서 응답 해석과 화면 전환 규칙을 확인하는 테스트 |
 
 ### PC에서 테스트 실행

@@ -1,0 +1,184 @@
+// =============================================================================
+//  화면·터치 테스트 (Raspberry Pi Pico WH + ILI9341 3.2인치 터치 모듈)
+//
+//  버스 알림판을 올리기 전에 배선이 맞는지만 확인하는 프로그램입니다.
+//  Wi-Fi, 인증키 설정이 필요 없습니다.
+//
+//  1단계: 색 확인   - 칸마다 적힌 색 이름과 실제 색이 맞는지 봅니다. (6초 또는 터치하면 다음)
+//  2단계: 터치 확인 - 화면을 누르면 숫자가 바뀌고 점이 찍힙니다.
+//  BOOTSEL 버튼   - 누를 때마다 백라이트 끄기/켜기 (LED 선 확인)
+// =============================================================================
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
+#include <SPI.h>
+#include <U8g2_for_Adafruit_GFX.h>
+
+// ----- 배선 (README 의 Pico WH 배선표와 같음) -----
+#define TFT_SCLK  2   // SCK, T_CLK
+#define TFT_MOSI  3   // SDI, T_DIN
+#define TFT_MISO  0   // T_DO
+#define TFT_CS    1
+#define TFT_DC    21
+#define TFT_RST   20
+#define TFT_BL    22  // LED
+#define TOUCH_CS  15  // T_CS
+#define TOUCH_IRQ 28  // T_IRQ
+
+// 1단계에서 색이 반대로 보이면 (배경이 하얗고 "검정" 칸이 하얗다면) true 로 바꾸세요.
+// 여기서 true 가 맞았다면 버스 알림판 config.h 의 TFT_INVERT_COLORS 도 true 로 바꾸면 됩니다.
+#define INVERT_COLORS false
+
+Adafruit_ILI9341 tft(&SPI, TFT_DC, TFT_CS, TFT_RST);
+U8G2_FOR_ADAFRUIT_GFX u8f;
+
+static void text(int16_t x, int16_t y, const char* s, uint16_t color) {
+  u8f.setFont(u8g2_font_unifont_t_korean2);
+  u8f.setFontMode(1);  // 글자 배경 투명 (글꼴을 바꾸면 다시 켜야 함)
+  u8f.setForegroundColor(color);
+  u8f.drawUTF8(x, y, s);
+}
+
+static void header(const char* title) {
+  tft.fillRect(0, 0, 320, 28, tft.color565(20, 60, 140));
+  text(8, 20, title, ILI9341_WHITE);
+}
+
+// ----- 터치 칩 (XPT2046) 읽기 -----
+static const SPISettings TOUCH_SPI(2000000, MSBFIRST, SPI_MODE0);
+
+static uint16_t touchRead(uint8_t cmd) {
+  SPI.transfer(cmd);
+  uint16_t hi = SPI.transfer(0), lo = SPI.transfer(0);
+  return (uint16_t)(((hi << 8) | lo) >> 3);
+}
+
+// 누르는 힘(z)과 위치(x, y) 원래 값
+static void touchReadAll(int* x, int* y, int* z) {
+  SPI.beginTransaction(TOUCH_SPI);
+  digitalWrite(TOUCH_CS, LOW);
+  int z1 = touchRead(0xB1);
+  int z2 = touchRead(0xC1);
+  *x = touchRead(0xD1);
+  *y = touchRead(0x91);
+  touchRead(0x90);  // 절전 + 터치 알림(T_IRQ) 다시 켜기
+  digitalWrite(TOUCH_CS, HIGH);
+  SPI.endTransaction();
+  *z = z1 + 4095 - z2;
+}
+
+// ----- 1단계: 색 확인 -----
+static void colorTest() {
+  tft.fillScreen(ILI9341_BLACK);
+  header("1단계: 색 확인");
+  struct {
+    const char* name;
+    uint16_t color, label;
+  } bars[] = {
+      {"빨강", ILI9341_RED, ILI9341_WHITE},   {"초록", ILI9341_GREEN, ILI9341_BLACK},
+      {"파랑", ILI9341_BLUE, ILI9341_WHITE},  {"흰색", ILI9341_WHITE, ILI9341_BLACK},
+      {"노랑", ILI9341_YELLOW, ILI9341_BLACK},
+  };
+  for (int i = 0; i < 5; i++) {
+    int16_t x = 8 + i * 62;
+    tft.fillRect(x, 40, 56, 100, bars[i].color);
+    text(x + 12, 96, bars[i].name, bars[i].label);
+  }
+  text(8, 170, "바탕이 검정이고 칸 이름과 색이", ILI9341_WHITE);
+  text(8, 190, "같으면 정상입니다.", ILI9341_WHITE);
+  text(8, 222, "다르면 INVERT_COLORS 를 바꾸세요", tft.color565(255, 150, 0));
+
+  Serial.println("[1단계] 색 확인 화면 (6초 또는 터치하면 다음)");
+  uint32_t start = millis();
+  while (millis() - start < 6000) {
+    if (digitalRead(TOUCH_IRQ) == LOW) break;
+    delay(20);
+  }
+  while (digitalRead(TOUCH_IRQ) == LOW) delay(20);  // 손을 뗄 때까지
+}
+
+// ----- 2단계: 터치 확인 -----
+static int tapCount = 0;
+static bool lastPressed = false;
+static bool backlightOn = true;
+static bool lastBootsel = false;
+
+static void touchScreen() {
+  tft.fillScreen(ILI9341_BLACK);
+  header("2단계: 터치 확인");
+  text(8, 228, "BOOTSEL: 백라이트 끄기/켜기", tft.color565(150, 150, 150));
+}
+
+static void showStatus(bool irq, int x, int y, int z) {
+  char line[64];
+  tft.fillRect(0, 32, 320, 84, ILI9341_BLACK);
+  snprintf(line, sizeof(line), "T_IRQ 신호 : %s", irq ? "눌림" : "안 눌림");
+  text(8, 52, line, irq ? ILI9341_GREEN : ILI9341_WHITE);
+  snprintf(line, sizeof(line), "누르는 힘  : %d", z);
+  text(8, 72, line, ILI9341_WHITE);
+  snprintf(line, sizeof(line), "위치 (원래값): %d, %d", x, y);
+  text(8, 92, line, ILI9341_WHITE);
+  snprintf(line, sizeof(line), "터치 횟수  : %d", tapCount);
+  text(8, 112, line, ILI9341_YELLOW);
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+  Serial.println("\n=== 화면·터치 테스트 ===");
+
+  pinMode(TFT_BL, OUTPUT);
+  digitalWrite(TFT_BL, HIGH);
+  pinMode(TOUCH_CS, OUTPUT);
+  digitalWrite(TOUCH_CS, HIGH);
+  pinMode(TOUCH_IRQ, INPUT_PULLUP);
+
+  SPI.setSCK(TFT_SCLK);
+  SPI.setTX(TFT_MOSI);
+  SPI.setRX(TFT_MISO);
+  tft.begin(27000000);
+  tft.setRotation(1);
+  tft.invertDisplay(INVERT_COLORS);
+  u8f.begin(tft);
+
+  colorTest();
+  touchScreen();
+  Serial.println("[2단계] 화면을 눌러 보세요");
+}
+
+void loop() {
+  static uint32_t lastShow = 0;
+
+  // BOOTSEL 로 백라이트 끄기/켜기
+  bool bootsel = BOOTSEL;
+  if (bootsel && !lastBootsel) {
+    backlightOn = !backlightOn;
+    digitalWrite(TFT_BL, backlightOn ? HIGH : LOW);
+    Serial.printf("[BOOTSEL] 백라이트 %s\n", backlightOn ? "켬" : "끔");
+  }
+  lastBootsel = bootsel;
+
+  // 터치 상태
+  bool irq = digitalRead(TOUCH_IRQ) == LOW;
+  int x, y, z;
+  touchReadAll(&x, &y, &z);
+  bool pressed = irq || z > 400;
+  if (pressed && !lastPressed) {
+    tapCount++;
+    Serial.printf("[터치] %d번째 (T_IRQ=%s, 힘=%d, 위치=%d,%d)\n", tapCount, irq ? "LOW" : "HIGH",
+                  z, x, y);
+  }
+  lastPressed = pressed;
+
+  // 누르는 곳에 점 찍기 (위치가 손가락과 어긋나거나 뒤집혀도 지금은 괜찮습니다)
+  if (z > 400) {
+    int sx = map(constrain(x, 200, 3900), 200, 3900, 0, 319);
+    int sy = map(constrain(y, 200, 3900), 200, 3900, 120, 215);
+    tft.fillCircle(sx, sy, 3, ILI9341_CYAN);
+  }
+
+  if (millis() - lastShow > 200) {
+    lastShow = millis();
+    showStatus(irq, x, y, z);
+  }
+  delay(20);
+}
