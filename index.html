@@ -10,8 +10,11 @@
 :root{
   --sky1:#bfe6fb; --sky2:#e3f5fe;
   --ink:#2b2b40;
-  --bs:max(280px, min(calc(100vw - 32px), calc(100vh - 380px), 640px));
+  --vh:100vh;
+  --dock-h:236px;
+  --bs:max(260px, min(calc(100vw - 32px), calc((var(--vh) - var(--dock-h) - 60px) / 1.13), 640px));
 }
+@supports (height:100svh){ :root{ --vh:100svh; } }
 @media (min-width: 900px){
   :root{ --bs:min(calc(100vw - 400px), calc(100vh - 200px), 820px); }
 }
@@ -111,7 +114,9 @@ button{font-family:inherit;cursor:pointer;border:none}
 .game-main{display:flex;flex-direction:column;align-items:center;gap:16px}
 @media (min-width: 900px){.game-main{flex-direction:row;align-items:flex-start;justify-content:center}}
 
-.board-wrap{position:relative;width:var(--bs);height:calc(var(--bs) * 1.13);flex:none}
+.board-wrap{position:relative;width:var(--bs);height:calc(var(--bs) * 1.13);flex:none;transition:height .4s}
+.board-wrap.no-start{height:calc(var(--bs) + 8px)}
+.board-wrap.no-start .start-pad{display:none}
 .board{position:absolute;left:0;top:0;width:var(--bs);height:var(--bs);display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);border-radius:16px;overflow:hidden;box-shadow:0 0 0 6px #fff,0 12px 30px rgba(40,90,140,.25)}
 .cell{position:relative;padding:5% 7%;font-size:calc(var(--bs) * .03);line-height:1}
 .cell .n{position:relative;z-index:1}
@@ -141,11 +146,12 @@ button{font-family:inherit;cursor:pointer;border:none}
 .panel{width:min(100%, calc(100vw - 32px), 640px);display:flex;flex-direction:column;gap:12px}
 @media (min-width: 900px){.panel{width:320px}}
 .pbox{background:#fff;border-radius:22px;padding:14px;box-shadow:0 6px 0 rgba(0,0,0,.06),0 12px 24px rgba(40,90,140,.14)}
-.turn-card{display:flex;align-items:center;gap:12px;border:4px solid var(--pc,#ddd)}
-.turn-card .tc-char{height:80px;display:flex;align-items:flex-end}
-.turn-card .tc-char svg{animation:bob .4s ease-in-out infinite alternate;transform-origin:50% 100%}
-.turn-label{font-size:16px;color:#778}
-.turn-name{font-size:34px}
+.dice-pbox{border:4px solid var(--pc,#ddd);transition:border-color .3s}
+.turn-mini{display:flex;align-items:center;gap:6px;min-height:36px}
+.turn-mini .tc-char{height:36px;display:flex;align-items:flex-end}
+.turn-mini .tc-char svg{height:36px;width:auto;animation:bob .4s ease-in-out infinite alternate;transform-origin:50% 100%}
+.turn-name{font-size:22px}
+.turn-label{font-size:15px;color:#778}
 .dice-box{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 12px;min-height:110px}
 .dice-show{display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:8px;min-height:76px}
 .eq{font-size:30px;min-height:38px}
@@ -204,8 +210,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 .resume-sub{font-size:15px;color:#667;margin-bottom:10px}
 .leave-card{max-width:420px}
 .leave-card p{font-size:17px;line-height:1.5;color:#445;margin:0}
-.turn-card .tc-info{flex:none}
-.tc-status{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.tc-status{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px}
 .st-chip{font-size:15px;border-radius:999px;padding:3px 10px;background:#eef4f8;white-space:nowrap}
 .st-chip.pend{background:#FFF3C4;border:2px solid #F9D71C;color:#7a5a00;animation:pulse 1s ease-in-out infinite alternate}
 .st-chip.shk{background:#e6f7fc;color:#16708A}
@@ -239,26 +244,33 @@ button{font-family:inherit;cursor:pointer;border:none}
   .game-head .title span{-webkit-text-stroke:1px rgba(0,0,0,.25)}
   .board-tag{font-size:13px;padding:3px 8px;margin-left:6px}
   .ev-help{font-size:13px;padding:2px 8px;margin-left:5px;border-width:2px}
-  .dock{gap:8px}
-  .turn-card{padding:6px 12px;gap:10px}
-  .turn-card .tc-char{height:46px}
-  .turn-card .tc-char svg{height:46px;width:auto}
-  .turn-label{font-size:12px}.turn-name{font-size:22px}
-  .st-chip{font-size:13px;padding:2px 8px}
-  .dice-box{min-height:64px;gap:4px 10px}
-  .dice-show{min-height:52px;gap:5px}
+  body.in-game{padding-bottom:calc(var(--dock-h) + 24px)}
+  .dock{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:10px 10px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(rgba(227,245,254,0),#e3f5fe 14px)}
+  .dock .dice-pbox{max-width:640px;margin:0 auto;padding:6px 10px 10px;border-radius:22px;box-shadow:0 -4px 18px rgba(40,90,140,.18)}
+  .turn-mini{min-height:30px}
+  .turn-mini .tc-char,.turn-mini .tc-char svg{height:30px}
+  .turn-name{font-size:18px}.turn-label{font-size:13px}
+  .st-chip{font-size:12px;padding:1px 7px}
+  .dice-box{height:64px;min-height:0;flex-wrap:nowrap;gap:0 8px;overflow:hidden}
+  .dice-show{min-height:0;gap:4px;flex-wrap:nowrap}
   .die{width:50px;height:50px;padding:6px;font-size:24px}
   .die.d4{padding-top:16px;font-size:22px}
-  .die.small{width:38px;height:38px;padding:5px;font-size:18px}
-  .die.small.d4{padding-top:12px;font-size:16px}
+  .die.small{width:34px;height:34px;padding:4px;font-size:16px;border-radius:8px}
+  .die.small.d4{padding-top:11px;font-size:14px}
   .op{width:36px;height:36px;font-size:22px}
-  .eq{font-size:22px;min-height:0}
-  .result-blocks svg{height:48px;width:auto}
+  .eq{font-size:20px;min-height:0;white-space:nowrap}
+  .result-blocks{flex:none}
+  .result-blocks svg{height:46px;width:auto}
+  .dice-box.many .result-blocks{display:none}
+  .dice-box.many{flex-direction:column;justify-content:center;gap:2px}
+  .dice-box.many .eq{font-size:17px}
+  .dock .dice-pbox{min-width:0;width:100%}
+  .dice-box,.dice-show{min-width:0;max-width:100%}
   .result-blocks .plus{font-size:18px}
-  .roll-btns{gap:8px;margin-top:8px}
-  .roll-btns .btn{min-height:84px}
-  .roll-btns .btn .big{font-size:32px}
-  .msg{font-size:15px;min-height:18px;margin-top:6px}
+  .roll-btns{gap:8px;margin-top:6px}
+  .roll-btns .btn{min-height:74px}
+  .roll-btns .btn .big{font-size:30px}
+  .msg{font-size:13px;height:18px;margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pbox{padding:10px}
 }
 
@@ -383,19 +395,19 @@ button{font-family:inherit;cursor:pointer;border:none}
     </div>
     <div class="panel">
       <div class="dock">
-      <div class="pbox turn-card" id="turnCard">
-        <div class="tc-char" id="turnChar"></div>
-        <div class="tc-info"><div class="turn-label">지금 차례</div><div class="turn-name" id="turnName"></div></div>
-        <div class="tc-status" id="tcStatus"></div>
-      </div>
-      <div class="pbox dice-pbox">
+      <div class="pbox dice-pbox" id="turnCard">
+        <div class="turn-mini">
+          <span class="tc-char" id="turnChar"></span>
+          <span class="turn-name" id="turnName"></span><span class="turn-label">차례</span>
+          <div class="tc-status" id="tcStatus"></div>
+        </div>
+        <div class="msg" id="msg"></div>
         <div class="dice-box">
           <div class="dice-show" id="diceShow"></div>
           <div class="eq" id="eqShow"></div>
           <div class="result-blocks" id="resultBlocks"></div>
         </div>
         <div class="roll-btns" id="rollBtns"></div>
-        <div class="msg" id="msg"></div>
       </div>
       </div>
       <div class="pbox plist" id="plist"></div>
@@ -870,6 +882,7 @@ const setup = { count:2, picks:[], step:0, highlight:null, mode:'normal', board:
 function show(id){
   ['#scrCount','#scrWho','#scrChar','#scrMode','#game','#endScreen'].forEach(s=>$(s).classList.toggle('hidden', s!==id));
   if(id==='#scrCount') refreshResume();
+  document.body.classList.toggle('in-game', id==='#game');
   window.scrollTo(0,0);
 }
 
@@ -1219,7 +1232,9 @@ function updateUI(){
   const p=cur();
   const col=nbColor(p.ch);
   $('#turnCard').style.setProperty('--pc', col);
-  $('#turnChar').innerHTML=nbSVG(p.ch, 80);
+  $('#turnChar').innerHTML=nbSVG(p.ch, 36);
+  // 출발 칸에 아무도 없으면 출발 줄을 없애고 아래 내용을 위로
+  $('.board-wrap').classList.toggle('no-start', !game.players.some(q=>q.pos===0 && !q.done));
   $('#turnName').innerHTML=`<span style="color:${p.ch===3?'#C9A400':col}">${p.name}</span>`;
   let st='';
   if(p.queue.length && !game.over) st+=`<span class="st-chip pend">${p.queue[0].icon} ${p.queue[0].label}${p.queue.length>1?` · 다음 ${p.queue.slice(1).map(x=>x.icon).join('')}`:''}</span>`;
@@ -1299,11 +1314,13 @@ async function rollMulti(type, n){
     box.innerHTML=Array.from({length:n},()=>dieHTML(type, randInt(1,max), cls+' rolling')).join(''); sfx.tick(); await wait(65);
   }
   const vals=Array.from({length:n},()=>randInt(1,max)), v=vals.reduce((a,b)=>a+b,0);
+  $('.dice-box').classList.toggle('many', n>2);
   box.innerHTML=vals.map(x=>dieHTML(type, x, cls)).join('');
   $('#eqShow').innerHTML = n>1 ? `${vals.join(' + ')} = <span class="ans">${v}</span>` : `<span class="ans">${v}</span>`;
   return v;
 }
 async function rollMath(){
+  $('.dice-box').classList.remove('many');
   const box=$('#diceShow'); $('#eqShow').innerHTML=''; $('#resultBlocks').innerHTML='';
   const r4=()=>1+Math.floor(Math.random()*4);
   for(let i=0;i<12;i++){
