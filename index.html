@@ -198,6 +198,12 @@ button{font-family:inherit;cursor:pointer;border:none}
 .ev-ds{font-size:14px;color:#556;line-height:1.35}
 .ev-rules{margin:10px 0 0;padding:10px 12px 10px 28px;background:#FFF8DC;border-radius:14px;font-size:14px;line-height:1.55;color:#5a4500}
 .ev-sub{font-size:16px;margin:12px 0 6px}
+.resume-card{border:4px solid #5DC232}
+.resume-info{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:4px}
+.resume-info .rp{display:flex;align-items:center;gap:6px;background:#f6f9fc;border-radius:14px;padding:4px 10px;font-size:17px}
+.resume-sub{font-size:15px;color:#667;margin-bottom:10px}
+.leave-card{max-width:420px}
+.leave-card p{font-size:17px;line-height:1.5;color:#445;margin:0}
 .turn-card .tc-info{flex:none}
 .tc-status{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .st-chip{font-size:15px;border-radius:999px;padding:3px 10px;background:#eef4f8;white-space:nowrap}
@@ -279,6 +285,14 @@ button{font-family:inherit;cursor:pointer;border:none}
 <section id="scrCount" class="screen">
   <h1 class="title" data-title="넘버블럭스 뱀과 사다리"></h1>
   <div class="lineup" id="lineup"></div>
+  <div class="card resume-card hidden" id="resumeCard">
+    <h2>🎮 하던 게임이 있어요!</h2>
+    <div id="resumeInfo"></div>
+    <div class="row">
+      <button class="btn green" id="resumeBtn">▶ 이어서 하기</button>
+      <button class="btn gray" id="resumeDel">🗑️ 지우고 새로</button>
+    </div>
+  </div>
   <div class="card">
     <h2>몇 명이 함께 할까요?</h2>
     <div class="count-btns" id="countBtns"></div>
@@ -396,6 +410,18 @@ button{font-family:inherit;cursor:pointer;border:none}
     <h2>🎁 난장판 이벤트</h2>
     <div id="evList"></div>
     <button class="btn pink" id="evClose" style="margin-top:12px">닫기</button>
+  </div>
+</div>
+
+<!-- 뒤로가기 확인 창 -->
+<div id="leaveModal" class="modal hidden">
+  <div class="card leave-card">
+    <h2>게임을 그만할까요?</h2>
+    <p>지금까지 한 게임은 <b style="color:#5DC232">자동 저장</b>돼요.<br>처음 화면에서 <b>"이어서 하기"</b>로 계속할 수 있어요.</p>
+    <div class="row">
+      <button class="btn green" id="leaveStay">▶ 계속하기</button>
+      <button class="btn gray" id="leaveGo">🏠 처음 화면으로</button>
+    </div>
   </div>
 </div>
 
@@ -806,6 +832,7 @@ const setup = { count:2, picks:[], step:0, highlight:null, mode:'normal', board:
 
 function show(id){
   ['#scrCount','#scrWho','#scrChar','#scrMode','#game','#endScreen'].forEach(s=>$(s).classList.toggle('hidden', s!==id));
+  if(id==='#scrCount') refreshResume();
   window.scrollTo(0,0);
 }
 
@@ -1034,11 +1061,69 @@ function posXY(p){
 }
 function setXY(p, xy){ p.xy=xy; p.el.style.left=xy.x+'%'; p.el.style.top=xy.y+'%'; }
 
-function startGame(){
+/* ---------- 자동 저장 (차례가 끝날 때마다) ---------- */
+const SAVE_KEY='nb-snakes-ladders-save-v1';
+function saveGame(){
+  if(game.over){ clearSave(); return; }
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      v:1, time:Date.now(),
+      setup:{count:setup.count, names:setup.names, picks:setup.picks, mode:setup.mode, board:setup.board},
+      turn:game.turn, rankCount:game.rankCount, shakeIn:game.shakeIn,
+      L:LADDERS, S:SNAKES, E:[...EVENTS],
+      players:game.players.map(p=>({pos:p.pos, done:p.done, rank:p.rank, queue:p.queue})),
+    }));
+  }catch(e){}
+}
+function loadSave(){
+  try{ const d=JSON.parse(localStorage.getItem(SAVE_KEY)); return d && d.v===1 && d.players ? d : null; }catch(e){ return null; }
+}
+function clearSave(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+function refreshResume(){
+  const d=loadSave(), card=$('#resumeCard');
+  card.classList.toggle('hidden', !d);
+  if(!d) return;
+  const mins=Math.max(0, Math.round((Date.now()-d.time)/60000));
+  const when = mins<1 ? '방금' : mins<60 ? `${mins}분 전` : mins<1440 ? `${Math.round(mins/60)}시간 전` : `${Math.round(mins/1440)}일 전`;
+  $('#resumeInfo').innerHTML =
+    `<div class="resume-sub">${d.setup.board==='chaos'?'🌪️ 난장판':'일반판'} · ${d.setup.mode==='math'?'덧셈·곱셈 주사위':'일반 주사위'} · ${when} 저장</div>`+
+    `<div class="resume-info">`+d.players.map((p,i)=>`<span class="rp">${nbSVG(d.setup.picks[i],30)}${d.setup.names[i]} <b>${p.done?`🏆${p.rank}등`:p.pos===0?'출발 전':p.pos+'칸'}</b></span>`).join('')+`</div>`;
+}
+$('#resumeBtn').onclick=()=>{ const d=loadSave(); if(d){ ac(); startGame(d); } };
+$('#resumeDel').onclick=()=>{ if(confirm('저장된 게임을 지울까요?')){ clearSave(); refreshResume(); } };
+
+/* ---------- 뒤로가기 막기: 게임 중이면 확인 창 ---------- */
+let backTrap=false;
+const gameActive=()=>!$('#game').classList.contains('hidden') && $('#endScreen').classList.contains('hidden') && !game.over;
+function armBackTrap(){ if(!backTrap){ try{ history.pushState({nbGame:1}, ''); backTrap=true; }catch(e){} } }
+window.addEventListener('popstate', ()=>{
+  if(gameActive()){ backTrap=false; armBackTrap(); $('#leaveModal').classList.remove('hidden'); }
+  else backTrap=false;
+});
+window.addEventListener('beforeunload', e=>{ if(gameActive()){ e.preventDefault(); e.returnValue=''; } });
+// 게임 화면을 떠나 처음 화면으로 (저장은 그대로 남김)
+function leaveToHome(){
+  $('#leaveModal').classList.add('hidden');
+  game.gid++; game.busy=false;           // 진행 중이던 움직임 멈춤
+  $('#tokens').innerHTML='';
+  $('#eventCard').classList.remove('show'); $('#drone').style.display='none';
+  show('#scrCount');
+  if(backTrap){ backTrap=false; history.back(); }
+}
+$('#leaveStay').onclick=()=>$('#leaveModal').classList.add('hidden');
+$('#leaveGo').onclick=leaveToHome;
+
+function startGame(saved){
+  if(saved) Object.assign(setup, saved.setup);
   game.players = setup.picks.map((ch,i)=>({ idx:i, name:setup.names[i], ch, pos:0, done:false, rank:0, xy:null, el:null, queue:[] }));
   game.turn=0; game.busy=false; game.over=false; game.rankCount=0; game.gid++;
   LADDERS={...DEFAULT_LADDERS}; SNAKES={...DEFAULT_SNAKES}; EVENTS=new Set();
   if(isChaos()){ EVENTS=pickEvents(); game.shakeIn=randInt(4,5); }
+  if(saved){
+    LADDERS=saved.L; SNAKES=saved.S; EVENTS=new Set(saved.E||[]);
+    game.turn=saved.turn; game.rankCount=saved.rankCount; game.shakeIn=saved.shakeIn;
+    saved.players.forEach((sp,i)=>Object.assign(game.players[i], {pos:sp.pos, done:sp.done, rank:sp.rank, queue:sp.queue||[]}));
+  }
   $('#boardTag').textContent = isChaos() ? '🌪️ 난장판' : '';
   $('#evHelp').classList.toggle('hidden', !isChaos());
   $('#overlay').style.opacity=1; $('.board-wrap').classList.remove('shake'); $('#eventCard').classList.remove('show'); $('#drone').style.display='none';
@@ -1049,11 +1134,14 @@ function startGame(){
     el.style.setProperty('--pc', nbColor(p.ch));
     el.innerHTML=`<div class="tk-inner">${nbSVG(p.ch)}</div><div class="tk-name">${p.name}</div>`;
     tk.appendChild(el); p.el=el; setXY(p, posXY(p));
+    if(p.done) el.classList.add('done');
   });
   $('#diceShow').innerHTML=''; $('#eqShow').innerHTML=''; $('#resultBlocks').innerHTML='';
+  $('#leaveModal').classList.add('hidden');
   renderRollBtns(); updateUI();
-  msg(isChaos() ? '🌪️ 난장판! 🎁 칸을 밟으면 깜짝 이벤트가 생겨요' : '주사위를 굴려요! 🎲');
+  msg(saved ? `▶ 이어서 해요! ${cur().name} 차례예요` : isChaos() ? '🌪️ 난장판! 🎁 칸을 밟으면 깜짝 이벤트가 생겨요' : '주사위를 굴려요! 🎲');
   show('#game');
+  saveGame(); armBackTrap();
 }
 
 function cur(){ return game.players[game.turn]; }
@@ -1490,6 +1578,7 @@ async function nextTurn(gid){
     }
   }
   game.turn=i; game.busy=false; setBtns(true); updateUI();
+  saveGame();
 }
 
 /* ---------- 끝 ---------- */
@@ -1508,14 +1597,15 @@ function endGame(){
     const d=2.5+Math.random()*3; c.style.animationDuration=d+'s'; c.style.animationDelay=(-Math.random()*d)+'s';
     cf.appendChild(c);
   }
-  sfx.win();
+  sfx.win(); clearSave();
   show('#endScreen');
   $('#game').classList.remove('hidden'); // 뒤에 보드가 보이게
 }
 
 $('#againBtn').onclick=()=>startGame();
+refreshResume();
 $('#endHomeBtn').onclick=()=>{ $('#confetti').innerHTML=''; show('#scrCount'); };
-$('#homeBtn').onclick=()=>{ if(confirm('처음 화면으로 갈까요? 지금 게임은 끝나요.')){ game.over=true; show('#scrCount'); } };
+$('#homeBtn').onclick=()=>$('#leaveModal').classList.remove('hidden');
 $('#muteBtn').onclick=()=>{ muted=!muted; $('#muteBtn').textContent = muted?'🔇 소리 끔':'🔊 소리'; };
 </script>
 </body>
