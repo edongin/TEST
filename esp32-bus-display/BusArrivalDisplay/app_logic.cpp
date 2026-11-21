@@ -15,11 +15,17 @@ HomeMode homeModeAt(const Schedule& s, int hour, bool timeKnown) {
   return HOME_OFF;
 }
 
-int nextScreen(int screen, int stationCount) {
-  if (stationCount <= 0) return -1;
+int nextScreen(int screen, int stationCount, bool extraWeather) {
+  const int total = (stationCount > 0 ? stationCount : 0) + (extraWeather ? 1 : 0);
+  if (total <= 0) return -1;
   if (screen < 0) return 0;
-  if (screen + 1 < stationCount) return screen + 1;
+  if (screen + 1 < total) return screen + 1;
   return -1;
+}
+
+HomeMode touchWeatherAt(const Schedule& s, int hour, bool timeKnown) {
+  if (timeKnown && hour >= s.tomorrowStart) return HOME_TOMORROW;
+  return HOME_TODAY;
 }
 
 bool stationTimedOut(uint32_t nowMs, uint32_t shownAtMs, uint32_t limitMin) {

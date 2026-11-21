@@ -263,6 +263,13 @@ static void testAppLogic() {
   CHECK(app::nextScreen(-1, 1) == 0);
   CHECK(app::nextScreen(0, 1) == -1);
   CHECK(app::nextScreen(-1, 0) == -1);
+  // 기본 화면이 꺼져 있는 시간: 정류장 다음에 날씨(번호 = 정류장 수)
+  CHECK(app::nextScreen(2, 3, true) == 3);
+  CHECK(app::nextScreen(3, 3, true) == -1);
+  CHECK(app::nextScreen(-1, 0, true) == 0);
+  CHECK(app::touchWeatherAt(s, 15, true) == app::HOME_TODAY);
+  CHECK(app::touchWeatherAt(s, 23, true) == app::HOME_TOMORROW);
+  CHECK(app::touchWeatherAt(s, 3, true) == app::HOME_TODAY);
 
   CHECK(!app::stationTimedOut(29 * 60000UL, 0, 30));
   CHECK(app::stationTimedOut(30 * 60000UL, 0, 30));

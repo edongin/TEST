@@ -3,6 +3,7 @@
 //
 //  - 평소(기본 화면): 오전에는 오늘 날씨, 저녁에는 내일 날씨, 그 밖에는 화면 꺼짐
 //  - 화면을 터치할 때마다: 정류장1 → 정류장2 → 정류장3 → 기본 화면
+//    (화면이 꺼져 있는 시간에는 정류장3 다음에 날씨가 한 번 더 나옴)
 //  - 정류장 화면에서는 15초마다 도착 정보를 새로 받고, 30분이 지나면 기본 화면으로
 //
 //  설정은 config.h 에서 합니다 (config.example.h 를 복사해서 만드세요).
@@ -32,7 +33,7 @@ static const app::Schedule SCHEDULE = {TODAY_WEATHER_START, TODAY_WEATHER_END,
 enum { KIND_TODAY = 100, KIND_TOMORROW, KIND_OFF };
 
 // ----- 화면 상태 -----
-static int screen = -1;  // -1 = 기본 화면, 0~ = 정류장 번호
+static int screen = -1;  // -1 = 기본 화면, 0~ = 정류장 번호, STATION_COUNT = 터치로 띄운 날씨
 static uint32_t stationShownAtMs = 0;
 static bool displayOn = true;
 static int drawnKind = -1;  // 마지막으로 그린 화면 종류
@@ -92,9 +93,27 @@ static void shortStationName(int index, char* out, size_t size) {
   }
 }
 
+// 지금이 기본 화면이 꺼져 있는 시간인지 (그러면 터치 순서에 날씨를 한 번 더 넣음)
+static bool homeIsOff() {
+  struct tm t;
+  bool timeKnown = platformLocalTime(&t);
+  return app::homeModeAt(SCHEDULE, timeKnown ? t.tm_hour : 0, timeKnown) == app::HOME_OFF;
+}
+
+// 터치로 띄운 날씨가 오늘 것인지 내일 것인지
+static bool touchWeatherIsTomorrow() {
+  struct tm t;
+  bool timeKnown = platformLocalTime(&t);
+  return app::touchWeatherAt(SCHEDULE, timeKnown ? t.tm_hour : 0, timeKnown) == app::HOME_TOMORROW;
+}
+
 // 맨 아래 오른쪽 안내: 터치하면 나올 화면 이름 (예: "터치: 안양대", "터치: 오늘 날씨")
 static void touchHintFor(int current, char* out, size_t size) {
-  int next = app::nextScreen(current, STATION_COUNT);
+  int next = app::nextScreen(current, STATION_COUNT, homeIsOff());
+  if (next >= STATION_COUNT) {
+    snprintf(out, size, "터치: %s", touchWeatherIsTomorrow() ? "내일 날씨" : "오늘 날씨");
+    return;
+  }
   if (next >= 0) {
     char name[64];
     shortStationName(next, name, sizeof(name));
@@ -271,7 +290,7 @@ static void showWeather(bool tomorrow, bool firstDraw, bool online, uint32_t now
   weatherTitle(tomorrow, &weatherData, title, sizeof(title));
   const char* warning = wifiLost ? "Wi-Fi 끊김, 다시 연결 중..." : weatherError;
   char hint[96];
-  touchHintFor(-1, hint, sizeof(hint));
+  touchHintFor(screen, hint, sizeof(hint));
   displayWeather(weatherData, title, timeKnown ? t.tm_hour : 12, weatherFooter, warning, hint);
 }
 
@@ -306,9 +325,13 @@ void loop() {
   if (online) platformStartClock();  // 처음 연결됐을 때 한 번만 실제로 시작됨
 
   // 2) 터치: 기본 화면 → 정류장1 → 정류장2 → 정류장3 → 기본 화면
+  //    기본 화면이 꺼져 있는 시간에는 정류장3 다음에 날씨가 한 번 더 나옵니다.
   if (touchTapped()) {
-    screen = app::nextScreen(screen, STATION_COUNT);
-    if (screen >= 0) {
+    screen = app::nextScreen(screen, STATION_COUNT, homeIsOff());
+    if (screen >= STATION_COUNT) {
+      stationShownAtMs = now;
+      Serial.printf("[터치] %s\n", touchWeatherIsTomorrow() ? "내일 날씨" : "오늘 날씨");
+    } else if (screen >= 0) {
       stationShownAtMs = now;
       haveBus = false;
       busError[0] = '\0';
@@ -321,7 +344,7 @@ void loop() {
     }
   }
 
-  // 3) 정류장 화면은 정해진 시간이 지나면 기본 화면으로
+  // 3) 정류장 화면(과 터치로 띄운 날씨)은 정해진 시간이 지나면 기본 화면으로
   if (screen >= 0 && app::stationTimedOut(now, stationShownAtMs, STATION_SHOW_MIN)) {
     Serial.printf("[화면] %d분이 지나 기본 화면으로\n", STATION_SHOW_MIN);
     screen = -1;
@@ -331,7 +354,9 @@ void loop() {
   struct tm t;
   bool timeKnown = platformLocalTime(&t);
   int kind;
-  if (screen >= 0) {
+  if (screen >= STATION_COUNT) {
+    kind = touchWeatherIsTomorrow() ? KIND_TOMORROW : KIND_TODAY;
+  } else if (screen >= 0) {
     kind = screen;
   } else {
     switch (app::homeModeAt(SCHEDULE, timeKnown ? t.tm_hour : 0, timeKnown)) {
