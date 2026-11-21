@@ -288,113 +288,187 @@ static RowLayout layoutFor(int count) {
   return {1, body, true};  // 1대면 화면 전체를 한 줄로
 }
 
-static const int16_t BIG_ROUTE_W = 118;  // 큰 배치에서 왼쪽 노선 번호 칸
-static const int16_t BIG_TEXT_X = BIG_ROUTE_W + 8;
-static const int16_t BIG_TEXT_W = W - BIG_TEXT_X - 6;
+static const int16_t BIG_ROUTE_W = 100;  // 큰 배치에서 왼쪽 노선 번호 칸
+static const int16_t BIG_TEXT_X = BIG_ROUTE_W + 6;
+static const int16_t BIG_TEXT_W = W - BIG_TEXT_X - 4;
 
-static void drawRouteName(int16_t y0, int16_t h, bool big, const char* name) {
-  const int16_t colW = big ? BIG_ROUTE_W : ROUTE_W;
-  if (!isAscii(name)) {
-    // 한글이 들어간 노선 번호 (예: "마을02")
-    if (big && bigWidth(name) <= colW - 8) {
-      drawBig(8, y0 + (h + bigAscent()) / 2, name, C_ROUTE);
-    } else {
-      useFont(FONT_KOREAN);
-      drawClipped(8, y0 + (h + u8f.getFontAscent()) / 2, colW - 8, name, C_ROUTE);
-    }
-    return;
-  }
-  // 영문/숫자 노선 번호: 칸에 들어가는 가장 큰 글꼴
-  // 큰 글꼴부터 한 단계씩 줄여 가며 칸에 맞는 것을 고릅니다.
-  const uint8_t* fonts[] = {FONT_ROUTE_HUGE, FONT_ROUTE_LARGE, FONT_ROUTE_24, FONT_ROUTE_BIG,
-                            FONT_ROUTE_MID};
-  const int count = sizeof(fonts) / sizeof(fonts[0]);
-  int first = !big ? 3 : (h >= 90 ? 0 : 1);
-  for (int i = first; i < count; i++) {
-    useFont(fonts[i]);
-    if (u8f.getUTF8Width(name) <= colW - 8 || i == count - 1) break;
-  }
-  int16_t baseline = y0 + (h + u8f.getFontAscent()) / 2;
-  drawClipped(8, baseline, colW - 8, name, C_ROUTE);
+// 한글 글꼴은 16픽셀 하나뿐이라, 1픽셀 옆에 한 번 더 그려서 굵게 보이게 합니다.
+static void drawBold(int16_t x, int16_t baseline, const char* text, uint16_t color) {
+  drawText(x, baseline, text, color);
+  drawText(x + 1, baseline, text, color);
 }
 
-// "다음 15분" 은 흰색, " / 범계역 방면" 은 회색으로 이어서 씁니다.
-static void drawNextLine(int16_t x, int16_t baseline, int16_t maxW, const char* second,
-                         const char* dest) {
+// 왼쪽 칸: 노선 번호(가운데 정렬)와 그 아래 방면(작게, 회색)
+static void drawRouteName(int16_t y0, int16_t h, bool big, const char* name, const char* dest) {
+  const int16_t colW = big ? BIG_ROUTE_W : ROUTE_W;
+  const int16_t maxW = colW - 6;
+  const bool showDest = dest && dest[0];
+  int16_t nameBase;
+
+  if (!isAscii(name)) {
+    // 한글이 들어간 노선 번호 (예: "마을02")
+    if (big && bigWidth(name) <= maxW) {
+      int16_t w = bigWidth(name);
+      nameBase = showDest ? y0 + (h - 20 + bigAscent()) / 2 : y0 + (h + bigAscent()) / 2;
+      drawBig((colW - w) / 2, nameBase, name, C_ROUTE);
+    } else {
+      useFont(FONT_KOREAN);
+      int16_t w = u8f.getUTF8Width(name);
+      nameBase = big ? (showDest ? y0 + (h - 20 + 14) / 2 : y0 + (h + 14) / 2) : y0 + 17;
+      drawClipped(w < maxW ? (colW - w) / 2 : 3, nameBase, maxW, name, C_ROUTE);
+    }
+  } else {
+    // 영문/숫자 노선 번호: 칸에 들어가는 가장 큰 글꼴
+    // 큰 글꼴부터 한 단계씩 줄여 가며 칸에 맞는 것을 고릅니다.
+    const uint8_t* fonts[] = {FONT_ROUTE_HUGE, FONT_ROUTE_LARGE, FONT_ROUTE_24, FONT_ROUTE_BIG,
+                              FONT_ROUTE_MID};
+    const int count = sizeof(fonts) / sizeof(fonts[0]);
+    // 작은 배치(4대 이상)에서 방면까지 쓰면 노선 번호는 한 단계 작게
+    int first = !big ? (showDest ? 4 : 3) : (h >= 90 ? 0 : 1);
+    for (int i = first; i < count; i++) {
+      useFont(fonts[i]);
+      if (u8f.getUTF8Width(name) <= maxW || i == count - 1) break;
+    }
+    int16_t asc = u8f.getFontAscent();
+    if (!big) {
+      nameBase = showDest ? y0 + 16 : y0 + (h + asc) / 2;
+    } else {
+      nameBase = showDest ? y0 + (h - 20 + asc) / 2 : y0 + (h + asc) / 2;
+    }
+    int16_t w = u8f.getUTF8Width(name);
+    drawClipped(w < maxW ? (colW - w) / 2 : 3, nameBase, maxW, name, C_ROUTE);
+  }
+
+  if (showDest) {
+    useFont(FONT_KOREAN);
+    int16_t w = u8f.getUTF8Width(dest);
+    int16_t destBase = big ? nameBase + 20 : y0 + 34;
+    drawClipped(w < maxW ? (colW - w) / 2 : 3, destBase, maxW, dest, C_TEXT2);
+  }
+}
+
+// 버스 한 대의 칸: "2분" / "3정거장 전" / "23석"
+struct ArrivalCell {
+  char time[32];
+  char stops[24];
+  char seats[12];
+  bus::Urgency urgency;
+};
+
+static void makeCell(const bus::Arrival& a, uint32_t ageSec, bool isSecond, ArrivalCell& c) {
+  c.time[0] = c.stops[0] = c.seats[0] = '\0';
+  c.urgency = bus::URGENCY_NONE;
+  // 두 번째 버스 정보가 아예 없으면 칸을 비워 둡니다.
+  if (isSecond && a.sec < 0 && !a.note[0]) return;
+  c.urgency = bus::formatMain(a, ageSec, c.time, sizeof(c.time));
+  if (a.sec >= 0 && a.stops > 0) snprintf(c.stops, sizeof(c.stops), "%d정거장 전", a.stops);
+  if (a.sec >= 0 && a.seats >= 0) snprintf(c.seats, sizeof(c.seats), "%d석", a.seats);
+}
+
+static uint16_t cellColor(const ArrivalCell& c) {
+  // 도착 시간은 흰색. 정보가 없을 때만 회색.
+  return c.urgency == bus::URGENCY_NONE ? C_DIM : C_TEXT;
+}
+
+// 정거장 수 (+ 자리가 남으면 빈자리 수). 칸이 좁으면 "전" 을 뺍니다.
+static void drawStops(int16_t x, int16_t baseline, int16_t maxW, const ArrivalCell& c,
+                      bool withSeats) {
   useFont(FONT_KOREAN);
-  int16_t used = 0;
-  if (second[0]) {
-    drawClipped(x, baseline, maxW, second, C_TEXT);
-    used = u8f.getUTF8Width(second);
+  char buf[48];
+  if (withSeats && c.seats[0]) {
+    snprintf(buf, sizeof(buf), "%s%s%s", c.stops, c.stops[0] ? " " : "", c.seats);
+    if (u8f.getUTF8Width(buf) <= maxW) {
+      drawText(x, baseline, buf, C_TEXT2);
+      return;
+    }
   }
-  if (dest[0] && used < maxW - 24) {
-    char buf[64];
-    snprintf(buf, sizeof(buf), "%s%s", second[0] ? " / " : "", dest);
-    drawClipped(x + used, baseline, maxW - used, buf, C_TEXT2);
+  if (!c.stops[0]) return;
+  snprintf(buf, sizeof(buf), "%s", c.stops);
+  if (u8f.getUTF8Width(buf) > maxW) {
+    char* p = strstr(buf, " 전");
+    if (p) *p = '\0';
   }
+  drawClipped(x, baseline, maxW, buf, C_TEXT2);
+}
+
+// 시간 글자를 2배로 쓸 수 있으면 2배, 아니면 보통 크기(굵게). 그린 너비를 돌려줍니다.
+static int16_t drawTime(int16_t x, int16_t baseline, int16_t maxW, const ArrivalCell& c,
+                        bool big) {
+  if (!c.time[0]) return 0;
+  if (big) {
+    int16_t w2 = bigWidth(c.time);
+    if (w2 <= maxW) {
+      drawBig(x, baseline, c.time, cellColor(c));
+      return w2;
+    }
+    baseline -= 8;  // 보통 크기 글자는 2배 글자 높이의 가운데쯤에
+  }
+  useFont(FONT_KOREAN);
+  drawBold(x, baseline, c.time, cellColor(c));
+  return u8f.getUTF8Width(c.time) + 1;
 }
 
 static void drawRow(int index, const RowLayout& lay, const bus::Route* route, uint32_t ageSec) {
-  char mainText[48] = "", detail[48] = "", second[48] = "", first[64] = "";
-  bus::Urgency urgency = bus::URGENCY_NONE;
+  ArrivalCell c0, c1;
   if (route) {
-    if (lay.big) {
-      urgency = bus::formatMain(route->next[0], ageSec, mainText, sizeof(mainText));
-      bus::formatDetail(route->next[0], detail, sizeof(detail));
-    } else {
-      urgency = bus::formatFirst(route->next[0], ageSec, first, sizeof(first));
-    }
-    bus::formatSecond(route->next[1], ageSec, second, sizeof(second));
+    makeCell(route->next[0], ageSec, false, c0);
+    makeCell(route->next[1], ageSec, true, c1);
+  } else {
+    c0.time[0] = c1.time[0] = '\0';
+    c0.stops[0] = c1.stops[0] = c0.seats[0] = c1.seats[0] = '\0';
+    c0.urgency = c1.urgency = bus::URGENCY_NONE;
   }
 
   char key[sizeof(rowCache[0])];
-  snprintf(key, sizeof(key), "%d|%s|%s%s|%s|%s|%d", lay.rows, route ? route->name : "", mainText,
-           first, detail, second, urgency);
+  snprintf(key, sizeof(key), "%d|%.12s|%.20s|%.20s|%.20s|%.20s|%s|%s|%d", lay.rows,
+           route ? route->name : "", c0.time, c1.time, c0.stops, c1.stops, c0.seats, c1.seats,
+           c0.urgency);
   if (!changed(rowCache[index], sizeof(rowCache[index]), key)) return;
 
   const int16_t y0 = HEADER_H + index * lay.h;
   tft.fillRect(0, y0, W, lay.h, (index % 2) ? C_ROW_ALT : C_BG);
   if (!route) return;
 
-  drawRouteName(y0, lay.h, lay.big, route->name);
-  // 도착 시간은 흰색. 정보가 없을 때만 회색.
-  const uint16_t timeColor = urgency == bus::URGENCY_NONE ? C_DIM : C_TEXT;
+  drawRouteName(y0, lay.h, lay.big, route->name, route->dest);
 
+  //  첫 번째 버스      두 번째 버스
+  //  2분               13분
+  //  3정거장 전        6정거장 전
+  const int16_t textX = lay.big ? BIG_TEXT_X : TEXT_X;
+  const int16_t textW = lay.big ? BIG_TEXT_W : TEXT_W;
+  const int16_t right = textX + textW;
+  const int16_t half = textW / 2;
+
+  int16_t timeBase, stopsBase, seatsBase = -1;
   if (!lay.big) {
-    // 4대 이상: 한 줄에 작게
-    useFont(FONT_KOREAN);
-    drawClipped(TEXT_X, y0 + 17, TEXT_W, first, timeColor);
-    drawNextLine(TEXT_X, y0 + 34, TEXT_W, second, route->dest);
-    return;
+    timeBase = y0 + 17;
+    stopsBase = y0 + 34;
+  } else if (lay.h >= 90) {
+    // 2대 또는 1대: 시간 / 정거장 수 / 빈자리 세 줄. 1대면 글자 묶음을 가운데로.
+    const int16_t cy = y0 + (lay.h - 95) / 2;
+    timeBase = cy + 44;
+    stopsBase = cy + 67;
+    seatsBase = cy + 87;
+  } else {
+    // 3대: 시간 / 정거장 수 두 줄
+    timeBase = y0 + 36;
+    stopsBase = y0 + 57;
   }
 
-  // 큰 배치: 도착 시간을 2배 크기로. 줄이 아주 높으면(1대) 글자 묶음을 가운데로.
-  const int16_t cy = lay.h > 95 ? y0 + (lay.h - 95) / 2 : y0;
-  const int16_t mainBase = lay.h >= 90 ? cy + 42 : y0 + 37;
-  int16_t mainW = bigWidth(mainText);
-  if (mainW <= BIG_TEXT_W) {
-    drawBig(BIG_TEXT_X, mainBase, mainText, timeColor);
-  } else {
-    useFont(FONT_KOREAN);
-    mainW = u8f.getUTF8Width(mainText);
-    drawClipped(BIG_TEXT_X, mainBase, BIG_TEXT_W, mainText, timeColor);
-  }
+  // 두 번째 칸은 위아래 줄이 맞도록 같은 자리에서 시작합니다.
+  // (큰 배치는 첫 칸을 조금 넓게: 2배 크기 "곧 도착" 이 들어가도록)
+  int16_t x1 = textX + (lay.big ? 118 : half);
+  int16_t w0 = drawTime(textX, timeBase, x1 - textX - 6, c0, lay.big);
+  if (textX + w0 + 8 > x1) x1 = textX + w0 + 8;
+  drawTime(x1, timeBase, right - x1, c1, lay.big);
 
-  useFont(FONT_KOREAN);
-  const int16_t detailW = detail[0] ? u8f.getUTF8Width(detail) : 0;
-  if (lay.h >= 90) {
-    // 2줄 배치: 시간 / 정거장 수 / 다음 버스와 방면
-    if (detail[0]) drawClipped(BIG_TEXT_X, cy + 64, BIG_TEXT_W, detail, C_TEXT2);
-    drawNextLine(BIG_TEXT_X, cy + 86, BIG_TEXT_W, second, route->dest);
-  } else if (detail[0] && BIG_TEXT_X + mainW + 10 + detailW <= W - 6) {
-    // 3줄 배치: 시간 옆에 정거장 수, 아래에 다음 버스와 방면
-    drawText(BIG_TEXT_X + mainW + 10, mainBase, detail, C_TEXT2);
-    drawNextLine(BIG_TEXT_X, y0 + 57, BIG_TEXT_W, second, route->dest);
-  } else {
-    // 3줄 배치인데 옆에 자리가 없으면: 정거장 수와 다음 버스를 아래 줄에
-    char line[96];
-    snprintf(line, sizeof(line), "%s%s%s", detail, detail[0] && second[0] ? "  " : "", second);
-    drawClipped(BIG_TEXT_X, y0 + 57, BIG_TEXT_W, line, C_TEXT2);
+  const bool seatsInline = seatsBase < 0;  // 빈자리 줄이 따로 없으면 정거장 수 옆에
+  drawStops(textX, stopsBase, x1 - textX - 8, c0, seatsInline);
+  drawStops(x1, stopsBase, right - x1, c1, seatsInline);
+  if (seatsBase >= 0) {
+    useFont(FONT_KOREAN);
+    if (c0.seats[0]) drawText(textX, seatsBase, c0.seats, C_TEXT2);
+    if (c1.seats[0]) drawText(x1, seatsBase, c1.seats, C_TEXT2);
   }
 }
 
@@ -625,11 +699,6 @@ static const int16_t TABLE_COL_W = 90;
 static const int16_t TABLE_HEAD_Y = 123;            // "오전 / 오후" 바닥선
 static const int16_t TABLE_ROW_Y = 145;             // "맑음(0%)" 줄 바닥선
 
-// 한글 글꼴은 16픽셀 하나뿐이라, 1픽셀 옆에 한 번 더 그려서 굵게 보이게 합니다.
-static void drawBold(int16_t x, int16_t baseline, const char* text, uint16_t color) {
-  drawText(x, baseline, text, color);
-  drawText(x + 1, baseline, text, color);
-}
 
 // "맑음(0%)" 한 칸. 칸보다 길면 "구름많음" -> "구름" 처럼 짧은 이름으로.
 static void drawConditionCell(int16_t cx, weather::Condition c, int pop) {

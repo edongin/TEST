@@ -20,20 +20,23 @@ bool fetchArrivals(const StationConfig& station, bus::Result& out) {
   }
 
   HTTPClient http;
-  bool started = httpBegin(http, url);
-  if (!started) {
-    bus::copyUtf8(out.error, sizeof(out.error), "요청 주소 오류");
-    return false;
-  }
-
-  Serial.printf("[버스] %s (%s) 정보 요청\n", station.label, station.id);
-  int status = http.GET();
-  if (status <= 0) {
+  int status = 0;
+  // 공공데이터포털 서버는 가끔 연결을 받아 주지 않아서, 연결 자체가 실패하면 한 번 더 시도합니다.
+  for (int attempt = 1; attempt <= 2; attempt++) {
+    if (!httpBegin(http, url)) {
+      bus::copyUtf8(out.error, sizeof(out.error), "요청 주소 오류");
+      return false;
+    }
+    Serial.printf("[버스] %s (%s) 정보 요청%s\n", station.label, station.id,
+                  attempt > 1 ? " (다시 시도)" : "");
+    status = http.GET();
+    if (status > 0) break;
     snprintf(out.error, sizeof(out.error), "서버 연결 실패 (%s)",
              http.errorToString(status).c_str());
     http.end();
     Serial.printf("[버스] %s\n", out.error);
-    return false;
+    if (attempt == 2) return false;
+    delay(500);
   }
 
   String body = http.getString();

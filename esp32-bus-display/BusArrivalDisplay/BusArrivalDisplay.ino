@@ -21,6 +21,7 @@
 
 static const char* APP_TITLE = "버스와 날씨 알림판";
 static const uint32_t BUS_STALE_SEC = 2 * 60;          // 2분 넘게 갱신 못 하면 경고
+static const uint32_t BUS_FIRST_RETRY_MS = 5000;     // 첫 정보를 못 받았을 때 다시 시도 간격
 static const uint32_t WEATHER_RETRY_MS = 2 * 60000UL;  // 날씨 실패 시 다시 시도 간격
 static const char* const WEEKDAYS[] = {"일", "월", "화", "수", "목", "금", "토"};
 
@@ -160,9 +161,11 @@ static void fetchBus(int index, uint32_t now) {
   }
   snprintf(busError, sizeof(busError), "갱신 실패: %s", busIncoming.error);
   if (!haveBus) {
+    // 아직 보여줄 정보가 없으면 15초까지 기다리지 않고 5초 뒤에 다시 받습니다.
+    nextBusFetchMs = millis() + BUS_FIRST_RETRY_MS;
     char title[96];
     stationTitle(index, title, sizeof(title));
-    displayMessage(title, busIncoming.error, "터치하면 다음 화면");
+    displayMessage(title, busIncoming.error, "5초 뒤 다시 시도합니다");
   }
 }
 
