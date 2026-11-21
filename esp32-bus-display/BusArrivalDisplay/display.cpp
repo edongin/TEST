@@ -231,23 +231,81 @@ static void useBigFont() {
   u8big.setFontMode(1);
 }
 
-static int16_t bigWidth(const char* text) {
-  useBigFont();
-  return u8big.getUTF8Width(text) * 2;
-}
+// 2배 글자에서 띄어쓰기 너비 (그림판 픽셀. 글꼴 그대로면 8 = 화면에서 16픽셀이라 너무 넓음)
+static const int16_t BIG_SPACE = 3;
 
 // 한글 글자는 글꼴이 알려 주는 높이(영문 기준)보다 위로 더 올라가서, 바닥선을 넉넉히 잡습니다.
 static const int16_t BIG_BASE = 15;  // 그림판 안의 바닥선 (16픽셀 글꼴, 아래로 2픽셀)
 
 static int16_t bigAscent() { return 14 * 2; }
 
-// baseline: 2배 글자의 바닥선 위치
-static void drawBig(int16_t x, int16_t baseline, const char* text, uint16_t color) {
+// "착" 은 글꼴에서 ㅊ 이 너무 작아서, ㄱ 을 줄이고 ㅊ 을 키운 모양으로 직접 그립니다 (16x16).
+static const char* const GLYPH_CHAK[16] = {
+    "................",
+    "................",
+    "....#.......#...",
+    ".#######....#...",
+    "....#.......#...",
+    "....#.......#...",
+    "...#.#......###.",
+    "..#...#.....#...",
+    ".#.....#....#...",
+    "#.......#...#...",
+    "............#...",
+    "................",
+    "...##########...",
+    "............#...",
+    "............#...",
+    "............#...",
+};
+
+static void drawGlyph16(int16_t x, const char* const rows[16]) {
+  for (int16_t r = 0; r < 16; r++) {
+    for (int16_t c = 0; c < 16; c++) {
+      if (rows[r][c] == '#') bigCanvas.drawPixel(x + c, r + BIG_BASE - 15, 1);
+    }
+  }
+}
+
+// 2배 글자를 그림판에 한 글자씩 씁니다 (draw = false 면 너비만 셉니다). 그림판 픽셀 너비를 돌려줌.
+static int16_t bigRender(const char* text, bool draw) {
   useBigFont();
   u8big.setForegroundColor(1);
+  int16_t x = 0;
+  for (const char* p = text; *p;) {
+    if (*p == ' ') {
+      x += BIG_SPACE;
+      p++;
+      continue;
+    }
+    const unsigned char lead = (unsigned char)*p;
+    int len = lead >= 0xF0 ? 4 : lead >= 0xE0 ? 3 : lead >= 0xC0 ? 2 : 1;
+    char ch[5];
+    int n = 0;
+    while (n < len && p[n]) {
+      ch[n] = p[n];
+      n++;
+    }
+    ch[n] = '\0';
+    p += n;
+    if (draw) {
+      if (strcmp(ch, "착") == 0) {
+        drawGlyph16(x, GLYPH_CHAK);
+      } else {
+        u8big.drawUTF8(x, BIG_BASE, ch);
+      }
+    }
+    x += u8big.getUTF8Width(ch);
+  }
+  return x;
+}
+
+static int16_t bigWidth(const char* text) { return bigRender(text, false) * 2; }
+
+// baseline: 2배 글자의 바닥선 위치
+static void drawBig(int16_t x, int16_t baseline, const char* text, uint16_t color) {
   bigCanvas.fillScreen(0);
-  u8big.drawUTF8(0, BIG_BASE, text);
-  int16_t w = u8big.getUTF8Width(text);
+  int16_t w = bigRender(text, true);
   if (w > bigCanvas.width()) w = bigCanvas.width();
   const int16_t top = baseline - BIG_BASE * 2;
   // 가로로 이어진 점들을 한 번에 칠해서 빠르게 그립니다.
@@ -391,24 +449,59 @@ static void drawStops(int16_t x, int16_t baseline, int16_t maxW, const ArrivalCe
   drawClipped(x, baseline, maxW, buf, C_TEXT2);
 }
 
-// 시간 글자를 2배로 쓸 수 있으면 2배, 아니면 보통 크기(굵게). 그린 너비를 돌려줍니다.
-static int16_t drawTime(int16_t x, int16_t baseline, int16_t maxW, const ArrivalCell& c,
-                        bool big) {
+// 시간 글자를 2배로 쓸 수 있으면(maxW 안에 들어가면) 2배, 아니면 보통 크기(굵게)
+static bool timeIsBig(const ArrivalCell& c, bool big, int16_t maxW) {
+  return big && bigWidth(c.time) <= maxW;
+}
+
+static int16_t timeWidth(const ArrivalCell& c, bool big, int16_t maxW) {
   if (!c.time[0]) return 0;
-  if (big) {
-    int16_t w2 = bigWidth(c.time);
-    if (w2 <= maxW) {
-      drawBig(x, baseline, c.time, cellColor(c));
-      return w2;
-    }
-    baseline -= 8;  // 보통 크기 글자는 2배 글자 높이의 가운데쯤에
-  }
+  if (timeIsBig(c, big, maxW)) return bigWidth(c.time);
   useFont(FONT_KOREAN);
-  drawBold(x, baseline, c.time, cellColor(c));
   return u8f.getUTF8Width(c.time) + 1;
 }
 
-static void drawRow(int index, const RowLayout& lay, const bus::Route* route, uint32_t ageSec) {
+static void drawTime(int16_t x, int16_t baseline, int16_t maxW, const ArrivalCell& c, bool big) {
+  if (!c.time[0]) return;
+  if (timeIsBig(c, big, maxW)) {
+    drawBig(x, baseline, c.time, cellColor(c));
+    return;
+  }
+  if (big) baseline -= 8;  // 보통 크기 글자는 2배 글자 높이의 가운데쯤에
+  useFont(FONT_KOREAN);
+  drawBold(x, baseline, c.time, cellColor(c));
+}
+
+// 이번 버스 칸 너비의 최댓값 (두 번째 칸이 이만큼 떨어져서 시작). 두 번째 칸은 모든 줄이 같은
+// 위치에서 시작해서 위아래가 맞고, 이번 버스 글자와 너무 떨어지지 않게 합니다.
+static const int16_t COL_GAP = 14;     // 이번 버스와 다음 버스 사이 간격
+static const int16_t SECOND_MIN_W = 90;  // 다음 버스 칸에 최소한 남길 너비
+
+static int16_t firstColumnWidth(const bus::Result& data, int page, const RowLayout& lay,
+                                uint32_t ageSec) {
+  const int16_t textW = lay.big ? BIG_TEXT_W : TEXT_W;
+  const int16_t cap = textW - SECOND_MIN_W - COL_GAP;
+  int16_t widest = 0;
+  for (int i = 0; i < lay.rows; i++) {
+    int idx = page * lay.rows + i;
+    if (idx >= data.count) break;
+    ArrivalCell c0, c1;
+    makeCell(data.routes[idx].next[0], ageSec, false, c0);
+    makeCell(data.routes[idx].next[1], ageSec, true, c1);
+    if (!c1.time[0]) continue;  // 다음 버스가 없는 줄은 이번 버스 글자가 길어도 상관없음
+    int16_t w = timeWidth(c0, lay.big, cap);
+    useFont(FONT_KOREAN);
+    if (c0.stops[0]) {
+      int16_t sw = u8f.getUTF8Width(c0.stops);
+      if (sw > w) w = sw;
+    }
+    if (w > widest) widest = w;
+  }
+  return widest < cap ? widest : cap;
+}
+
+static void drawRow(int index, const RowLayout& lay, const bus::Route* route, uint32_t ageSec,
+                    int16_t firstW) {
   ArrivalCell c0, c1;
   if (route) {
     makeCell(route->next[0], ageSec, false, c0);
@@ -420,9 +513,9 @@ static void drawRow(int index, const RowLayout& lay, const bus::Route* route, ui
   }
 
   char key[sizeof(rowCache[0])];
-  snprintf(key, sizeof(key), "%d|%.12s|%.20s|%.20s|%.20s|%.20s|%s|%s|%d", lay.rows,
-           route ? route->name : "", c0.time, c1.time, c0.stops, c1.stops, c0.seats, c1.seats,
-           c0.urgency);
+  snprintf(key, sizeof(key), "%d|%d|%.12s|%.20s|%.20s|%.20s|%.20s|%s|%s|%d", lay.rows,
+           firstW, route ? route->name : "", c0.time, c1.time, c0.stops, c1.stops, c0.seats,
+           c1.seats, c0.urgency);
   if (!changed(rowCache[index], sizeof(rowCache[index]), key)) return;
 
   const int16_t y0 = HEADER_H + index * lay.h;
@@ -437,7 +530,6 @@ static void drawRow(int index, const RowLayout& lay, const bus::Route* route, ui
   const int16_t textX = lay.big ? BIG_TEXT_X : TEXT_X;
   const int16_t textW = lay.big ? BIG_TEXT_W : TEXT_W;
   const int16_t right = textX + textW;
-  const int16_t half = textW / 2;
 
   int16_t timeBase, stopsBase, seatsBase = -1;
   if (!lay.big) {
@@ -455,15 +547,14 @@ static void drawRow(int index, const RowLayout& lay, const bus::Route* route, ui
     stopsBase = y0 + 57;
   }
 
-  // 두 번째 칸은 위아래 줄이 맞도록 같은 자리에서 시작합니다.
-  // (큰 배치는 첫 칸을 조금 넓게: 2배 크기 "곧 도착" 이 들어가도록)
-  int16_t x1 = textX + (lay.big ? 118 : half);
-  int16_t w0 = drawTime(textX, timeBase, x1 - textX - 6, c0, lay.big);
-  if (textX + w0 + 8 > x1) x1 = textX + w0 + 8;
+  // 두 번째 칸은 모든 줄에서 같은 자리(이번 버스 칸 너비 + 간격)에서 시작합니다.
+  const int16_t cap = textW - SECOND_MIN_W - COL_GAP;
+  const int16_t x1 = textX + firstW + COL_GAP;
+  drawTime(textX, timeBase, cap, c0, lay.big);
   drawTime(x1, timeBase, right - x1, c1, lay.big);
 
   const bool seatsInline = seatsBase < 0;  // 빈자리 줄이 따로 없으면 정거장 수 옆에
-  drawStops(textX, stopsBase, x1 - textX - 8, c0, seatsInline);
+  drawStops(textX, stopsBase, c1.time[0] ? x1 - textX - 6 : right - textX, c0, seatsInline);
   drawStops(x1, stopsBase, right - x1, c1, seatsInline);
   if (seatsBase >= 0) {
     useFont(FONT_KOREAN);
@@ -518,9 +609,10 @@ void displayArrivals(const bus::Result& data, uint32_t ageSec, const char* stati
       for (auto& row : rowCache) row[0] = '\0';
       lastRows = lay.rows;
     }
+    const int16_t firstW = firstColumnWidth(data, page, lay, ageSec);
     for (int i = 0; i < lay.rows; i++) {
       int idx = page * lay.rows + i;
-      drawRow(i, lay, idx < data.count ? &data.routes[idx] : nullptr, ageSec);
+      drawRow(i, lay, idx < data.count ? &data.routes[idx] : nullptr, ageSec, firstW);
     }
   }
   // 오른쪽: "1/2  터치: 아파트 정문" (페이지가 하나면 터치 안내만)
