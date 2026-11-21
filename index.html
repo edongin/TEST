@@ -214,6 +214,9 @@ button{font-family:inherit;cursor:pointer;border:none}
 .prow .pd{font-size:14px;background:#FFF3C4;border-radius:999px;padding:1px 8px;color:#7a5a00}
 /* 이벤트 칸 */
 .cell.ev{box-shadow:inset 0 0 0 calc(var(--bs) * .005) #F9D71C}
+.cell.it{box-shadow:inset 0 0 0 calc(var(--bs) * .005) #2BB5D8}
+.cell .itm{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);font-size:calc(var(--bs) * .036);line-height:1;background:#fff;border-radius:50%;padding:calc(var(--bs) * .006);box-shadow:0 0 0 calc(var(--bs) * .004) #2BB5D8,0 2px 3px rgba(0,0,0,.25);animation:evb 1.8s ease-in-out infinite}
+.prow .sh{font-size:14px;background:#e6f7fc;border-radius:999px;padding:1px 8px;color:#16708A}
 .cell .evi{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);font-size:calc(var(--bs) * .042);line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3));animation:evb 1.4s ease-in-out infinite}
 @keyframes evb{50%{transform:translate(-50%,-62%) scale(1.1)}}
 #overlay{transition:opacity .45s}
@@ -704,6 +707,9 @@ const sfx = {
   bump: () => { tone(300,.12,'square',.07,0,600); tone(600,.12,'square',.06,.1,300); },
   win: () => [523,659,784,1047,784,1047].forEach((f,i)=>tone(f,.22,'triangle',.14,i*.13)),
   op: () => tone(660,.15,'sine',.12,0,990),
+  item: () => [660,880,1320].forEach((f,i)=>tone(f,.12,'triangle',.12,i*.06)),
+  shield: () => { tone(1200,.08,'square',.06); tone(900,.25,'triangle',.12,.06,1500); },
+  magnet: () => tone(200,.6,'sine',.12,0,700),
   event: () => [784,988,1175,1568].forEach((f,i)=>tone(f,.14,'sine',.12,i*.07)),
   rumble: () => { for(let i=0;i<6;i++) tone(70+Math.random()*30,.25,'sawtooth',.08,i*.18,50); },
   warp: () => tone(260,.45,'sine',.13,0,1400),
@@ -717,6 +723,13 @@ const DEFAULT_LADDERS = {4:14, 9:27, 21:38, 28:45, 51:67, 63:79, 71:88, 80:96};
 const DEFAULT_SNAKES  = {17:7, 34:16, 47:26, 54:31, 62:43, 87:64, 93:73, 98:76};
 let LADDERS = {...DEFAULT_LADDERS}, SNAKES = {...DEFAULT_SNAKES};
 let EVENTS = new Set(); // 난장판 이벤트 칸
+let ITEMS = {};           // 난장판 아이템 칸 {칸번호: 'shield'|'magnet'|'ladder'}
+const ITEM_INFO = {
+  shield:{icon:'🛡️', name:'뱀방패',        desc:'갖고 있다가 뱀을 만나면 한 번 막아줘요', color:'#2BB5D8'},
+  magnet:{icon:'🧲', name:'자석',          desc:'가장 가까운 친구를 바로 내 앞 칸으로 끌어와요', color:'#E8232A'},
+  ladder:{icon:'🪜', name:'휴대용 사다리', desc:'바로 윗줄로 사다리를 놓고 올라가요', color:'#8B5A2B'},
+};
+const ITEM_COUNT = 4; // 판 위 아이템 개수 (5개 미만)
 
 const randInt = (a,b) => a+Math.floor(Math.random()*(b-a+1));
 const pickOne = arr => arr[Math.floor(Math.random()*arr.length)];
@@ -747,6 +760,32 @@ function genSnakesLadders(){
   }
   return {L:{...DEFAULT_LADDERS}, S:{...DEFAULT_SNAKES}};
 }
+// 난장판: 아이템 4개 (2~80칸 안에서 이벤트·뱀·사다리·말이 있는 칸은 피함, 종류는 고르게)
+function placeItems(){
+  const bad=new Set([1,...EVENTS]);
+  [LADDERS,SNAKES].forEach(m=>Object.entries(m).forEach(([a,b])=>{ bad.add(+a); bad.add(+b); }));
+  game.players.forEach(q=>bad.add(q.pos));
+  const types=shuffleArr(['shield','magnet','ladder']);
+  while(types.length<ITEM_COUNT) types.push(pickOne(['shield','magnet','ladder']));
+  const items={};
+  for(const c of shuffleArr(Array.from({length:79},(_,i)=>i+2))){
+    if(Object.keys(items).length>=ITEM_COUNT) break;
+    if(bad.has(c) || Object.keys(items).some(k=>rowOf(+k)===rowOf(c))) continue;
+    items[c]=types[Object.keys(items).length];
+  }
+  return items;
+}
+function renderItems(){
+  $$('#board .itm').forEach(e=>e.parentNode.removeChild(e));
+  $$('#board .cell.it').forEach(c=>c.classList.toggle('it', false));
+  for(const [n,t] of Object.entries(ITEMS)){
+    const c=$(`#board .cell[data-n="${n}"]`);
+    if(c){ c.classList.add('it'); c.insertAdjacentHTML('beforeend', `<span class="itm">${ITEM_INFO[t].icon}</span>`); }
+  }
+}
+// 바로 윗줄의 같은 세로줄 칸
+function cellAbove(n){ const r=rowOf(n), c=cellRC(n).c, r2=r+1; return r2*10 + (r2%2===0 ? c : 9-c) + 1; }
+
 // 난장판: 이벤트 칸 18개 (줄마다 고르게, 붙어 있지 않게)
 function pickEvents(){
   const ends=new Set([1,100]);
@@ -977,7 +1016,7 @@ function buildBoard(){
     for(let c=0;c<10;c++){
       const n = r*10 + (r%2===0 ? c : 9-c) + 1;
       const k=(n-1)%10+1;
-      const cell=document.createElement('div'); cell.className='cell'+(k===10?' c10':'');
+      const cell=document.createElement('div'); cell.className='cell'+(k===10?' c10':''); cell.dataset.n=n;
       let bg;
       if(k===7) bg='linear-gradient(#e7cdf4,#c6cdf0,#cdeefc,#d5f1c8,#fdf3b5,#fde0bd,#f9c3c5)';
       else if(k===10) bg='#ffffff';
@@ -992,6 +1031,7 @@ function buildBoard(){
     }
   }
   drawOverlay();
+  renderItems();
 }
 
 const snakePaths = {};
@@ -1070,8 +1110,8 @@ function saveGame(){
       v:1, time:Date.now(),
       setup:{count:setup.count, names:setup.names, picks:setup.picks, mode:setup.mode, board:setup.board},
       turn:game.turn, rankCount:game.rankCount, shakeIn:game.shakeIn,
-      L:LADDERS, S:SNAKES, E:[...EVENTS],
-      players:game.players.map(p=>({pos:p.pos, done:p.done, rank:p.rank, queue:p.queue})),
+      L:LADDERS, S:SNAKES, E:[...EVENTS], I:ITEMS,
+      players:game.players.map(p=>({pos:p.pos, done:p.done, rank:p.rank, queue:p.queue, shield:p.shield})),
     }));
   }catch(e){}
 }
@@ -1115,14 +1155,15 @@ $('#leaveGo').onclick=leaveToHome;
 
 function startGame(saved){
   if(saved) Object.assign(setup, saved.setup);
-  game.players = setup.picks.map((ch,i)=>({ idx:i, name:setup.names[i], ch, pos:0, done:false, rank:0, xy:null, el:null, queue:[] }));
+  game.players = setup.picks.map((ch,i)=>({ idx:i, name:setup.names[i], ch, pos:0, done:false, rank:0, xy:null, el:null, queue:[], shield:0 }));
   game.turn=0; game.busy=false; game.over=false; game.rankCount=0; game.gid++;
   LADDERS={...DEFAULT_LADDERS}; SNAKES={...DEFAULT_SNAKES}; EVENTS=new Set();
-  if(isChaos()){ EVENTS=pickEvents(); game.shakeIn=randInt(4,5); }
+  ITEMS={};
+  if(isChaos()){ EVENTS=pickEvents(); ITEMS=placeItems(); game.shakeIn=randInt(4,5); }
   if(saved){
-    LADDERS=saved.L; SNAKES=saved.S; EVENTS=new Set(saved.E||[]);
+    LADDERS=saved.L; SNAKES=saved.S; EVENTS=new Set(saved.E||[]); ITEMS=saved.I||{};
     game.turn=saved.turn; game.rankCount=saved.rankCount; game.shakeIn=saved.shakeIn;
-    saved.players.forEach((sp,i)=>Object.assign(game.players[i], {pos:sp.pos, done:sp.done, rank:sp.rank, queue:sp.queue||[]}));
+    saved.players.forEach((sp,i)=>Object.assign(game.players[i], {pos:sp.pos, done:sp.done, rank:sp.rank, queue:sp.queue||[], shield:sp.shield||0}));
   }
   $('#boardTag').textContent = isChaos() ? '🌪️ 난장판' : '';
   $('#evHelp').classList.toggle('hidden', !isChaos());
@@ -1189,11 +1230,11 @@ function updateUI(){
   updateRollLabels();
   game.players.forEach(q=>{
     q.el.classList.toggle('active', q===p && !game.over);
-    q.el.querySelector('.tk-name').textContent = q.name + (q.queue.length && !q.done ? ' '+q.queue.map(x=>x.icon).join('') : '');
+    q.el.querySelector('.tk-name').textContent = q.name + (q.shield && !q.done ? ' 🛡️'+(q.shield>1?q.shield:'') : '') + (q.queue.length && !q.done ? ' '+q.queue.map(x=>x.icon).join('') : '');
   });
   $('#plist').innerHTML=game.players.map(q=>{
     const c=nbColor(q.ch);
-    const right = (q.queue.length&&!q.done ? `<span class="pd">${q.queue.map(x=>x.icon).join(' ')} ${q.queue[0].label}</span>` : '') + (q.done ? `<span class="rk">🏆 ${q.rank}등</span>` : `<span class="pp">${q.pos===0?'출발 전':q.pos+'칸'}</span>`);
+    const right = (q.shield&&!q.done ? `<span class="sh">🛡️${q.shield>1?'×'+q.shield:''}</span>` : '') + (q.queue.length&&!q.done ? `<span class="pd">${q.queue.map(x=>x.icon).join(' ')} ${q.queue[0].label}</span>` : '') + (q.done ? `<span class="rk">🏆 ${q.rank}등</span>` : `<span class="pp">${q.pos===0?'출발 전':q.pos+'칸'}</span>`);
     return `<div class="prow ${q===p&&!game.over?'now':''}" style="--pc:${c}"><div class="pc">${nbSVG(q.ch,46)}</div><div class="pn">${q.name}</div>${right}</div>`;
   }).join('');
 }
@@ -1364,6 +1405,7 @@ async function moveSteps(p, steps){
 // canEvent: 이번에 '움직여서' 이 칸에 왔는지 (제자리면 이벤트 없이 뱀/사다리만 적용)
 async function settle(p, canEvent=false){
   let eventUsed=false; // 이번 이동에서 이벤트는 한 번만
+  let shieldAt=0;      // 뱀방패로 막은 뱀 머리 칸
   for(let guard=0; guard<60; guard++){
     if(!p.el.isConnected) return; // 새 게임이 시작됨
     if(p.pos===100){ await finish(p); return; }
@@ -1382,12 +1424,22 @@ async function settle(p, canEvent=false){
       p.pos=to; await climb(p, posXY(p)); await land(p); updateUI(); await wait(200);
       canEvent=false; continue;
     }
-    if(SNAKES[p.pos]){
+    if(SNAKES[p.pos] && shieldAt!==p.pos){
+      if(p.shield>0){
+        p.shield--; shieldAt=p.pos; sfx.shield();
+        toast('🛡️ 뱀방패! 뱀을 막았어요','good'); msg(`🛡️ ${p.name} 뱀방패로 뱀을 막았어요!`);
+        updateUI(); await wait(1000);
+        continue;
+      }
       const from=p.pos, to=SNAKES[from];
       toast(`🐍 뱀이다! ${from} → ${to}`,'bad'); msg(`앗! ${p.name} 뱀 타고 ${from} → ${to} 내려가요`);
       sfx.snake(); await wait(350);
       p.pos=to; await followPath(p, snakePaths[from], 1300); setXY(p, posXY(p)); await land(p); updateUI(); await wait(200);
       canEvent=false; continue;
+    }
+    if(canEvent && isChaos() && ITEMS[p.pos]){
+      const t=ITEMS[p.pos]; delete ITEMS[p.pos]; renderItems();
+      if(await useItem(p, t)) continue; // 사다리로 올라갔으면 새 칸 확인
     }
     if(canEvent && isChaos() && EVENTS.has(p.pos)){
       canEvent=false;
@@ -1465,6 +1517,53 @@ async function runEvent(p){
   return false;
 }
 
+/* ---------- 난장판 아이템 ---------- */
+// 아이템 사용. 내가 움직였으면 true
+async function useItem(p, t){
+  const it=ITEM_INFO[t];
+  sfx.item();
+  if(t==='shield'){
+    p.shield=(p.shield||0)+1; updateUI();
+    msg(`🛡️ ${p.name} 뱀방패를 얻었어요! 뱀을 만나면 한 번 막아줘요`);
+    await eventCard('🛡️','뱀방패 획득!','뱀을 만나면 한 번 막아줘요',it.color,1800);
+    return false;
+  }
+  if(t==='magnet'){
+    const others=game.players.filter(q=>q!==p && !q.done && q.pos>0);
+    if(!others.length){
+      msg(`🧲 ${p.name}: 주변에 친구가 없어요!`);
+      await eventCard('🧲','자석!','주변에 친구가 없어서 그냥 끝나요',it.color,1800);
+      return false;
+    }
+    const md=Math.min(...others.map(q=>Math.abs(q.pos-p.pos)));
+    const q=pickOne(others.filter(q=>Math.abs(q.pos-p.pos)===md));
+    const dest=p.pos+1;
+    await eventCard('🧲','자석!',`가장 가까운 ${q.name} → 내 앞 ${dest}칸으로 끌어와요`,it.color,1900);
+    if(q.pos===dest){ msg(`🧲 ${q.name} 이미 바로 앞에 있어요!`); return false; }
+    msg(`🧲 ${q.name} ${q.pos} → ${dest} 끌려와요!`);
+    sfx.magnet();
+    q.pos=dest; await animate(q, posXY(q), 750, 3); await land(q); updateUI();
+    await settle(q, true); // 끌려온 친구도 도착 칸 규칙 적용
+    return false;
+  }
+  if(t==='ladder'){
+    const from=p.pos, to=cellAbove(from);
+    msg(`🪜 ${p.name} 휴대용 사다리로 ${from} → ${to}!`);
+    await eventCard('🪜','휴대용 사다리!',`바로 윗줄로 올라가요 (${from} → ${to})`,it.color,1800);
+    const A=cellXY(from), B=cellXY(to);
+    let g=`<g id="tmpLadder">`;
+    [-17,17].forEach(dx=> g+=`<line x1="${A.x+dx}" y1="${A.y+12}" x2="${B.x+dx}" y2="${B.y-12}" stroke="#C68642" stroke-width="9" stroke-linecap="round"/>`);
+    for(let y=A.y; y>=B.y; y-=24) g+=`<line x1="${A.x-17}" y1="${y}" x2="${A.x+17}" y2="${y}" stroke="#F9D71C" stroke-width="6" stroke-linecap="round"/>`;
+    g+=`</g>`;
+    $('#overlay').insertAdjacentHTML('beforeend', g);
+    sfx.ladder(); p.pos=to; await climb(p, posXY(p)); await land(p); updateUI();
+    await wait(250);
+    const tl=$('#tmpLadder'); if(tl) tl.parentNode.removeChild(tl);
+    return true;
+  }
+  return false;
+}
+
 // 이벤트 목록 창
 const EVENT_LIST = [
   ['🎲🎲','주사위 2개!','다음 차례에 주사위 2개를 굴려서 모두 더해요','#2BB5D8'],
@@ -1481,7 +1580,10 @@ function openEventList(){
   $('#evList').innerHTML =
     `<div class="ev-sub">🎁 칸에 도착하면 아래 중 하나가 랜덤!<br><small style="color:#778">주사위 2·3·4·5개 이벤트는 4가지를 합쳐서 다른 이벤트 하나만큼 나와요</small></div>` +
     EVENT_LIST.map(([ic,nm,ds,c])=>`<div class="ev-row" style="--c:${c}"><div class="ev-ic">${ic}</div><div><div class="ev-nm">${nm}</div><div class="ev-ds">${ds}</div></div></div>`).join('') +
+    `<div class="ev-sub" style="margin-top:16px">🧰 아이템 <small style="color:#778">(판 위에 ${ITEM_COUNT}개, 그 칸에 도착하면 주워요)</small></div>` +
+    Object.values(ITEM_INFO).map(it=>`<div class="ev-row" style="--c:${it.color}"><div class="ev-ic">${it.icon}</div><div><div class="ev-nm">${it.name}</div><div class="ev-ds">${it.desc}</div></div></div>`).join('') +
     `<ul class="ev-rules">
+      <li>🌪️ 맵이 흔들리면 아이템도 새 자리에 ${ITEM_COUNT}개로 다시 놓여요</li>
       <li>이벤트는 한 번! 이벤트로 움직여서 또 🎁 칸에 가도 그냥 지나가요</li>
       <li>"다음 차례" 효과가 여러 개면 내 차례마다 하나씩 써요</li>
       <li>🌪️ 모두 4~5턴씩 하면 맵이 흔들려 뱀·사다리가 바뀌어요</li>
@@ -1542,6 +1644,7 @@ async function shuffleBoard(gid){
   $('#overlay').style.opacity=0;
   await wait(650); if(gid!==game.gid) return;
   const g=genSnakesLadders(); LADDERS=g.L; SNAKES=g.S; drawOverlay();
+  ITEMS=placeItems(); renderItems();
   $('#overlay').style.opacity=1;
   await wait(600); wrap.classList.remove('shake');
   await card;
